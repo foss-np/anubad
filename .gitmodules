@@ -1,0 +1,3 @@
+[submodule "foss_gloss"]
+	path = foss_gloss
+	url = https://github.com/foss-np/np-l10n-glossary
