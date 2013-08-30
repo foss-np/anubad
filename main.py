@@ -2,6 +2,7 @@
 
 from tkinter import *
 from tkinter import ttk
+#from tkinter.ttk import *
 import tkinter.font as tkfont
 from tkinter.simpledialog import askstring
 
@@ -12,6 +13,7 @@ fullpath=os.path.dirname(filepath)
 #print(fullpath)
 
 GLOSS=fullpath+"/foss_gloss/glossary.list"
+import ttksearchbox.main as ttksbox
 
 list_col = [
     ["#", "Word", "नेपाली"],
@@ -28,7 +30,6 @@ class BrowseList(Frame):
         Frame.__init__(self, parent)
         self.visible = True
         self.makeWidgets()
-        self.master.bind('<Key-F8>', self.toggle_display)
         self.pack(expand=YES, side=TOP, fill=BOTH, anchor=N)
 
     def makeWidgets(self):
@@ -68,7 +69,7 @@ class BrowseList(Frame):
             command=lambda col=col: self.sortby(col, int(not descending)))
 
     def fill_tree(self):
-        file=open(GLOSS).read().splitlines()
+        file=open(GLOSS, encoding="UTF-8").read().splitlines()
         self.count=0
         def insert_row(line):
             self.count+=1
@@ -95,7 +96,6 @@ class BrowseList(Frame):
         for item in x: self.tree.delete(item)
 
     def toggle_display(self, *args):
-        print("F9 is pressed")
         if self.visible: self.pack_forget()
         else: self.pack(expand=NO, side=TOP, fill=BOTH, anchor=N)
         self.visible = not self.visible
@@ -106,11 +106,12 @@ class BrowseNav(Frame):
         self.visible = True
         self.makeWidgets()
         self.pack(expand=NO, fill=X, side=TOP)
-        self.master.bind('<Key-F4>', self.toggle_display)
+        self.config(background="#b2b2b2")
 
     def makeWidgets(self):
         # searchbox
-        self.sbox=Entry(self, takefocus=0)
+        ttksbox.entrystyle()
+        self.sbox=ttksbox.ttk.Entry(self, style="Search.entry", width=20)
         self.sbox.insert(0, "Search")
         self.sbox.bind('<Button-1>', self.search_box)
         self.sbox.bind('<Up>', search_box_unfocus)
@@ -127,7 +128,6 @@ class BrowseNav(Frame):
         self.sbox.select_range(0, END)
 
     def toggle_display(self, *args):
-        print("F4 is pressed")
         if self.visible: self.pack_forget()
         else: self.pack(expand=NO, fill=X, side=TOP)
         self.visible = not self.visible

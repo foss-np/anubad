@@ -1,3 +1,6 @@
 [submodule "foss_gloss"]
 	path = foss_gloss
 	url = https://github.com/foss-np/np-l10n-glossary
+[submodule "ttksearchbox"]
+	path = ttksearchbox
+	url = https://github.com/bekar/ttksearchbox
