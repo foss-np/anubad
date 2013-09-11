@@ -31,11 +31,15 @@ class BrowseList(Frame):
         self.visible = True
         self.makeWidgets()
         self.pack(expand=YES, side=TOP, fill=BOTH, anchor=N)
+        self.popup=None
+        self.make_popup()
+
 
     def makeWidgets(self):
         # a treeview
         self.tree = ttk.Treeview(show="headings", columns=list_col[0])
         self.tree.config(selectmode='browse') #one select at the time
+        self.tree.bind('<Button-3>', self.call_popup)
         #self.tree.config(height=8) #def=10
         #self.tree.config(height=8, font=[ "DejaVuSansMono", 11 ])
 
@@ -84,7 +88,6 @@ class BrowseList(Frame):
         for line in file[1:]:
             insert_row(line)
 
-
         if self.count:
             #show_count(count)
             self.tree.selection_set(select)
@@ -99,6 +102,35 @@ class BrowseList(Frame):
         if self.visible: self.pack_forget()
         else: self.pack(expand=NO, side=TOP, fill=BOTH, anchor=N)
         self.visible = not self.visible
+
+    def make_popup(self):
+        popup = Menu(self, tearoff=0)
+
+        popup.add_command(label="Edit", command=None)
+        popup.add_command(label="Open Directory", command=self.opendir)
+        popup.add_command(label="Open Gloss", command=self.opengloss)
+        popup.add_separator()
+        popup.add_command(label="Reload", command=None)
+        self.popup=popup
+
+    def call_popup(self, event):
+        global POP_SELECT
+        ex=event.x_root
+        ey=event.y_root
+        offset=19*3
+        self.popup.tk_popup(ex,ey)
+        POP_SELECT=ttk.Treeview.identify(self.tree, component='item', x=ex, y=ey-offset)
+        self.tree.selection_set(POP_SELECT)
+        self.tree.focus(POP_SELECT)
+        self.tree.focus_set()
+
+    def opendir(self):
+        os.system("setsid %s $(dirname %s)"%("nautilus", GLOSS))
+
+    def opengloss(self):
+        os.system("setsid %s %s"%("leafpad", GLOSS))
+
+
 
 class BrowseNav(Frame):
     def __init__(self, parent=None):
@@ -118,10 +150,12 @@ class BrowseNav(Frame):
         self.sbox.bind('<Down>', search_box_unfocus)
 
         self.master.bind('<Control-s>', self.search_box)
+        self.master.bind('<Control-f>', self.search_box)
         self.found_status=Label(self)
 
         #packing
         self.sbox.pack(expand=NO, side=RIGHT, fill=X)
+
 
     def search_box(self, *args):
         self.sbox.focus()
@@ -134,10 +168,14 @@ class BrowseNav(Frame):
 
 def search_from_box(*args):
     list = blst.tree.get_children()
-    word=nav.sbox.get().lower()
+    word=nav.sbox.get().lower().strip()
+
+    if word.isalpha(): lang=1;
+    else: lang=2
+
     for item in list:
         sel=blst.tree.item(item)
-        val=sel['values'][1]
+        val=sel['values'][lang]
         if val==word:
             blst.tree.selection_set(item)
             blst.tree.focus(item)
@@ -217,6 +255,6 @@ if __name__=="__main__":
 
     root.bind('<Control-c>', clipboard)
     root.bind('<Control-e>', edit)
-    root.bind("<Key-Escape>", quit)
-    root.bind('<Control-d>', quit)
+    root.bind("<Key-Escape>", lambda event: quit())
+    root.bind('<Control-d>', lambda event: quit())
     root.mainloop()
