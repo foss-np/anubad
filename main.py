@@ -13,6 +13,8 @@ fullpath=os.path.dirname(filepath)
 #print(fullpath)
 
 GLOSS=fullpath+"/foss_gloss/glossary.list"
+ABBR=fullpath+"/foss_gloss/abbreviation.list"
+TRANS=fullpath+"/foss_gloss/transliterate.list"
 import ttksearchbox.main as ttksbox
 
 list_col = [
@@ -33,7 +35,6 @@ class BrowseList(Frame):
         self.pack(expand=YES, side=TOP, fill=BOTH, anchor=N)
         self.popup=None
         self.make_popup()
-
 
     def makeWidgets(self):
         # a treeview
@@ -72,8 +73,8 @@ class BrowseList(Frame):
         self.tree.heading(col,
             command=lambda col=col: self.sortby(col, int(not descending)))
 
-    def fill_tree(self):
-        file=open(GLOSS, encoding="UTF-8").read().splitlines()
+    def fill_tree(self, gloss_file):
+        file=open(gloss_file, encoding="UTF-8").read().splitlines()
         self.count=0
         def insert_row(line):
             self.count+=1
@@ -131,7 +132,6 @@ class BrowseList(Frame):
         os.system("setsid %s %s"%("leafpad", GLOSS))
 
 
-
 class BrowseNav(Frame):
     def __init__(self, parent=None):
         Frame.__init__(self, parent)
@@ -167,50 +167,62 @@ class BrowseNav(Frame):
         self.visible = not self.visible
 
 def search_from_box(*args):
-    list = blst.tree.get_children()
+    global word
     word=nav.sbox.get().lower().strip()
 
+    global lang
     if word.isalpha(): lang=1;
     else: lang=2
 
+    for key in tab_info.keys():
+        search_tree(key, word)
+
+def search_tree(tid, word):
+    obj=tab_info[tid]
+    list = obj.tree.get_children()
+
     for item in list:
-        sel=blst.tree.item(item)
+        sel=obj.tree.item(item)
         val=sel['values'][lang]
         if val==word:
-            blst.tree.selection_set(item)
-            blst.tree.focus(item)
-            blst.tree.focus_set()
-            blst.tree.yview(int(item[1:], 16)-1)
+            # TODO: make class method do view
+            if tid != nb.select(): nb.select(tid)
+            obj.tree.selection_set(item)
+            obj.tree.focus(item)
+            obj.tree.focus_set()
+            obj.tree.yview(int(item[1:], 16)-1)
             break
     else:
-        print("\"%s\" not found"%word)
+        print("\"%s\" not found in %s"%(word, tid))
         global ADD_LOCK
         ADD_LOCK=False
 
 def add_to_list(*args):
-    global ADD_LOCK
+    global ADD_LOCK, word
     if ADD_LOCK:
         print("World already Exist, only edit possible")
         return 1;
 
     DIRTY=True
     ADD_LOCK=True
-    word=nav.sbox.get().lower()
     anubad=askstring("Entry", "अनुवाद: %s"%word)
     if not anubad: return
 
-    blst.count+=1
-    row = [ blst.count, word, anubad ]
-    select=blst.tree.insert('', 'end', values=row)
-    blst.tree.selection_set(select)
-    blst.tree.focus(select)
-    blst.tree.focus_set()
-    blst.tree.yview(int(select[1:], 16)-1)
+    en2np.count+=1
+    row = [ en2np.count, word, anubad ]
+    select=en2np.tree.insert('', 'end', values=row)
+    # TODO: make class method do view
+    en2np.tree.selection_set(select)
+    en2np.tree.focus(select)
+    en2np.tree.focus_set()
+    en2np.tree.yview(int(select[1:], 16)-1)
     fp=open(GLOSS, 'a').write("\n"+word+": "+anubad)
+    print(fp)
 
 def clipboard(*args):
     print("Copy current view to clipboard")
-    sel=blst.tree.item(blst.tree.focus())
+    obj=tab_info[nb.select()]
+    sel=obj.tree.item(obj.tree.focus())
     val=sel['values']
     root.clipboard_clear()
     root.clipboard_append(val[2])
@@ -223,7 +235,6 @@ def edit(*args):
 
 def search_box_unfocus(*args):
     blst.tree.focus_set()
-
 
 def cli_mode(list):
     file=open(GLOSS).read()#.splitlines()
@@ -239,22 +250,41 @@ def cli_mode(list):
 
         print()
 
-if __name__=="__main__":
+
+if __name__ == '__main__':
     if len(sys.argv) > 1:
         cli_mode(sys.argv[1:])
         exit()
 
     root=Tk()
     root.title("anubad")
-
     nav=BrowseNav()
     nav.sbox.bind('<Return>', search_from_box)
     nav.sbox.bind('<Control-a>', add_to_list)
-    blst=BrowseList();
-    blst.fill_tree()
+
+    nb = ttk.Notebook()
+    nb.pack(expand=YES, fill=BOTH )
+    en2np=BrowseList(); en2np.fill_tree(GLOSS)
+    abbr=BrowseList(); abbr.fill_tree(ABBR)
+    trans=BrowseList(); trans.fill_tree(TRANS)
+
+    nb.add(en2np, text="en2np", underline=0, padding=3)
+    nb.add(abbr, text="abbreviation", underline=0, padding=3)
+    nb.add(trans, text="transliterate", underline=0, padding=3)
+    nb.enable_traversal()
+    nbtabs=nb.tabs()
+
+    tab_info = dict()
+    tab_info[nbtabs[0]] = en2np
+    tab_info[nbtabs[1]] = abbr
+    tab_info[nbtabs[2]] = trans
+
+
+    root.bind('<Alt-KeyPress-1>', lambda event: nb.select(nbtabs[0]))
+    root.bind('<Alt-KeyPress-2>', lambda event: nb.select(nbtabs[1]))
+    root.bind('<Alt-KeyPress-3>', lambda event: nb.select(nbtabs[2]))
 
     root.bind('<Control-c>', clipboard)
-    root.bind('<Control-e>', edit)
     root.bind("<Key-Escape>", lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())
     root.mainloop()
