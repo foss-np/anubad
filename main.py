@@ -41,6 +41,7 @@ class BrowseList(Frame):
         self.tree = ttk.Treeview(show="headings", columns=list_col[0])
         self.tree.config(selectmode='browse') #one select at the time
         self.tree.bind('<Button-3>', self.call_popup)
+        self.tree.bind('<Key>', search_focus_type)
         #self.tree.config(height=8) #def=10
         #self.tree.config(height=8, font=[ "DejaVuSansMono", 11 ])
 
@@ -146,7 +147,7 @@ class BrowseNav(Frame):
         self.sbox=ttksbox.ttk.Entry(self, style="Search.entry", width=20)
         self.sbox.insert(0, "Search")
         self.sbox.bind('<Button-1>', self.search_box)
-        self.sbox.bind('<Up>', search_box_unfocus)
+        self.sbox.bind('<Up>', search_box_unfocus) #TODO: for upkey
         self.sbox.bind('<Down>', search_box_unfocus)
 
         self.master.bind('<Control-s>', self.search_box)
@@ -156,7 +157,6 @@ class BrowseNav(Frame):
         #packing
         self.sbox.pack(expand=NO, side=RIGHT, fill=X)
 
-
     def search_box(self, *args):
         self.sbox.focus()
         self.sbox.select_range(0, END)
@@ -165,6 +165,13 @@ class BrowseNav(Frame):
         if self.visible: self.pack_forget()
         else: self.pack(expand=NO, fill=X, side=TOP)
         self.visible = not self.visible
+
+def search_focus_type(event):
+    typed=event.char
+    if not typed.isalpha(): return
+    nav.sbox.delete(0, END)
+    nav.sbox.insert(0, typed)
+    nav.sbox.focus()
 
 def search_from_box(*args):
     global word
@@ -181,7 +188,6 @@ def search_from_box(*args):
     print("\"%s\" not found"%word)
     global ADD_LOCK
     ADD_LOCK=False
-
 
 def search_tree(tid, word):
     obj=tab_info[tid]
@@ -230,14 +236,23 @@ def clipboard(*args):
     root.clipboard_clear()
     root.clipboard_append(val[2])
 
-def edit(*args):
-    print("Editing current value")
-    sel=blst.tree.item(blst.tree.focus())
-    val=sel['values']
-    anubad=askstring("Modify", "Edit %s"%val[1])
+# def edit(*args):
+#     print("Editing current value")
+#     obj=tab_info[nb.select()]
+#     sel=obj.tree.item(obj.tree.focus())
+#     val=sel['values']
+#     anubad=askstring("Modify", "Edit %s"%val[1])
 
 def search_box_unfocus(*args):
-    blst.tree.focus_set()
+    nav.sbox.select_range(0, 0)
+
+    obj=tab_info[nb.select()]
+    obj.tree.focus_set()
+    item=obj.tree.next(obj.tree.focus())
+    if not item: return
+    obj.tree.selection_set(item)
+    obj.tree.focus(item)
+    obj.tree.focus_set()
 
 def cli_mode(list):
     file=open(GLOSS).read()#.splitlines()
@@ -252,6 +267,15 @@ def cli_mode(list):
         #os.system("echo %s | xclip -i"%file[found:found+i])
 
         print()
+
+def switch_tab(event):
+    index=int(event.char)-1
+    tab=tablst[index]
+    obj=tab_info[tab]
+    # BUG: object focus after tabswitch not working properly
+    print(index, tab, tab_info[tab])
+    nb.select(tab)
+    obj.tree.focus(obj.tree.focus())
 
 
 if __name__ == '__main__':
@@ -275,17 +299,17 @@ if __name__ == '__main__':
     nb.add(abbr, text="abbreviation", underline=0, padding=3)
     nb.add(trans, text="transliterate", underline=0, padding=3)
     nb.enable_traversal()
-    nbtabs=nb.tabs()
+    tablst=nb.tabs()
 
     tab_info = dict()
-    tab_info[nbtabs[0]] = en2np
-    tab_info[nbtabs[1]] = abbr
-    tab_info[nbtabs[2]] = trans
+    tab_info[tablst[0]] = en2np
+    tab_info[tablst[1]] = abbr
+    tab_info[tablst[2]] = trans
 
-
-    root.bind('<Alt-KeyPress-1>', lambda event: nb.select(nbtabs[0]))
-    root.bind('<Alt-KeyPress-2>', lambda event: nb.select(nbtabs[1]))
-    root.bind('<Alt-KeyPress-3>', lambda event: nb.select(nbtabs[2]))
+    # TODO: fix focus
+    root.bind('<Alt-KeyPress-1>', switch_tab)
+    root.bind('<Alt-KeyPress-2>', switch_tab)
+    root.bind('<Alt-KeyPress-3>', switch_tab)
 
     root.bind('<Control-c>', clipboard)
     root.bind("<Key-Escape>", lambda event: quit())
