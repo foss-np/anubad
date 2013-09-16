@@ -175,7 +175,13 @@ def search_from_box(*args):
     else: lang=2
 
     for key in tab_info.keys():
-        search_tree(key, word)
+        if search_tree(key, word):
+            return
+
+    print("\"%s\" not found"%word)
+    global ADD_LOCK
+    ADD_LOCK=False
+
 
 def search_tree(tid, word):
     obj=tab_info[tid]
@@ -191,11 +197,8 @@ def search_tree(tid, word):
             obj.tree.focus(item)
             obj.tree.focus_set()
             obj.tree.yview(int(item[1:], 16)-1)
-            break
-    else:
-        print("\"%s\" not found in %s"%(word, tid))
-        global ADD_LOCK
-        ADD_LOCK=False
+            return True
+    return False
 
 def add_to_list(*args):
     global ADD_LOCK, word
