@@ -15,6 +15,9 @@ fullpath=os.path.dirname(filepath)
 GLOSS=fullpath+"/foss_gloss/glossary.list"
 ABBR=fullpath+"/foss_gloss/abbreviation.list"
 TRANS=fullpath+"/foss_gloss/transliterate.list"
+
+glist = [ GLOSS, ABBR, TRANS ]
+
 import ttksearchbox.main as ttksbox
 
 list_col = [
@@ -42,6 +45,8 @@ class BrowseList(Frame):
         self.tree.config(selectmode='browse') #one select at the time
         self.tree.bind('<Button-3>', self.call_popup)
         self.tree.bind('<Key>', search_focus_type)
+        # TODO: open gloss keybind
+        # self.tree.bind('<Control-u>', lambda e: self.opengloss)
         #self.tree.config(height=8) #def=10
         #self.tree.config(height=8, font=[ "DejaVuSansMono", 11 ])
 
@@ -130,7 +135,16 @@ class BrowseList(Frame):
         os.system("setsid %s $(dirname %s)"%("nautilus", GLOSS))
 
     def opengloss(self):
-        os.system("setsid %s %s"%("leafpad", GLOSS))
+        index=tablst.index(nb.select())
+        os.system("setsid %s %s"%("leafpad", glist[index]))
+
+def reload_gloss(self):
+    tab=nb.select()
+    index=tablst.index(tab)
+    obj=tab_info[tab]
+    obj.clear_tree()
+    obj.fill_tree(glist[index])
+    print("Reload %s"%glist[index])
 
 
 class BrowseNav(Frame):
@@ -150,12 +164,20 @@ class BrowseNav(Frame):
         self.sbox.bind('<Up>', search_box_unfocus) #TODO: for upkey
         self.sbox.bind('<Down>', search_box_unfocus)
 
+        self.master.bind('<Control-c>', lambda e: self.sbox.delete(0,END))
         self.master.bind('<Control-s>', self.search_box)
         self.master.bind('<Control-f>', self.search_box)
-        self.found_status=Label(self)
+        self.found_status=Label(self) #TODO: GUI status display
+
+        var=IntVar() # TODO: autocopy to clipboard
+        self.cbox_acopy = Checkbutton(self, text="auto copy", command=None, variable=var)
+        self.cbox_acopy.config(background="#b2b2b2", relief=FLAT)
+        var.set(1)
 
         #packing
         self.sbox.pack(expand=NO, side=RIGHT, fill=X)
+        self.cbox_acopy.pack(side=LEFT)
+
 
     def search_box(self, *args):
         self.sbox.focus()
@@ -273,7 +295,7 @@ def switch_tab(event):
     tab=tablst[index]
     obj=tab_info[tab]
     # BUG: object focus after tabswitch not working properly
-    print(index, tab, tab_info[tab])
+    # print(index, tab, tab_info[tab])
     nb.select(tab)
     obj.tree.focus(obj.tree.focus())
 
@@ -291,13 +313,15 @@ if __name__ == '__main__':
 
     nb = ttk.Notebook()
     nb.pack(expand=YES, fill=BOTH )
+
+    # TODO: use glist array
     en2np=BrowseList(); en2np.fill_tree(GLOSS)
     abbr=BrowseList(); abbr.fill_tree(ABBR)
     trans=BrowseList(); trans.fill_tree(TRANS)
-
     nb.add(en2np, text="en2np", underline=0, padding=3)
     nb.add(abbr, text="abbreviation", underline=0, padding=3)
     nb.add(trans, text="transliterate", underline=0, padding=3)
+
     nb.enable_traversal()
     tablst=nb.tabs()
 
@@ -306,12 +330,13 @@ if __name__ == '__main__':
     tab_info[tablst[1]] = abbr
     tab_info[tablst[2]] = trans
 
-    # TODO: fix focus
     root.bind('<Alt-KeyPress-1>', switch_tab)
     root.bind('<Alt-KeyPress-2>', switch_tab)
     root.bind('<Alt-KeyPress-3>', switch_tab)
 
-    root.bind('<Control-c>', clipboard)
-    root.bind("<Key-Escape>", lambda event: quit())
+
+    root.bind('<Key-F5>', reload_gloss)
+    root.bind('<Control-Insert>', clipboard)
+    root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())
     root.mainloop()

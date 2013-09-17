@@ -1,0 +1,6 @@
+#!/bin/bash
+
+git submodule init
+git submodule update
+
+touch ttksearchbox/__init__.py
