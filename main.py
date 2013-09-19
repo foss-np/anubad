@@ -12,11 +12,11 @@ filepath=os.path.abspath(__file__)
 fullpath=os.path.dirname(filepath)
 #print(fullpath)
 
-GLOSS=fullpath+"/foss_gloss/glossary.list"
+EN2NP=fullpath+"/foss_gloss/glossary.list"
 ABBR=fullpath+"/foss_gloss/abbreviation.list"
 TRANS=fullpath+"/foss_gloss/transliterate.list"
 
-glist = [ GLOSS, ABBR, TRANS ]
+glist = [ EN2NP, ABBR, TRANS ]
 
 import ttksearchbox.main as ttksbox
 
@@ -38,13 +38,17 @@ class BrowseList(Frame):
         self.pack(expand=YES, side=TOP, fill=BOTH, anchor=N)
         self.popup=None
         self.make_popup()
+        self.GLOSS=None
 
     def makeWidgets(self):
         # a treeview
         self.tree = ttk.Treeview(show="headings", columns=list_col[0])
         self.tree.config(selectmode='browse') #one select at the time
+
         self.tree.bind('<Button-3>', self.call_popup)
-        self.tree.bind('<Key>', search_focus_type)
+        self.tree.bind('<Key>', key_press)
+        self.tree.bind('<Control-c>', clipboard)
+
         # TODO: open gloss keybind
         # self.tree.bind('<Control-u>', lambda e: self.opengloss)
         #self.tree.config(height=8) #def=10
@@ -80,7 +84,8 @@ class BrowseList(Frame):
             command=lambda col=col: self.sortby(col, int(not descending)))
 
     def fill_tree(self, gloss_file):
-        file=open(gloss_file, encoding="UTF-8").read().splitlines()
+        self.GLOSS=gloss_file
+        file=open(self.GLOSS, encoding="UTF-8").read().splitlines()
         self.count=0
         def insert_row(line):
             self.count+=1
@@ -114,7 +119,7 @@ class BrowseList(Frame):
         popup = Menu(self, tearoff=0)
 
         popup.add_command(label="Edit", command=None)
-        popup.add_command(label="Open Directory", command=self.opendir)
+        popup.add_command(label="Open Directory", command=open_dir)
         popup.add_command(label="Open Gloss", command=self.opengloss)
         popup.add_separator()
         popup.add_command(label="Reload", command=None)
@@ -131,12 +136,15 @@ class BrowseList(Frame):
         self.tree.focus(POP_SELECT)
         self.tree.focus_set()
 
-    def opendir(self):
-        os.system("setsid %s $(dirname %s)"%("nautilus", GLOSS))
-
     def opengloss(self):
         index=tablst.index(nb.select())
         os.system("setsid %s %s"%("leafpad", glist[index]))
+
+def open_dir(*events):
+    tab=nb.select()
+    obj=tab_info[tab]
+    gloss_file=obj.GLOSS
+    os.system("setsid %s $(dirname %s)"%("nautilus", gloss_file))
 
 def reload_gloss(self):
     tab=nb.select()
@@ -163,10 +171,16 @@ class BrowseNav(Frame):
         self.sbox.bind('<Button-1>', self.search_box)
         self.sbox.bind('<Up>', search_box_unfocus) #TODO: for upkey
         self.sbox.bind('<Down>', search_box_unfocus)
+        self.sbox.bind('<Control-s>', search_box_emacs)
+        self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0,END))
+        #self.sbox.bind('<Control-a>', lambda e: self.sbox.select_range(0, END))
 
-        self.master.bind('<Control-c>', lambda e: self.sbox.delete(0,END))
-        self.master.bind('<Control-s>', self.search_box)
-        self.master.bind('<Control-f>', self.search_box)
+
+        self.sbox.bind('<Return>', search_from_box)
+        self.sbox.bind('<Leave>', lambda e: root.bind('<Control-s>', search_box_emacs))
+
+
+        self.master.bind('<Control-f>', search_box_focus)
         self.found_status=Label(self) #TODO: GUI status display
 
         var=IntVar() # TODO: autocopy to clipboard
@@ -178,17 +192,30 @@ class BrowseNav(Frame):
         self.sbox.pack(expand=NO, side=RIGHT, fill=X)
         self.cbox_acopy.pack(side=LEFT)
 
-
     def search_box(self, *args):
-        self.sbox.focus()
-        self.sbox.select_range(0, END)
+        text=self.sbox.get()
+        if text: search_from_box();
 
     def toggle_display(self, *args):
         if self.visible: self.pack_forget()
         else: self.pack(expand=NO, fill=X, side=TOP)
         self.visible = not self.visible
 
-def search_focus_type(event):
+def search_box_focus(event):
+    nav.sbox.focus()
+    nav.sbox.select_range(0, END)
+    root.unbind('<Control-s>')
+
+def search_box_emacs(event):
+    text=root.clipboard_get()
+    if text=="" or text:
+        nav.sbox.delete(0, END)
+        nav.sbox.insert(0, text)
+    else:
+        nav.sbox.select_range(0, END)
+
+
+def key_press(event):
     typed=event.char
     if not typed.isalpha(): return
     nav.sbox.delete(0, END)
@@ -247,16 +274,16 @@ def add_to_list(*args):
     en2np.tree.focus(select)
     en2np.tree.focus_set()
     en2np.tree.yview(int(select[1:], 16)-1)
-    fp=open(GLOSS, 'a').write("\n"+word+": "+anubad)
+    fp=open(EN2NP, 'a').write("\n"+word+": "+anubad)
     print(fp)
 
 def clipboard(*args):
-    print("Copy current view to clipboard")
     obj=tab_info[nb.select()]
     sel=obj.tree.item(obj.tree.focus())
     val=sel['values']
     root.clipboard_clear()
     root.clipboard_append(val[2])
+    print(val[2], "Copied to clipboard")
 
 # def edit(*args):
 #     print("Editing current value")
@@ -308,14 +335,13 @@ if __name__ == '__main__':
     root=Tk()
     root.title("anubad")
     nav=BrowseNav()
-    nav.sbox.bind('<Return>', search_from_box)
-    nav.sbox.bind('<Control-a>', add_to_list)
+    nav.sbox.bind('<Control-i>', add_to_list)
 
     nb = ttk.Notebook()
     nb.pack(expand=YES, fill=BOTH )
 
     # TODO: use glist array
-    en2np=BrowseList(); en2np.fill_tree(GLOSS)
+    en2np=BrowseList(); en2np.fill_tree(EN2NP)
     abbr=BrowseList(); abbr.fill_tree(ABBR)
     trans=BrowseList(); trans.fill_tree(TRANS)
     nb.add(en2np, text="en2np", underline=0, padding=3)
@@ -334,7 +360,8 @@ if __name__ == '__main__':
     root.bind('<Alt-KeyPress-2>', switch_tab)
     root.bind('<Alt-KeyPress-3>', switch_tab)
 
-
+    root.bind('<Control-s>', search_box_focus)
+    root.bind('<Control-o>', open_dir)
     root.bind('<Key-F5>', reload_gloss)
     root.bind('<Control-Insert>', clipboard)
     root.bind('<Key-Escape>', lambda event: quit())
