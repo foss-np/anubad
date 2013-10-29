@@ -11,11 +11,7 @@ import os, sys
 filepath=os.path.abspath(__file__)
 fullpath=os.path.dirname(filepath)
 
-GLOSS=fullpath+"/foss_gloss/"
-
-EN2NP=fullpath+"/foss_gloss/en2np.tra"
-ABBR=fullpath+"/foss_gloss/en2np.abb"
-TRANS=fullpath+"/foss_gloss/en2np.tsl"
+GLOSS=fullpath+"/foss_gloss/en2np/"
 
 import ttksearchbox.main as ttksbox
 
@@ -83,6 +79,7 @@ class BrowseList(Frame):
             command=lambda col=col: self.sortby(col, int(not descending)))
 
     def fill_tree(self, gloss_file):
+        print("loading", gloss_file)
         self.GLOSS=gloss_file
         file=open(self.GLOSS, encoding="UTF-8").read().splitlines()
         self.count=0
@@ -119,7 +116,7 @@ class BrowseList(Frame):
 
         popup.add_command(label="Edit", command=None)
         popup.add_command(label="Open Directory", accelerator="Ctrl+o", command=open_dir)
-        popup.add_command(label="Open Gloss", command=self.opengloss)
+        popup.add_command(label="Open Gloss", command=open_gloss)
         popup.add_separator()
         popup.add_command(label="Reload", command=None)
         self.popup=popup
@@ -135,24 +132,22 @@ class BrowseList(Frame):
         self.tree.focus(POP_SELECT)
         self.tree.focus_set()
 
-    def opengloss(self):
-        index=tablst.index(nb.select())
-        os.system("setsid %s %s"%("leafpad", glist[index]))
+def open_gloss(*events):
+    index=nb.index(nb.select())
+    obj=glist[index]
+    os.system("setsid %s %s"%("leafpad", obj.GLOSS))
 
 def open_dir(*events):
-    tab=nb.select()
-    obj=tab_info[tab]
-    gloss_file=obj.GLOSS
-    os.system("setsid %s $(dirname %s)"%("nautilus", gloss_file))
+    index=nb.index(nb.select())
+    obj=glist[index]
+    os.system("setsid %s %s"%("nautilus", obj.GLOSS))
 
 def reload_gloss(self):
-    tab=nb.select()
-    index=tablst.index(tab)
-    obj=tab_info[tab]
+    index=nb.index(nb.select())
+    obj=glist[index]
     obj.clear_tree()
-    obj.fill_tree(glist[index])
-    print("Reload %s"%glist[index])
-
+    obj.fill_tree(obj.GLOSS)
+    print("Reload %s"%obj.GLOSS)
 
 class BrowseNav(Frame):
     def __init__(self, parent=None):
@@ -260,19 +255,23 @@ def add_to_list(*args):
     anubad=askstring("Entry", "अनुवाद: %s"%word)
     if not anubad: return
 
-    en2np.count+=1
-    row = [ en2np.count, word, anubad ]
-    select=en2np.tree.insert('', 'end', values=row)
+    i=nb.index(nb.select())
+    obj=glist[i]
+
+    obj.count+=1
+    row = [ obj.count, word, anubad ]
+    select=obj.tree.insert('', 'end', values=row)
     # TODO: make class method do view
-    en2np.tree.selection_set(select)
-    en2np.tree.focus(select)
-    en2np.tree.focus_set()
-    en2np.tree.yview(int(select[1:], 16)-1)
-    fp=open(EN2NP, 'a').write("\n"+word+": "+anubad)
+    obj.tree.selection_set(select)
+    obj.tree.focus(select)
+    obj.tree.focus_set()
+    obj.tree.yview(int(select[1:], 16)-1)
+    fp=open(obj.GLOSS, 'a').write("\n"+word+": "+anubad)
     print(fp)
 
 def clipboard(*args):
-    obj=tab_info[nb.select()]
+    index=nb.index(nb.select())
+    obj=glist[index]
     sel=obj.tree.item(obj.tree.focus())
     val=sel['values']
     root.clipboard_clear()
@@ -350,6 +349,7 @@ if __name__ == '__main__':
 
     root.bind('<Control-s>', search_box_focus)
     root.bind('<Control-o>', open_dir)
+    root.bind('<Control-g>', open_gloss)
     root.bind('<Key-F5>', reload_gloss)
     root.bind('<Control-Insert>', clipboard)
     root.bind('<Key-Escape>', lambda event: quit())
