@@ -10,13 +10,12 @@ import os, sys
 
 filepath=os.path.abspath(__file__)
 fullpath=os.path.dirname(filepath)
-#print(fullpath)
 
-EN2NP=fullpath+"/foss_gloss/glossary.list"
-ABBR=fullpath+"/foss_gloss/abbreviation.list"
-TRANS=fullpath+"/foss_gloss/transliterate.list"
+GLOSS=fullpath+"/foss_gloss/"
 
-glist = [ EN2NP, ABBR, TRANS ]
+EN2NP=fullpath+"/foss_gloss/en2np.tra"
+ABBR=fullpath+"/foss_gloss/en2np.abb"
+TRANS=fullpath+"/foss_gloss/en2np.tsl"
 
 import ttksearchbox.main as ttksbox
 
@@ -119,7 +118,7 @@ class BrowseList(Frame):
         popup = Menu(self, tearoff=0)
 
         popup.add_command(label="Edit", command=None)
-        popup.add_command(label="Open Directory", command=open_dir)
+        popup.add_command(label="Open Directory", accelerator="Ctrl+o", command=open_dir)
         popup.add_command(label="Open Gloss", command=self.opengloss)
         popup.add_separator()
         popup.add_command(label="Reload", command=None)
@@ -179,7 +178,6 @@ class BrowseNav(Frame):
         self.sbox.bind('<Return>', search_from_box)
         self.sbox.bind('<Leave>', lambda e: root.bind('<Control-s>', search_box_emacs))
 
-
         self.master.bind('<Control-f>', search_box_focus)
         self.found_status=Label(self) #TODO: GUI status display
 
@@ -214,7 +212,6 @@ def search_box_emacs(event):
     else:
         nav.sbox.select_range(0, END)
 
-
 def key_press(event):
     typed=event.char
     if not typed.isalpha(): return
@@ -230,24 +227,21 @@ def search_from_box(*args):
     if word.isalpha(): lang=1;
     else: lang=2
 
-    for key in tab_info.keys():
-        if search_tree(key, word):
+    for i, obj in enumerate(glist):
+        if search_tree(i, obj, word):
             return
 
     print("\"%s\" not found"%word)
     global ADD_LOCK
     ADD_LOCK=False
 
-def search_tree(tid, word):
-    obj=tab_info[tid]
+def search_tree(tab, obj, word):
     list = obj.tree.get_children()
-
     for item in list:
         sel=obj.tree.item(item)
         val=sel['values'][lang]
         if val==word:
-            # TODO: make class method do view
-            if tid != nb.select(): nb.select(tid)
+            nb.select(tab)
             obj.tree.selection_set(item)
             obj.tree.focus(item)
             obj.tree.focus_set()
@@ -319,13 +313,25 @@ def cli_mode(list):
 
 def switch_tab(event):
     index=int(event.char)-1
-    tab=tablst[index]
-    obj=tab_info[tab]
+    obj=glist[index]
     # BUG: object focus after tabswitch not working properly
     # print(index, tab, tab_info[tab])
-    nb.select(tab)
+    nb.select(index)
     obj.tree.focus(obj.tree.focus())
 
+def load_files():
+    global glist
+    glist=[]
+    top=1
+    for file in os.listdir(GLOSS):
+        if file[-4:] in [ ".tsl", ".fun", ".abb", ".tra" ]:
+            obj=BrowseList()
+            obj.fill_tree(GLOSS+file)
+            nb.add(obj, text=file, underline=0, padding=3)
+            glist.append(obj)
+            if top < 10:
+                root.bind('<Alt-KeyPress-%d>'%top, switch_tab)
+            top+=1
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -339,26 +345,8 @@ if __name__ == '__main__':
 
     nb = ttk.Notebook()
     nb.pack(expand=YES, fill=BOTH )
-
-    # TODO: use glist array
-    en2np=BrowseList(); en2np.fill_tree(EN2NP)
-    abbr=BrowseList(); abbr.fill_tree(ABBR)
-    trans=BrowseList(); trans.fill_tree(TRANS)
-    nb.add(en2np, text="en2np", underline=0, padding=3)
-    nb.add(abbr, text="abbreviation", underline=0, padding=3)
-    nb.add(trans, text="transliterate", underline=0, padding=3)
-
+    load_files()
     nb.enable_traversal()
-    tablst=nb.tabs()
-
-    tab_info = dict()
-    tab_info[tablst[0]] = en2np
-    tab_info[tablst[1]] = abbr
-    tab_info[tablst[2]] = trans
-
-    root.bind('<Alt-KeyPress-1>', switch_tab)
-    root.bind('<Alt-KeyPress-2>', switch_tab)
-    root.bind('<Alt-KeyPress-3>', switch_tab)
 
     root.bind('<Control-s>', search_box_focus)
     root.bind('<Control-o>', open_dir)
