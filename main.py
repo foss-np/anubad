@@ -227,6 +227,10 @@ def search_from_box(*args):
             return
 
     print("\"%s\" not found"%word)
+    #generate_near_words
+    for i, obj in enumerate(glist):
+        print(find_near(i, obj, word));
+
     global ADD_LOCK
     ADD_LOCK=False
 
@@ -243,6 +247,40 @@ def search_tree(tab, obj, word):
             obj.tree.yview(int(item[1:], 16)-1)
             return True
     return False
+
+def find_near(tab, obj, word):
+    #get the maximum matched string?
+    match = 1000 #leser-the-better
+    holder = []
+    list = obj.tree.get_children()
+    for item in list:
+        sel=obj.tree.item(item)
+        val=sel['values'][lang]
+        #print(val.__doc__)
+        #print(word.__doc__)
+        dis = lev_dis(word, val)
+        if(dis < match):
+            match = dis
+            holder = []
+            holder.append(val+str(match))
+        elif(dis == match):
+            holder.append(val+str(match))
+    return holder
+#End find_near
+
+def lev_dis(seq1,seq2):
+    oneago = None
+    thisrow = list(range(1, len(seq2) + 1))
+    thisrow.append(0)
+    for x in range(len(seq1)):
+        twoago, oneago, thisrow = oneago, thisrow, [0] * len(seq2) + [x + 1]
+        for y in range(len(seq2)):
+            delcost = oneago[y] + 1
+            addcost = thisrow[y - 1] + 1
+            subcost = oneago[y - 1] + (seq1[x] != seq2[y])
+            thisrow[y] = min(delcost, addcost, subcost)
+    return thisrow[len(seq2) - 1]
+#End lev_dis
 
 def add_to_list(*args):
     global ADD_LOCK, word
