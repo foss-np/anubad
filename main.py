@@ -1,22 +1,31 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 
-from tkinter import *
-from tkinter import ttk
-#from tkinter.ttk import *
-import tkinter.font as tkfont
-from tkinter.simpledialog import askstring
+# 2 and 3 compatibility
+# -*- coding: utf-8 -*-
 
 import os, sys
+
+try:
+    import tkinter as tk
+    from tkinter import *
+    from tkinter import ttk
+    from tkinter.ttk import *
+    from tkinter.simpledialog import askstring
+except:
+    import Tkinter as tk
+    from Tkinter import *
+    import ttk
+    from ttk import *
+    from tkSimpleDialog import askstring
 
 filepath=os.path.abspath(__file__)
 fullpath=os.path.dirname(filepath)
 
 GLOSS=fullpath+"/foss_gloss/en2np/"
-
 import ttksearchbox.main as ttksbox
 
 list_col = [
-    ["#", "Word", "नेपाली"],
+    ["#", "Word", "Nepali"],
     [50, 250, 250]
 ]
 
@@ -44,8 +53,6 @@ class BrowseList(Frame):
         self.tree.bind('<Key>', key_press)
         self.tree.bind('<Control-c>', clipboard)
 
-        # TODO: open gloss keybind
-        # self.tree.bind('<Control-u>', lambda e: self.opengloss)
         #self.tree.config(height=8) #def=10
         #self.tree.config(height=8, font=[ "DejaVuSansMono", 11 ])
 
@@ -81,7 +88,11 @@ class BrowseList(Frame):
     def fill_tree(self, gloss_file):
         print("loading", gloss_file)
         self.GLOSS=gloss_file
-        file=open(self.GLOSS, encoding="UTF-8").read().splitlines()
+        try:
+            file=open(self.GLOSS, encoding="UTF-8").read().splitlines()
+        except:
+            file=open(self.GLOSS).read().splitlines()
+
         self.count=0
         def insert_row(line):
             self.count+=1
@@ -125,7 +136,7 @@ class BrowseList(Frame):
         global POP_SELECT
         ex=event.x_root
         ey=event.y_root
-        offset=19*3
+        offset=19*4
         self.popup.tk_popup(ex,ey)
         POP_SELECT=ttk.Treeview.identify(self.tree, component='item', x=ex, y=ey-offset)
         self.tree.selection_set(POP_SELECT)
@@ -155,7 +166,7 @@ class BrowseNav(Frame):
         self.visible = True
         self.makeWidgets()
         self.pack(expand=NO, fill=X, side=TOP)
-        self.config(background="#b2b2b2")
+        #self.config(background="#b2b2b2")
 
     def makeWidgets(self):
         # searchbox
@@ -163,8 +174,6 @@ class BrowseNav(Frame):
         self.sbox=ttksbox.ttk.Entry(self, style="Search.entry", width=20)
         self.sbox.insert(0, "Search")
         self.sbox.bind('<Button-1>', self.search_box)
-        self.sbox.bind('<Up>', search_box_unfocus) #TODO: for upkey
-        self.sbox.bind('<Down>', search_box_unfocus)
         self.sbox.bind('<Control-s>', search_box_emacs)
         self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0,END))
         #self.sbox.bind('<Control-a>', lambda e: self.sbox.select_range(0, END))
@@ -177,8 +186,8 @@ class BrowseNav(Frame):
         self.found_status=Label(self) #TODO: GUI status display
 
         var=IntVar() # TODO: autocopy to clipboard
-        self.cbox_acopy = Checkbutton(self, text="auto copy", command=None, variable=var)
-        self.cbox_acopy.config(background="#b2b2b2", relief=FLAT)
+        self.cbox_acopy = tk.Checkbutton(self, text="auto copy", command=None, variable=var)
+        #self.cbox_acopy.config(background="#b2b2b2", relief=FLAT)
         var.set(1)
 
         #packing
@@ -252,7 +261,7 @@ def add_to_list(*args):
 
     DIRTY=True
     ADD_LOCK=True
-    anubad=askstring("Entry", "अनुवाद: %s"%word)
+    anubad=askstring("Entry", "anubad: %s"%word)
     if not anubad: return
 
     i=nb.index(nb.select())
@@ -285,17 +294,6 @@ def clipboard(*args):
 #     val=sel['values']
 #     anubad=askstring("Modify", "Edit %s"%val[1])
 
-def search_box_unfocus(*args):
-    nav.sbox.select_range(0, 0)
-
-    obj=tab_info[nb.select()]
-    obj.tree.focus_set()
-    item=obj.tree.next(obj.tree.focus())
-    if not item: return
-    obj.tree.selection_set(item)
-    obj.tree.focus(item)
-    obj.tree.focus_set()
-
 def cli_mode(list):
     file=open(GLOSS).read()#.splitlines()
     for word in list:
@@ -305,7 +303,7 @@ def cli_mode(list):
             break
         for i, char in enumerate(file[found:]):
             if char=='\n': break
-            print(char, end="")
+            print(char)
         #os.system("echo %s | xclip -i"%file[found:found+i])
 
         print()
@@ -326,7 +324,7 @@ def load_files():
         if file[-4:] in [ ".tsl", ".fun", ".abb", ".tra" ]:
             obj=BrowseList()
             obj.fill_tree(GLOSS+file)
-            nb.add(obj, text=file, underline=0, padding=3)
+            nb.add(obj, text=file, padding=3)
             glist.append(obj)
             if top < 10:
                 root.bind('<Alt-KeyPress-%d>'%top, switch_tab)
@@ -349,7 +347,7 @@ if __name__ == '__main__':
 
     root.bind('<Control-s>', search_box_focus)
     root.bind('<Control-o>', open_dir)
-    root.bind('<Control-g>', open_gloss)
+    root.bind('<Control-u>', open_gloss)
     root.bind('<Key-F5>', reload_gloss)
     root.bind('<Control-Insert>', clipboard)
     root.bind('<Key-Escape>', lambda event: quit())
