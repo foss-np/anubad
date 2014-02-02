@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+# BUG: Tkinter Widget not taking utf-8 data
 # 2 and 3 compatibility
 # -*- coding: utf-8 -*-
 
@@ -18,52 +19,58 @@ except:
     from ttk import *
     from tkSimpleDialog import askstring
 
+import ttksearchbox.main as ttksbox
+
 filepath=os.path.abspath(__file__)
 fullpath=os.path.dirname(filepath)
 
+exec(open(fullpath+"/settings.conf").read())
 GLOSS=fullpath+"/foss_gloss/en2np/"
-import ttksearchbox.main as ttksbox
-
-list_col = [
-    ["#", "Word", "Nepali"],
-    [50, 250, 250]
-]
 
 DIRTY=False
 ADD_LOCK=True
 
-def_font=[ "DejaVuSansMono", 11 ]
+cols = [ "#", "en", "ne" ]
+
+col_attrib = [
+   #[ "id", "label", min-width, width, stretch, !show ],
+    [ "#", "#", 50, 50, 0, False ],
+    [ "en", "English", 250, 300, 1, False ],
+    [ "ne", "Nepali", 250, 90, 1, False ]
+]
 
 class BrowseList(Frame):
-    def __init__(self, parent=None):
+    def __init__(self, _gloss=None, parent=None):
         Frame.__init__(self, parent)
         self.visible = True
-        self.makeWidgets()
-        self.pack(expand=YES, side=TOP, fill=BOTH, anchor=N)
         self.popup=None
+        self.makeWidgets(cols, col_attrib)
+        self.bindWidgets()
+        self.GLOSS=_gloss
+        if self.GLOSS:
+            print("loading", _gloss)
+            self.fill_tree(self.GLOSS)
+
+        self.pack(expand=YES, side=TOP, fill=BOTH, anchor=N)
         self.make_popup()
-        self.GLOSS=None
 
-    def makeWidgets(self):
+    def makeWidgets(self, _c, _a):
         # a treeview
-        self.tree = ttk.Treeview(show="headings", columns=list_col[0])
-        self.tree.config(selectmode='browse') #one select at the time
-
-        self.tree.bind('<Button-3>', self.call_popup)
-        self.tree.bind('<Key>', key_press)
-        self.tree.bind('<Control-c>', clipboard)
+        self.tree = ttk.Treeview(self, show="headings", columns=_c)
+        self.tree.config(selectmode="browse")
 
         #self.tree.config(height=8) #def=10
         #self.tree.config(height=8, font=[ "DejaVuSansMono", 11 ])
 
         # adding header
-        for c, w in zip(list_col[0], list_col[1]):
-            self.tree.heading(c, text=c, command=lambda col=c: self.sortby(col, 0))
-            self.tree.column(c, width=w, minwidth=w)
+        for a in _a:
+            if a[-1]: continue
+            self.tree.heading(a[0], text=a[1], command=lambda aa=a[0]: self.sortby(aa, 0))
+            self.tree.column(a[0], minwidth=a[2], width=a[3], stretch=a[4])
 
         # adding scrollbar
-        vsb = Scrollbar(orient="vertical", command=self.tree.yview, takefocus=0)
-        hsb = Scrollbar(orient="horizontal", command=self.tree.xview, takefocus=0)
+        vsb = Scrollbar(self, orient="vertical", command=self.tree.yview, takefocus=0)
+        hsb = Scrollbar(self, orient="horizontal", command=self.tree.xview, takefocus=0)
         self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
         # packing to grid
@@ -73,6 +80,11 @@ class BrowseList(Frame):
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
+
+    def bindWidgets(self):
+        self.tree.bind('<Button-3>', self.call_popup)
+        self.tree.bind('<Control-Insert>', self.clipboard)
+        self.tree.bind('<Control-c>', self.clipboard)
 
     def sortby(self, col, descending): #column click sort
         data = [(self.tree.set(child, col), child) for child in self.tree.get_children('')]
@@ -85,49 +97,51 @@ class BrowseList(Frame):
         self.tree.heading(col,
             command=lambda col=col: self.sortby(col, int(not descending)))
 
-    def fill_tree(self, gloss_file):
-        print("loading", gloss_file)
-        self.GLOSS=gloss_file
-        try:
-            file=open(self.GLOSS, encoding="UTF-8").read().splitlines()
-        except:
-            file=open(self.GLOSS).read().splitlines()
-
+    def fill_tree(self, _gloss):
+        file=open(_gloss, encoding="UTF-8").read().splitlines()
         self.count=0
-        def insert_row(line):
-            self.count+=1
-            row=line.split(':')
-            row.insert(0, self.count)
-            row[2]=row[2][1:]
-            id=self.tree.insert('', 'end', values=row)
-            return id
-
-        select=insert_row(file[0])
 
         for line in file[1:]:
-            insert_row(line)
-
-        if self.count:
-            #show_count(count)
-            self.tree.selection_set(select)
-            self.tree.focus(select)
-            self.tree.focus_set()
+            self.count+=1
+            row=line.split(';')
+            row.insert(0, self.count)
+            row[2]=row[2][1:] # remove space
+            self.select=self.tree.insert('', 'end', values=row)
 
     def clear_tree(self):
         x = self.tree.get_children()
         for item in x: self.tree.delete(item)
+
+    def reload_tree(self):
+        self.clear_tree()
+        self.fill_tree(self.GLOSS)
+
+        # BUG: doesn't work well with tab-mode, you know why
+        # if self.count:
+        #     #show_count(count)
+        #     self.tree.selection_set(self.select)
+        #     self.tree.focus(self.select)
+        #     self.tree.focus_set()
 
     def toggle_display(self, *args):
         if self.visible: self.pack_forget()
         else: self.pack(expand=NO, side=TOP, fill=BOTH, anchor=N)
         self.visible = not self.visible
 
+    def clipboard(self, event):
+        # index=nb.index(nb.select())
+        # obj=glist[index]
+        sel=self.tree.item(self.tree.focus())
+        val=sel['values']
+        root.clipboard_clear()
+        root.clipboard_append(val[2])
+        print(val[2], "Copied to clipboard")
+
     def make_popup(self):
         popup = Menu(self, tearoff=0)
-
         popup.add_command(label="Edit", command=None)
-        popup.add_command(label="Open Directory", accelerator="Ctrl+o", command=open_dir)
-        popup.add_command(label="Open Gloss", command=open_gloss)
+        popup.add_command(label="Open Directory", accelerator="Ctrl+o", command=None)
+        popup.add_command(label="Open Gloss", command=None)
         popup.add_separator()
         popup.add_command(label="Reload", command=None)
         self.popup=popup
@@ -143,56 +157,81 @@ class BrowseList(Frame):
         self.tree.focus(POP_SELECT)
         self.tree.focus_set()
 
-def open_gloss(*events):
-    index=nb.index(nb.select())
-    obj=glist[index]
-    os.system("setsid %s %s"%("leafpad", obj.GLOSS))
-
-def open_dir(*events):
-    index=nb.index(nb.select())
-    obj=glist[index]
-    os.system("setsid %s %s"%("nautilus", obj.GLOSS))
-
-def reload_gloss(self):
-    index=nb.index(nb.select())
-    obj=glist[index]
-    obj.clear_tree()
-    obj.fill_tree(obj.GLOSS)
-    print("Reload %s"%obj.GLOSS)
-
-class BrowseNav(Frame):
+class GUI(Frame):
     def __init__(self, parent=None):
         Frame.__init__(self, parent)
         self.visible = True
+        self.glist=[]
         self.makeWidgets()
+        self.bindWidgets()
         self.pack(expand=NO, fill=X, side=TOP)
-        #self.config(background="#b2b2b2")
 
     def makeWidgets(self):
         # searchbox
         ttksbox.entrystyle()
         self.sbox=ttksbox.ttk.Entry(self, style="Search.entry", width=20)
         self.sbox.insert(0, "Search")
-        self.sbox.bind('<Button-1>', self.search_box)
-        self.sbox.bind('<Control-s>', search_box_emacs)
-        self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0,END))
-        #self.sbox.bind('<Control-a>', lambda e: self.sbox.select_range(0, END))
 
-
-        self.sbox.bind('<Return>', search_from_box)
-        self.sbox.bind('<Leave>', lambda e: root.bind('<Control-s>', search_box_emacs))
-
-        self.master.bind('<Control-f>', search_box_focus)
         self.found_status=Label(self) #TODO: GUI status display
 
         var=IntVar() # TODO: autocopy to clipboard
         self.cbox_acopy = tk.Checkbutton(self, text="auto copy", command=None, variable=var)
-        #self.cbox_acopy.config(background="#b2b2b2", relief=FLAT)
         var.set(1)
+
+        self.nb = ttk.Notebook()
+        self.nb.enable_traversal()
 
         #packing
         self.sbox.pack(expand=NO, side=RIGHT, fill=X)
         self.cbox_acopy.pack(side=LEFT)
+        self.nb.pack(expand=YES, fill=BOTH, side=BOTTOM)
+
+    def bindWidgets(self):
+        self.sbox.bind('<Button-1>', self.search_box)
+        self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0,END))
+        self.sbox.bind('<Control-g>', lambda e: self.sbox.delete(0,END))
+
+        self.sbox.bind('<Return>', search_from_box)
+
+        self.sbox.bind('<FocusIn>', self.sboxFocusIn)
+        self.sbox.bind('<FocusOut>', self.sboxFocusOut)
+        self.sbox.bind('<Control-i>', add_to_list)
+
+        root.bind('<Control-o>', self.open_dir)
+        root.bind('<Control-u>', self.open_gloss)
+        root.bind('<Key-F5>', self.reload_gloss)
+
+        root.bind('<Control-f>', self.sboxSetFocus)
+        root.bind('<Control-s>', self.sboxSetFocus)
+        root.bind('<Key>', key_press)
+
+    def sboxFocusIn(self, event):
+        nav.sbox.focus()
+        root.unbind('<Control-s>')
+        root.bind('<Control-s>', self.sbox_emacs_search_next)
+
+    def sboxFocusOut(self, event):
+        root.unbind('<Control-c>')
+        root.bind('<Key>', key_press)
+        root.bind('<Control-s>', self.sboxSetFocus)
+
+    def sboxSetFocus(self, event):
+        self.sbox.focus()
+        self.sbox.select_range(0, END)
+        root.unbind('<Control-s>')
+
+    def sbox_emacs_search_next(self, event):
+        sbox_text=self.sbox.get()
+        if sbox_text:
+            print(sbox_text)
+
+        # NOTE: this is the paste style code
+        # text=root.clipboard_get()
+        # if text=="" or text:
+        #     self.sbox.delete(0, END)
+        #     self.sbox.insert(0, text)
+        # else:
+        #     self.sbox.select_range(0, END)
 
     def search_box(self, *args):
         text=self.sbox.get()
@@ -203,18 +242,42 @@ class BrowseNav(Frame):
         else: self.pack(expand=NO, fill=X, side=TOP)
         self.visible = not self.visible
 
-def search_box_focus(event):
-    nav.sbox.focus()
-    nav.sbox.select_range(0, END)
-    root.unbind('<Control-s>')
+    def switch_tab(self, event):
+        index=int(event.char)-1
+        obj=self.glist[index]
+        # BUG: object focus after tabswitch not working properly
+        # print(index, tab, tab_info[tab])
+        self.nb.select(index)
+        # obj.tree.focus(obj.tree.focus())
 
-def search_box_emacs(event):
-    text=root.clipboard_get()
-    if text=="" or text:
-        nav.sbox.delete(0, END)
-        nav.sbox.insert(0, text)
-    else:
-        nav.sbox.select_range(0, END)
+
+    # TODO: add the decorator in all this stuffs :D
+    def open_gloss(self, *events):
+        index=self.nb.index(self.nb.select())
+        obj=self.glist[index]
+        os.system("setsid %s %s"%("leafpad", obj.GLOSS))
+
+    def open_dir(self, *events):
+        index=self.nb.index(self.nb.select())
+        obj=self.glist[index]
+        os.system("setsid %s %s"%(FILEMGR, obj.GLOSS))
+
+    def reload_gloss(self, *events):
+        index=self.nb.index(self.nb.select())
+        obj=self.glist[index]
+        obj.reload_tree()
+        print("Reload %s"%obj.GLOSS)
+
+    def load_files(self):
+        for i, file in enumerate(os.listdir(GLOSS)):
+            if not file[-4:] in FILE_TYPES: continue
+            obj=BrowseList(GLOSS+file)
+            self.nb.add(obj, text=file, padding=3)
+            self.glist.append(obj)
+            if i < 10:
+                root.bind('<Alt-KeyPress-%d>'%(i+1), self.switch_tab)
+
+        return self.glist
 
 def key_press(event):
     typed=event.char
@@ -222,6 +285,7 @@ def key_press(event):
     nav.sbox.delete(0, END)
     nav.sbox.insert(0, typed)
     nav.sbox.focus()
+    root.unbind('<Key>')
 
 def search_from_box(*args):
     global word
@@ -231,13 +295,15 @@ def search_from_box(*args):
     if word.isalpha(): lang=1;
     else: lang=2
 
-    for i, obj in enumerate(glist):
+    for i, obj in enumerate(nav.glist):
         if search_tree(i, obj, word):
+            nav.sbox.select_range(0, END)
             return
 
     print("\"%s\" not found"%word)
+
     #generate_near_words
-    for i, obj in enumerate(glist):
+    for i, obj in enumerate(nav.glist):
         print(find_near(i, obj, word));
 
     global ADD_LOCK
@@ -249,7 +315,7 @@ def search_tree(tab, obj, word):
         sel=obj.tree.item(item)
         val=sel['values'][lang]
         if val==word:
-            nb.select(tab)
+            nav.nb.select(tab)
             obj.tree.selection_set(item)
             obj.tree.focus(item)
             obj.tree.focus_set()
@@ -302,8 +368,8 @@ def add_to_list(*args):
     anubad=askstring("Entry", "anubad: %s"%word)
     if not anubad: return
 
-    i=nb.index(nb.select())
-    obj=glist[i]
+    i=nav.nb.index(nav.nb.select())
+    obj=nav.glist[i]
 
     obj.count+=1
     row = [ obj.count, word, anubad ]
@@ -313,60 +379,24 @@ def add_to_list(*args):
     obj.tree.focus(select)
     obj.tree.focus_set()
     obj.tree.yview(int(select[1:], 16)-1)
-    fp=open(obj.GLOSS, 'a').write("\n"+word+": "+anubad)
+    fp=open(obj.GLOSS, 'a').write("\n"+word+"; "+anubad)
     print(fp)
 
-def clipboard(*args):
-    index=nb.index(nb.select())
-    obj=glist[index]
-    sel=obj.tree.item(obj.tree.focus())
-    val=sel['values']
-    root.clipboard_clear()
-    root.clipboard_append(val[2])
-    print(val[2], "Copied to clipboard")
-
-# def edit(*args):
-#     print("Editing current value")
-#     obj=tab_info[nb.select()]
-#     sel=obj.tree.item(obj.tree.focus())
-#     val=sel['values']
-#     anubad=askstring("Modify", "Edit %s"%val[1])
-
 def cli_mode(list):
-    file=open(GLOSS).read()#.splitlines()
-    for word in list:
-        found=file.find(word)
-        if found == -1:
-            print("%s Not Found"%word)
-            break
-        for i, char in enumerate(file[found:]):
-            if char=='\n': break
-            print(char)
-        #os.system("echo %s | xclip -i"%file[found:found+i])
+    file=open(GLOSS).read()
+    print("CLI-mode Currenly Disabled")
+    # for word in list:
+    #     found=file.find(word)
+    #     if found == -1:
+    #         print("%s Not Found"%word)
+    #         break
+    #     for i, char in enumerate(file[found:]):
+    #         if char=='\n': break
+    #         print(char)
+    #     #os.system("echo %s | xclip -i"%file[found:found+i])
 
-        print()
+    #     print()
 
-def switch_tab(event):
-    index=int(event.char)-1
-    obj=glist[index]
-    # BUG: object focus after tabswitch not working properly
-    # print(index, tab, tab_info[tab])
-    nb.select(index)
-    obj.tree.focus(obj.tree.focus())
-
-def load_files():
-    global glist
-    glist=[]
-    top=1
-    for file in os.listdir(GLOSS):
-        if file[-4:] in [ ".tsl", ".fun", ".abb", ".tra" ]:
-            obj=BrowseList()
-            obj.fill_tree(GLOSS+file)
-            nb.add(obj, text=file, padding=3)
-            glist.append(obj)
-            if top < 10:
-                root.bind('<Alt-KeyPress-%d>'%top, switch_tab)
-            top+=1
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -375,19 +405,11 @@ if __name__ == '__main__':
 
     root=Tk()
     root.title("anubad")
-    nav=BrowseNav()
-    nav.sbox.bind('<Control-i>', add_to_list)
 
-    nb = ttk.Notebook()
-    nb.pack(expand=YES, fill=BOTH )
-    load_files()
-    nb.enable_traversal()
+    nav=GUI()
+    nav.load_files()
 
-    root.bind('<Control-s>', search_box_focus)
-    root.bind('<Control-o>', open_dir)
-    root.bind('<Control-u>', open_gloss)
-    root.bind('<Key-F5>', reload_gloss)
-    root.bind('<Control-Insert>', clipboard)
     root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())
+
     root.mainloop()
