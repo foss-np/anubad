@@ -1,12 +1,9 @@
 #!/usr/bin/python
-
-# BUG: Tkinter Widget not taking utf-8 data
-# 2 and 3 compatibility
 # -*- coding: utf-8 -*-
 
 import os, sys
 
-try:
+try: # py2/3 compatibility
     import tkinter as tk
     from tkinter import *
     from tkinter import ttk
@@ -36,7 +33,7 @@ col_attrib = [
    #[ "id", "label", min-width, width, stretch, !show ],
     [ "#", "#", 50, 50, 0, False ],
     [ "en", "English", 250, 300, 1, False ],
-    [ "ne", "Nepali", 250, 90, 1, False ]
+    [ "ne", "नेपाली", 250, 90, 1, False ]
 ]
 
 class BrowseList(Frame):
@@ -98,11 +95,20 @@ class BrowseList(Frame):
             command=lambda col=col: self.sortby(col, int(not descending)))
 
     def fill_tree(self, _gloss):
-        file=open(_gloss, encoding="UTF-8").read().splitlines()
+        try: # py2/3 compatibility
+            file=open(self.GLOSS, encoding="UTF-8").read().splitlines()
+        except:
+            file=open(self.GLOSS).read().splitlines()
+
         self.count=0
 
-        for line in file[1:]:
+        for line in file:
             self.count+=1
+            try:  # py2/3 compatibility
+                line=line.decode('utf-8')
+            except:
+                pass
+
             row=line.split(';')
             row.insert(0, self.count)
             row[2]=row[2][1:] # remove space
@@ -191,7 +197,8 @@ class GUI(Frame):
         self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0,END))
         self.sbox.bind('<Control-g>', lambda e: self.sbox.delete(0,END))
 
-        self.sbox.bind('<Return>', search_from_box)
+        # TODO: will do the complete search
+        self.sbox.bind('<Return>', sbox_next_search)
 
         self.sbox.bind('<FocusIn>', self.sboxFocusIn)
         self.sbox.bind('<FocusOut>', self.sboxFocusOut)
@@ -223,15 +230,11 @@ class GUI(Frame):
     def sbox_emacs_search_next(self, event):
         sbox_text=self.sbox.get()
         if sbox_text:
-            print(sbox_text)
-
-        # NOTE: this is the paste style code
-        # text=root.clipboard_get()
-        # if text=="" or text:
-        #     self.sbox.delete(0, END)
-        #     self.sbox.insert(0, text)
-        # else:
-        #     self.sbox.select_range(0, END)
+            sbox_next_search();
+        else: # if empty get from clipboard
+            clip_text=root.clipboard_get()
+            if clip_text:
+                self.sbox.insert(0, clip_text)
 
     def search_box(self, *args):
         text=self.sbox.get()
@@ -287,7 +290,7 @@ def key_press(event):
     nav.sbox.focus()
     root.unbind('<Key>')
 
-def search_from_box(*args):
+def sbox_next_search(*args):
     global word
     word=nav.sbox.get().lower().strip()
 
