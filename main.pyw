@@ -1,12 +1,9 @@
 #!/usr/bin/python
-
-# BUG: Tkinter Widget not taking utf-8 data
-# 2 and 3 compatibility
 # -*- coding: utf-8 -*-
 
 import os, sys
 
-try:
+try: # py2/3 compatibility
     import tkinter as tk
     from tkinter import *
     from tkinter import ttk
@@ -25,7 +22,7 @@ filepath=os.path.abspath(__file__)
 fullpath=os.path.dirname(filepath)
 
 exec(open(fullpath+"/settings.conf").read())
-GLOSS=fullpath+"/foss_gloss/en2np/"
+PATH_GLOSS=fullpath+PATH_GLOSS
 
 DIRTY=False
 ADD_LOCK=True
@@ -36,7 +33,7 @@ col_attrib = [
    #[ "id", "label", min-width, width, stretch, !show ],
     [ "#", "#", 50, 50, 0, False ],
     [ "en", "English", 250, 300, 1, False ],
-    [ "ne", "Nepali", 250, 90, 1, False ]
+    [ "ne", "नेपाली", 250, 90, 1, False ]
 ]
 
 class BrowseList(Frame):
@@ -48,7 +45,8 @@ class BrowseList(Frame):
         self.bindWidgets()
         self.GLOSS=_gloss
         if self.GLOSS:
-            print("loading", _gloss)
+            # avoid utf-8 print in terminal
+            print("loading", self.GLOSS.split('/')[-1])
             self.fill_tree(self.GLOSS)
 
         self.pack(expand=YES, side=TOP, fill=BOTH, anchor=N)
@@ -98,11 +96,20 @@ class BrowseList(Frame):
             command=lambda col=col: self.sortby(col, int(not descending)))
 
     def fill_tree(self, _gloss):
-        file=open(_gloss, encoding="UTF-8").read().splitlines()
+        try: # py2/3 compatibility
+            file=open(self.GLOSS, encoding="UTF-8").read().splitlines()
+        except:
+            file=open(self.GLOSS).read().splitlines()
+
         self.count=0
 
-        for line in file[1:]:
+        for line in file:
             self.count+=1
+            try:  # py2/3 compatibility
+                line=line.decode('utf-8')
+            except:
+                pass
+
             row=line.split(';')
             row.insert(0, self.count)
             row[2]=row[2][1:] # remove space
@@ -116,12 +123,14 @@ class BrowseList(Frame):
         self.clear_tree()
         self.fill_tree(self.GLOSS)
 
-        # BUG: doesn't work well with tab-mode, you know why
-        # if self.count:
-        #     #show_count(count)
-        #     self.tree.selection_set(self.select)
-        #     self.tree.focus(self.select)
-        #     self.tree.focus_set()
+    def treeSetFocus(self):
+        print("%5d"%self.count, self.GLOSS.split('/')[-1])
+        if self.tree.focus()!="": return
+
+        if self.count:
+            self.tree.selection_set('I001')
+            self.tree.focus('I001')
+            self.tree.focus_set()
 
     def toggle_display(self, *args):
         if self.visible: self.pack_forget()
@@ -135,7 +144,7 @@ class BrowseList(Frame):
         val=sel['values']
         root.clipboard_clear()
         root.clipboard_append(val[2])
-        print(val[2], "Copied to clipboard")
+        print("Copied to clipboard")
 
     def make_popup(self):
         popup = Menu(self, tearoff=0)
@@ -187,11 +196,11 @@ class GUI(Frame):
         self.nb.pack(expand=YES, fill=BOTH, side=BOTTOM)
 
     def bindWidgets(self):
-        self.sbox.bind('<Button-1>', self.search_box)
         self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0,END))
         self.sbox.bind('<Control-g>', lambda e: self.sbox.delete(0,END))
 
-        self.sbox.bind('<Return>', search_from_box)
+        # TODO: will do the complete search
+        self.sbox.bind('<Return>', sbox_next_search)
 
         self.sbox.bind('<FocusIn>', self.sboxFocusIn)
         self.sbox.bind('<FocusOut>', self.sboxFocusOut)
@@ -223,33 +232,24 @@ class GUI(Frame):
     def sbox_emacs_search_next(self, event):
         sbox_text=self.sbox.get()
         if sbox_text:
-            print(sbox_text)
-
-        # NOTE: this is the paste style code
-        # text=root.clipboard_get()
-        # if text=="" or text:
-        #     self.sbox.delete(0, END)
-        #     self.sbox.insert(0, text)
-        # else:
-        #     self.sbox.select_range(0, END)
-
-    def search_box(self, *args):
-        text=self.sbox.get()
-        if text: search_from_box();
+            sbox_next_search();
+        else: # if empty get from clipboard
+            clip_text=root.clipboard_get()
+            if clip_text:
+                self.sbox.insert(0, clip_text)
 
     def toggle_display(self, *args):
         if self.visible: self.pack_forget()
         else: self.pack(expand=NO, fill=X, side=TOP)
         self.visible = not self.visible
 
-    def switch_tab(self, event):
-        index=int(event.char)-1
-        obj=self.glist[index]
+    def switch_tab(self, *event):
+        tab=int(event[0].char)-1
+        obj=self.glist[tab]
         # BUG: object focus after tabswitch not working properly
         # print(index, tab, tab_info[tab])
-        self.nb.select(index)
-        # obj.tree.focus(obj.tree.focus())
-
+        self.nb.select(tab)
+        obj.treeSetFocus()
 
     # TODO: add the decorator in all this stuffs :D
     def open_gloss(self, *events):
@@ -269,9 +269,9 @@ class GUI(Frame):
         print("Reload %s"%obj.GLOSS)
 
     def load_files(self):
-        for i, file in enumerate(os.listdir(GLOSS)):
+        for i, file in enumerate(os.listdir(PATH_GLOSS)):
             if not file[-4:] in FILE_TYPES: continue
-            obj=BrowseList(GLOSS+file)
+            obj=BrowseList(PATH_GLOSS+file)
             self.nb.add(obj, text=file, padding=3)
             self.glist.append(obj)
             if i < 10:
@@ -287,7 +287,7 @@ def key_press(event):
     nav.sbox.focus()
     root.unbind('<Key>')
 
-def search_from_box(*args):
+def sbox_next_search(*args):
     global word
     word=nav.sbox.get().lower().strip()
 
@@ -319,6 +319,7 @@ def search_tree(tab, obj, word):
             obj.tree.selection_set(item)
             obj.tree.focus(item)
             obj.tree.focus_set()
+            root.update()
             obj.tree.yview(int(item[1:], 16)-1)
             return True
     return False
@@ -374,6 +375,7 @@ def add_to_list(*args):
     obj.count+=1
     row = [ obj.count, word, anubad ]
     select=obj.tree.insert('', 'end', values=row)
+
     # TODO: make class method do view
     obj.tree.selection_set(select)
     obj.tree.focus(select)
@@ -408,6 +410,7 @@ if __name__ == '__main__':
 
     nav=GUI()
     nav.load_files()
+    nav.glist[0].treeSetFocus()
 
     root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())

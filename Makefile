@@ -9,6 +9,11 @@ py2:
 cli:
 	./main.pyw hello
 
+wine:
+	# note should load from same directory
+	# and please set the python path in wine
+	wine python main.pyw
+
 dist:
 	rm -f "$(NAME).7z"
 	7z a "$(NAME)" $(PWD)

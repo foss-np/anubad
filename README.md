@@ -6,6 +6,11 @@ tkinter interface
   Copyright © 2013 to the Anubad Authors.
 ___
 
+## Features
+
+- py2/3 compatible
+- mswin compatible
+
 #### To run
 
 ```bash
