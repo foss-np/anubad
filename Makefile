@@ -1,13 +1,13 @@
 NAME=`basename $(PWD)`
 
 run:
-	./main.py
+	./main.pyw
 
 py2:
-	python2 main.py
+	python2 main.pyw
 
 cli:
-	./main.py hello
+	./main.pyw hello
 
 dist:
 	rm -f "$(NAME).7z"
