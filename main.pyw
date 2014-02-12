@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os, sys
+import copy
 
 try: # py2/3 compatibility
     import tkinter as tk
@@ -16,12 +17,13 @@ except:
     from ttk import *
     from tkSimpleDialog import askstring
 
-import ttksearchbox.main as ttksbox
+import plug_ins.ttksearchbox.main as ttksbox
 
 filepath=os.path.abspath(__file__)
 fullpath=os.path.dirname(filepath)
 
 exec(open(fullpath+"/settings.conf").read())
+exec(open(fullpath+"/my.conf").read())
 PATH_GLOSS=fullpath+PATH_GLOSS
 
 DIRTY=False
@@ -41,6 +43,7 @@ class BrowseList(Frame):
         Frame.__init__(self, parent)
         self.visible = True
         self.popup=None
+        self.copy_smart=False
         self.makeWidgets(cols, col_attrib)
         self.bindWidgets()
         self.GLOSS=_gloss
@@ -82,7 +85,7 @@ class BrowseList(Frame):
     def bindWidgets(self):
         self.tree.bind('<Button-3>', self.call_popup)
         self.tree.bind('<Control-Insert>', self.clipboard)
-        self.tree.bind('<Control-c>', self.clipboard)
+        self.tree.bind('<Control-c>', self.clipboard_smart)
 
     def sortby(self, col, descending): #column click sort
         data = [(self.tree.set(child, col), child) for child in self.tree.get_children('')]
@@ -113,7 +116,9 @@ class BrowseList(Frame):
             row=line.split(';')
             row.insert(0, self.count)
             row[2]=row[2][1:] # remove space
-            self.select=self.tree.insert('', 'end', values=row)
+            self.select=self.tree.insert('', 'end', values=row, tag="npfont")
+
+        self.tree.tag_configure("npfont", font=def_font)
 
     def clear_tree(self):
         x = self.tree.get_children()
@@ -124,20 +129,21 @@ class BrowseList(Frame):
         self.fill_tree(self.GLOSS)
 
     def treeSetFocus(self):
-        print("%5d"%self.count, self.GLOSS.split('/')[-1])
-        if self.tree.focus()!="": return
+        if not self.count: return # if no data
 
-        if self.count:
+        if self.tree.focus() == "":
+            print("%5d"%self.count, self.GLOSS.split('/')[-1])
             self.tree.selection_set('I001')
             self.tree.focus('I001')
-            self.tree.focus_set()
+
+        self.tree.focus_set()
 
     def toggle_display(self, *args):
         if self.visible: self.pack_forget()
         else: self.pack(expand=NO, side=TOP, fill=BOTH, anchor=N)
         self.visible = not self.visible
 
-    def clipboard(self, event):
+    def clipboard(self, *event):
         # index=nb.index(nb.select())
         # obj=glist[index]
         sel=self.tree.item(self.tree.focus())
@@ -145,6 +151,27 @@ class BrowseList(Frame):
         root.clipboard_clear()
         root.clipboard_append(val[2])
         print("Copied to clipboard")
+
+    def clipboard_smart(self, event):
+        try: # seem like in there is no var defined
+            old_val=root.clipboard_get()
+        except:
+            old_val=""
+
+        sel=self.tree.item(self.tree.focus())
+        val=sel['values']
+        new_val=val[2].split(',')[0]
+
+        root.clipboard_clear()
+
+        if old_val==new_val:
+            self.copy_smart=True
+            root.clipboard_append(val[2])
+        else:
+            root.clipboard_append(new_val)
+
+
+        print("smart clipboard")
 
     def make_popup(self):
         popup = Menu(self, tearoff=0)
@@ -212,6 +239,7 @@ class GUI(Frame):
 
         root.bind('<Control-f>', self.sboxSetFocus)
         root.bind('<Control-s>', self.sboxSetFocus)
+        root.bind('<Control-l>', self.sboxSetFocus)
         root.bind('<Key>', key_press)
 
     def sboxFocusIn(self, event):
@@ -269,6 +297,8 @@ class GUI(Frame):
         print("Reload %s"%obj.GLOSS)
 
     def load_files(self):
+        # TODO: here prototype pattern can be applied
+        # WISH: do the profile before and after
         for i, file in enumerate(os.listdir(PATH_GLOSS)):
             if not file[-4:] in FILE_TYPES: continue
             obj=BrowseList(PATH_GLOSS+file)
@@ -278,6 +308,25 @@ class GUI(Frame):
                 root.bind('<Alt-KeyPress-%d>'%(i+1), self.switch_tab)
 
         return self.glist
+
+    def load_files_prototype_pattern(self):
+        ori_obj=BrowseList()
+
+        for i, file in enumerate(os.listdir(PATH_GLOSS)):
+            if not file[-4:] in FILE_TYPES: continue
+            print("loading", file)
+            obj = copy.deepcopy(ori_obj)
+            obj.GLOSS=PATH_GLOSS+file
+            obj.fill_tree(PATH_GLOSS+file)
+            self.nb.add(obj, text=file, padding=3)
+            self.glist.append(obj)
+            if i < 10:
+                root.bind('<Alt-KeyPress-%d>'%(i+1), self.switch_tab)
+
+        return self.glist
+
+
+
 
 def key_press(event):
     typed=event.char
@@ -302,10 +351,6 @@ def sbox_next_search(*args):
 
     print("\"%s\" not found"%word)
 
-    #generate_near_words
-    for i, obj in enumerate(nav.glist):
-        print(find_near(i, obj, word));
-
     global ADD_LOCK
     ADD_LOCK=False
 
@@ -323,40 +368,6 @@ def search_tree(tab, obj, word):
             obj.tree.yview(int(item[1:], 16)-1)
             return True
     return False
-
-def find_near(tab, obj, word):
-    #get the maximum matched string?
-    match = 1000 #leser-the-better
-    holder = []
-    list = obj.tree.get_children()
-    for item in list:
-        sel=obj.tree.item(item)
-        val=sel['values'][lang]
-        #print(val.__doc__)
-        #print(word.__doc__)
-        dis = lev_dis(word, val)
-        if(dis < match):
-            match = dis
-            holder = []
-            holder.append(val+str(match))
-        elif(dis == match):
-            holder.append(val+str(match))
-    return holder
-#End find_near
-
-def lev_dis(seq1,seq2):
-    oneago = None
-    thisrow = list(range(1, len(seq2) + 1))
-    thisrow.append(0)
-    for x in range(len(seq1)):
-        twoago, oneago, thisrow = oneago, thisrow, [0] * len(seq2) + [x + 1]
-        for y in range(len(seq2)):
-            delcost = oneago[y] + 1
-            addcost = thisrow[y - 1] + 1
-            subcost = oneago[y - 1] + (seq1[x] != seq2[y])
-            thisrow[y] = min(delcost, addcost, subcost)
-    return thisrow[len(seq2) - 1]
-#End lev_dis
 
 def add_to_list(*args):
     global ADD_LOCK, word
@@ -399,20 +410,23 @@ def cli_mode(list):
 
     #     print()
 
-
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         cli_mode(sys.argv[1:])
         exit()
 
     root=Tk()
-    root.title("anubad")
+    root.title("anubad - आनुबाद")
 
     nav=GUI()
     nav.load_files()
+    #nav.load_files_prototype_pattern()
     nav.glist[0].treeSetFocus()
 
     root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())
+
+    # TODO: auto-add plug-ins
+    exec(open(fullpath+"/plug_ins/dicts.py").read())
 
     root.mainloop()
