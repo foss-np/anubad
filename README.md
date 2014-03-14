@@ -11,6 +11,14 @@ ___
 - py2/3 compatible
 - mswin compatible
 
+#### clone it
+
+it content submodules 
+
+git clone -r 
+
+
+
 #### To run
 
 ```bash

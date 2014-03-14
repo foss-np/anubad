@@ -1,5 +1,7 @@
 NAME=`basename $(PWD)`
 
+default: run
+
 run:
 	./main.pyw
 
@@ -17,3 +19,9 @@ wine:
 dist:
 	rm -f "$(NAME).7z"
 	7z a "$(NAME)" $(PWD)
+
+browser:
+	./browselst.py
+
+viewer:
+	./viewer.py
