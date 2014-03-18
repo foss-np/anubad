@@ -1,6 +1,11 @@
 #!/bin/bash
 
-git submodule init
-git submodule update
+if [[ -e .git ]]; then
+    git submodule init
+    git submodule update
+    touch ttksearchbox/__init__.py
+fi
 
-touch ttksearchbox/__init__.py
+
+wget https://github.com/bekar/ttksearchbox/archive/0.5-alpha.tar.gz
+wget https://github.com/foss-np/np-l10n-glossary/archive/0.5.tar.gz

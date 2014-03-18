@@ -46,7 +46,8 @@ class Viewer(Text):
 
         >>> obj = Viewer(root=root)
         >>> obj.pack()
-        >>> obj.parser([1, "hello", "नमस्कार"])
+        >>> data = [1, 'I001', "hello", "नमस्कार"]
+        >>> obj.parser(data)
         """
         print(lst)
         href=lst[0:2]
@@ -67,27 +68,35 @@ class Viewer(Text):
         trasliterate = ""
         traslation = []
         pos = "undefined"
+        level = 0
 
         fbreak = ftsl = 0
         # TODO: dictonary map of pos-tags
         for i, c in enumerate(raw):
-            if c == '[': ftsl = i
+            if c == '[': ftsl = i; level += 1
             elif c == ']':
                 trasliterate = raw[ftsl+1:i]
                 ftsl = i + 2
-                fbreak = i
+                fbreak = i + 2
+                level -= 1
             elif c == '(':
                 pos = raw[fbreak:i]
                 fbreak = i + 1
-            # elif c == ',':
-            #     fbreak = i+2
+                level += 1
+            elif c == ',':
+                if raw[i-1] in ')]': continue
+                if level > 0: continue
+                traslation.append([pos, raw[fbreak:i]])
+                fbreak = i+2
             elif c == ')':
                 traslation.append([pos, raw[fbreak:i]])
                 pos = "undefined"
                 fbreak = i+3
+                level -= 1
 
-        if len(traslation) == 0:
-            traslation.append([pos, raw[ftsl:]])
+
+        if i - fbreak > 2:
+            traslation.append([pos, raw[fbreak:]])
 
         self.insert(END, '\t['+trasliterate+']\n', "tsl")
         for c, t in enumerate(traslation):

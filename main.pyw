@@ -68,6 +68,7 @@ class GUI(Frame):
         self.nb.enable_traversal()
 
         self.out = Viewer(self, root)
+        #self.out = Text(root)
 
         #packing
         self.sbox.pack(expand=YES, side=LEFT, fill=X)
@@ -152,6 +153,7 @@ class GUI(Frame):
     def load_files(self):
         # TODO: here prototype pattern can be applied
         # WISH: do the profile before and after
+        # NOTE: some other patterns is here
         for i, file in enumerate(os.listdir(PATH_GLOSS)):
             if not file[-4:] in FILE_TYPES: continue
             obj = BrowseList(PATH_GLOSS+file)
@@ -217,7 +219,11 @@ def search_tree(tab, obj, word, lang):
     for item in list:
         sel = obj.tree.item(item)
         if sel['values'][lang] == word:
-            gui.out.parser([tab, item]+sel['values'][1:])
+            try:
+                gui.out.parser([tab, item]+sel['values'][1:])
+            except:
+                gui.out.insert(END, [tab, item]+sel['values'][1:])
+
             gui.word.append(word)
             gui.sbox.config(values=gui.word)
             return True
@@ -300,8 +306,10 @@ if __name__ == '__main__':
 
     # TODO: plugin module: trasliterate validity test
 
+    # TODO: import mechanism
+
     root = Tk()
-    root.title("anubad - आनुबाद")
+    root.title("anubad - आनुवाद")
 
     # BL.root = root
     # Vi.root = root
@@ -315,6 +323,9 @@ if __name__ == '__main__':
     root.bind('<Control-d>', lambda event: quit())
 
     # TODO: auto-add plug-ins
-    exec(open(fullpath+"/plug_ins/dicts.py").read())
+    try:
+        exec(open(fullpath+"/plug_ins/dicts.py").read())
+    except:
+        pass
 
     root.mainloop()
