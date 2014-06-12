@@ -13,15 +13,12 @@ ___
 
 #### clone it
 
-it content submodules 
-
-git clone -r 
-
+git clone --recursive https://github.com/foss-np/anubad
+###### **Note** you need to do recursive since it has submodules
 
 
 #### To run
 
 ```bash
-./configure
-make
+./main.sh # OR `python main.sh` OR just run `make`
 ```
