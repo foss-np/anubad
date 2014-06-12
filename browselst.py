@@ -113,7 +113,12 @@ class BrowseList(Frame):
 
             row = line.split(';')
             row.insert(0, self.count)
-            row[2] = row[2][1:] # remove space
+            try:
+                row[2] = row[2][1:] # remove space
+            except:
+                print("File Format Error: %s: %d"%(self.GLOSS, self.count))
+                exit()
+
             self.select = self.tree.insert('', 'end', values=row, tag="npfont")
 
         self.tree.tag_configure("npfont", font=def_font)

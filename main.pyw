@@ -229,7 +229,7 @@ def search_tree(tab, obj, word, lang):
             return True
     return False
 
-# NOTE: this is decorator pattern
+# NOTE: this is not the decorator pattern
 def _click(event, href):
     gui.nb.select(href[0])
     obj = gui.glist[href[0]]

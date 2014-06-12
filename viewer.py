@@ -94,8 +94,7 @@ class Viewer(Text):
                 fbreak = i+3
                 level -= 1
 
-
-        if i - fbreak > 2:
+        if i - fbreak > 2 or len(traslation) < 1:
             traslation.append([pos, raw[fbreak:]])
 
         self.insert(END, '\t['+trasliterate+']\n', "tsl")
