@@ -159,7 +159,7 @@ class GUI(Frame):
             obj = BrowseList(PATH_GLOSS+file)
             self.nb.add(obj, text=file, padding=3)
             self.glist.append(obj)
-            if i < 10:
+            if i < 9:
                 root.bind('<Alt-KeyPress-%d>'%(i+1), self.switch_tab)
 
         return self.glist
@@ -317,7 +317,9 @@ if __name__ == '__main__':
     gui = GUI()
     gui.load_files()
     #gui.load_files_prototype_pattern()
-    gui.glist[0].treeSetFocus()
+
+    gui.nb.select('4')
+    gui.glist[4].treeSetFocus()
 
     root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())
