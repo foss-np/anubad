@@ -137,12 +137,12 @@ class GUI(Frame):
     def open_gloss(self, *events):
         index = self.nb.index(self.nb.select())
         obj = self.glist[index]
-        os.system("setsid %s %s"%("leafpad", obj.GLOSS))
+        os.system("setsid xdg-open %s"%obj.GLOSS)
 
     def open_dir(self, *events):
         index = self.nb.index(self.nb.select())
         obj = self.glist[index]
-        os.system("setsid %s %s"%(FILEMGR, obj.GLOSS))
+        os.system("setsid xdg-open %s"%obj.GLOSS)
 
     def reload_gloss(self, *events):
         index = self.nb.index(self.nb.select())
