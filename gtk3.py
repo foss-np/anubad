@@ -74,21 +74,21 @@ class GUI():
         layout.add(self.cb_search)#, 0, 0, 2, 1)
 
         self.b_search = Gtk.Button(label="Search")
-        self.b_search.connect("clicked", self.searchWord)
+        self.b_search.connect('clicked', self.cb_bind_search_btn_click)
         layout.attach(self.b_search, 1, 0, 1, 1)
 
         ## Viewer
-        scrolledwindow = Gtk.ScrolledWindow()
-        scrolledwindow.set_hexpand(True)
-        scrolledwindow.set_vexpand(True)
-        layout.attach(scrolledwindow, 0, 1, 2, 2)
+        self.scrolledwindow = Gtk.ScrolledWindow()
+        self.scrolledwindow.set_hexpand(True)
+        self.scrolledwindow.set_vexpand(True)
+        layout.attach(self.scrolledwindow, 0, 1, 2, 2)
 
         self.textview = Gtk.TextView()
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
 
         self.textbuffer = self.textview.get_buffer()
         self.textbuffer.set_text("Type Something to Search")
-        scrolledwindow.add(self.textview)
+        self.scrolledwindow.add(self.textview)
 
         self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
         self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
@@ -106,10 +106,27 @@ class GUI():
         if event.keyval == 65293:
             self.searchWord(widget, event)
 
+    def cb_bind_search_btn_click(self, widget):
+        self.searchWord(widget,"clicked")
+
     def searchWord(self, widget, event):
         entry = self.cb_search.get_child()
-        print("Entered: %s" % entry.get_text())
-
+        val = entry.get_text()
+        val = (val.strip()).lower()
+        foundFlag = False
+        print("Entered: %s" % val)
+        for row in self.lview.liststore:
+            if(row[1]==val):
+                print("# %d - %s - %s " % (row[0], row[1], row[2]) )
+                self.textbuffer.set_text("%s -> %s" %(row[1], row[2]) )
+                self.scrolledwindow.add(self.textview)
+                foundFlag = True
+                break
+        if(foundFlag is False):
+            self.textbuffer.set_text("Sorry, %s was not found" %(val))
+            self.scrolledwindow.add(self.textview)
+        #Now perform Lev Distance
+        #calc_lev_dist() -- future 
         # print(self.lview.liststore.iter_next(0))
         # help(self.lview.liststore.get_data)
         # print(self.lview.liststore.get_data)
