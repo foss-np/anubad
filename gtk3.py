@@ -111,22 +111,21 @@ class GUI():
 
     def searchWord(self, widget, event):
         entry = self.cb_search.get_child()
-        val = entry.get_text()
-        val = (val.strip()).lower()
+        val = entry.get_text().strip().lower()
+
         foundFlag = False
-        print("Entered: %s" % val)
-        for row in self.lview.liststore:
-            if(row[1]==val):
-                print("# %d - %s - %s " % (row[0], row[1], row[2]) )
-                self.textbuffer.set_text("%s -> %s" %(row[1], row[2]) )
-                self.scrolledwindow.add(self.textview)
-                foundFlag = True
-                break
-        if(foundFlag is False):
-            self.textbuffer.set_text("Sorry, %s was not found" %(val))
-            self.scrolledwindow.add(self.textview)
+        for n, en, np in self.lview.liststore:
+            if en != val : continue
+            print("#%-4d %s - %s "%(n, en, np))
+            self.textbuffer.set_text("%s -> %s" %(en, np))
+            foundFlag = True
+            break
+
+        if foundFlag is False:
+            self.textbuffer.set_text('Sorry, "%s" was not found'%val)
+
         #Now perform Lev Distance
-        #calc_lev_dist() -- future 
+        #calc_lev_dist() -- future
         # print(self.lview.liststore.iter_next(0))
         # help(self.lview.liststore.get_data)
         # print(self.lview.liststore.get_data)
