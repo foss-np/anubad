@@ -309,7 +309,7 @@ if __name__ == '__main__':
     # TODO: import mechanism
 
     root = Tk()
-    root.title("anubad - आनुवाद")
+    root.title("anubad - अनुवाद")
 
     # BL.root = root
     # Vi.root = root
@@ -318,8 +318,8 @@ if __name__ == '__main__':
     gui.load_files()
     #gui.load_files_prototype_pattern()
 
-    gui.nb.select('4')
-    gui.glist[4].treeSetFocus()
+    gui.nb.select('3')
+    gui.glist[3].treeSetFocus()
 
     root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())

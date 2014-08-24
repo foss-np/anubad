@@ -90,7 +90,7 @@ class Viewer(Text):
                 fbreak = i+2
             elif c == ')':
                 traslation.append([pos, raw[fbreak:i]])
-                pos = "undefined"
+                pos = ""
                 fbreak = i+3
                 level -= 1
 
@@ -100,7 +100,9 @@ class Viewer(Text):
         self.insert(END, '\t['+trasliterate+']\n', "tsl")
         for c, t in enumerate(traslation):
             self.insert(END, "%d. "%(c+1), "li")
-            self.insert(END, t[0], "pos")
+            if t[0] == "": pos_ = "undefined"
+            else: pos_ = t[0]
+            self.insert(END, pos_, "pos")
             self.insert(END, " ~ ")
             self.insert(END, t[1]+"\n")
 

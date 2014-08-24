@@ -11,6 +11,9 @@ py2:
 cli:
 	./main.pyw hello
 
+gtk:
+	./gtk3.py
+
 wine:
 	# note should load from same directory
 	# and please set the python path in wine
