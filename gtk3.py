@@ -74,28 +74,28 @@ class GUI():
         layout.add(self.cb_search)#, 0, 0, 2, 1)
 
         self.b_search = Gtk.Button(label="Search")
-        self.b_search.connect('clicked', self.cb_bind_search_btn_click)
+        self.b_search.connect('clicked', self.searchWord)
         layout.attach(self.b_search, 1, 0, 1, 1)
 
         ## Viewer
-        self.scrolledwindow = Gtk.ScrolledWindow()
-        self.scrolledwindow.set_hexpand(True)
-        self.scrolledwindow.set_vexpand(True)
-        layout.attach(self.scrolledwindow, 0, 1, 2, 2)
+        scrolledwindow = Gtk.ScrolledWindow()
+        scrolledwindow.set_hexpand(True)
+        scrolledwindow.set_vexpand(True)
+        layout.attach(scrolledwindow, 0, 1, 2, 2)
 
         self.textview = Gtk.TextView()
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
 
         self.textbuffer = self.textview.get_buffer()
-        self.textbuffer.set_text("Type Something to Search")
-        self.scrolledwindow.add(self.textview)
+        self.textbuffer.set_text('Type Something to Search')
+        scrolledwindow.add(self.textview)
 
         self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
         self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
         self.tag_underline = self.textbuffer.create_tag("underline",  underline=Pango.Underline.SINGLE)
         self.tag_found = self.textbuffer.create_tag("found",  background="yellow")
 
-        # # tree-viewer
+        ## tree-viewer
         # for i, f in enumerate(os.listdir(PATH_GLOSS)):
         #     #if not f[-4:] in FILE_TYPES: continue
         self.lview = List_view(PATH_GLOSS+'main.tra', self.parent)
@@ -106,17 +106,14 @@ class GUI():
         if event.keyval == 65293:
             self.searchWord(widget, event)
 
-    def cb_bind_search_btn_click(self, widget):
-        self.searchWord(widget,"clicked")
-
     def searchWord(self, widget, event):
         entry = self.cb_search.get_child()
         val = entry.get_text().strip().lower()
 
         foundFlag = False
-        for n, en, np in self.lview.liststore:
+        for i, en, np in self.lview.liststore:
             if en != val : continue
-            print("#%-4d %s - %s "%(n, en, np))
+            print("#%-4d %s - %s "%(i, en, np))
             self.textbuffer.set_text("%s -> %s" %(en, np))
             foundFlag = True
             break
