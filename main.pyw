@@ -137,12 +137,19 @@ class GUI(Frame):
     def open_gloss(self, *events):
         index = self.nb.index(self.nb.select())
         obj = self.glist[index]
-        os.system("setsid xdg-open %s"%obj.GLOSS)
+        # TODO : smart xdg-open with arguments
+        id = obj.tree.focus()
+        if id != "":
+            jump = "--jump=%d"%(int(id[1:], 16))
+        else:
+            jump = ""# "--jump=%d"%(int(id[1:], 16))
+
+        os.system("setsid leafpad %s %s"%(jump, obj.GLOSS))
 
     def open_dir(self, *events):
         index = self.nb.index(self.nb.select())
         obj = self.glist[index]
-        os.system("setsid xdg-open %s"%obj.GLOSS)
+        os.system("setsid nemo %s"%obj.GLOSS)
 
     def reload_gloss(self, *events):
         index = self.nb.index(self.nb.select())
@@ -318,7 +325,7 @@ if __name__ == '__main__':
     gui.load_files()
     #gui.load_files_prototype_pattern()
 
-    gui.nb.select('3')
+    gui.nb.select('4')
     gui.glist[3].treeSetFocus()
 
     root.bind('<Key-Escape>', lambda event: quit())

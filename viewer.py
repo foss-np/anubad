@@ -120,12 +120,12 @@ class Viewer(Text):
     def _leave(self, event):
         self.config(cursor="")
 
-def _click(event, href):
-    ex=event.x_root
-    ey=event.y_root
-    tooltip = Menu(tearoff=0)
-    tooltip.add_command(label=href)
-    tooltip.tk_popup(ex,ey)
+def _click(event, link):
+    ex = event.x_root
+    ey = event.y_root
+    href = Menu(tearoff=0)
+    href.add_command(label=link)
+    href.tk_popup(ex, ey)
 
 if __name__ == '__main__':
     def_font=[ "DejaVuSansMono", 12, "normal" ]

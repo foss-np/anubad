@@ -71,7 +71,10 @@ class GUI():
         self.cb_search = Gtk.ComboBox.new_with_model_and_entry(self.search_history)
         self.cb_search.connect('key_release_event', self.cb_bind_enter)
         self.cb_search.set_entry_text_column(1)
+        #self.cb_search.set_icon_from_stock(Gtk.EntryIconPosition.PRIMARY, Gtk.STOCK_FIND)
+
         layout.add(self.cb_search)#, 0, 0, 2, 1)
+
 
         self.b_search = Gtk.Button(label="Search")
         self.b_search.connect('clicked', self.searchWord)
