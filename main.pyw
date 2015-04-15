@@ -161,19 +161,23 @@ class GUI(Frame):
         # TODO: here prototype pattern can be applied
         # WISH: do the profile before and after
         # NOTE: some other patterns is here
-        for i, file in enumerate(os.listdir(PATH_GLOSS)):
-            if not file[-4:] in FILE_TYPES: continue
-            obj = BrowseList(PATH_GLOSS+file)
-            self.nb.add(obj, text=file, padding=3)
+        i = 0
+        for file_name in os.listdir(PATH_GLOSS):
+            if not file_name[-4:] in FILE_TYPES: continue
+            if "main" in file_name:
+                self.MAIN_INDEX = i
+            obj = BrowseList(PATH_GLOSS+file_name)
+            self.nb.add(obj, text=file_name, padding=3)
             self.glist.append(obj)
             if i < 9:
                 root.bind('<Alt-KeyPress-%d>'%(i+1), self.switch_tab)
+            i += 1
 
         return self.glist
 
     def load_files_prototype_pattern(self):
         ori_obj = BrowseList()
-
+        # NOTE: this should be re: written
         for i, file in enumerate(os.listdir(PATH_GLOSS)):
             if not file[-4:] in FILE_TYPES: continue
             obj = copy.deepcopy(ori_obj)
@@ -324,9 +328,9 @@ if __name__ == '__main__':
     gui = GUI()
     gui.load_files()
     #gui.load_files_prototype_pattern()
-
-    gui.nb.select('4')
-    gui.glist[3].treeSetFocus()
+    root.update()
+    gui.nb.select(str(gui.MAIN_INDEX))
+    gui.glist[gui.MAIN_INDEX-1].treeSetFocus()
 
     root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())
