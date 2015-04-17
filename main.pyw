@@ -3,7 +3,6 @@
 # ^^^ needed for py2
 
 import os, sys
-import copy
 
 filepath = os.path.abspath(__file__)
 fullpath = os.path.dirname(filepath) + '/'
@@ -12,20 +11,20 @@ exec(open(fullpath+"/gsettings.conf").read())
 
 try: # py2/3 compatibility
     import tkinter as tk
-    from tkinter import *
-    from tkinter import ttk
+    from tkinter.ttk import *
     from tkinter.simpledialog import askstring
     exec(open(fullpath+"mysettings.conf").read())
 except:
     import Tkinter as tk
-    from Tkinter import *
-    import ttk
+    from ttk import *
     from tkSimpleDialog import askstring
+
 
 if PATH_MYLIB:
     sys.path.append(PATH_MYLIB)
     from debugly import *
 
+from subprocess import check_output
 import browselst as BL
 import viewer as Vi
 
@@ -43,43 +42,65 @@ PATH_GLOSS = fullpath + PATH_GLOSS
 class GUI(Frame):
     def __init__(self, parent=None):
         Frame.__init__(self, parent)
-        self.CURRENT_FOUND_ITEM = None
+        self.CURRENT_FOUND_ITEM = False
         self.MAIN_TAB = 0
         self.glist = []
         self.history = []
 
         self.makeWidgets()
         self.bindWidgets()
-        self.pack(expand=NO, fill=X, side=TOP)
+        self.pack(expand=1, fill="both")
 
     def makeWidgets(self):
         # searchbox
-        search_frame = LabelFrame(self, text="Search", padx=5, pady=5)
-        combo_font = def_font[:]; combo_font[1]=11
-        self.sbox = ttk.Combobox(search_frame, font=combo_font)
-        self.sbox.insert(0, "Type your query here")
+        button_frame = Frame(self)
+        button_frame.pack(expand=1, fill="both")
 
-        var = IntVar() # TODO: autocopy to clipboard
-        self.cbox_acopy = tk.Checkbutton(search_frame, text="auto copy")
+        Label(button_frame, text="Query").pack(side="left", padx=5)
+
+        combo_font = def_font[:]; combo_font[1]=11
+        self.sbox = Combobox(button_frame, font=combo_font)
+        self.sbox.pack(side="left")
+        self.sbox.insert(0, "Here")
+
+        Button(button_frame, text="Previous").pack(side="left", padx=5)
+        Button(button_frame, text="Next").pack(side="left", padx=5)
+
+        # searchbox
+        history_frame = tk.Frame(self)
+        history_frame.pack(expand=1, side="left", fill="both")
+
+        self.suggestion = tk.Listbox(history_frame)
+        self.suggestion.pack(expand=1, side="top", fill="both")
+
+        variable = tk.StringVar(self)
+        variable.set("one") # default value
+
+        self.gloss_list = OptionMenu(history_frame, variable, "one", "two", "three")
+        self.gloss_list.pack(fill="x")
+
+        # viewer
+        view_frame = Frame(self)
+        view_frame.pack(expand=1, side="right", fill="both")
+
+        self.viewer = Vi.Viewer(view_frame, root)
+        self.viewer.pack(expand=1, side="top", fill="both")
+
+        self.tabar = Notebook(view_frame, takefocus=0)
+        self.tabar.pack(expand=1, side="top", fill="both")
+        self.tabar.enable_traversal()
+        #self.viewer = Text(root)
+
+        var = tk.IntVar() # TODO: autocopy to clipboard
+        self.cbox_acopy = tk.Checkbutton(view_frame, text="auto copy")
+        self.cbox_acopy.pack(side="right")
         self.cbox_acopy.config(variable=var, takefocus=0)
         var.set(1)
 
-        self.tabar = ttk.Notebook(takefocus=0)
-        self.tabar.enable_traversal()
-
-        self.viewer = Vi.Viewer(self, root)
-        #self.viewer = Text(root)
-
-        #packing
-        self.sbox.pack(expand=YES, side=LEFT, fill=X)
-        self.cbox_acopy.pack(side=RIGHT)
-        search_frame.pack(expand=YES, side=TOP, fill=X)
-        self.tabar.pack(expand=YES, fill=BOTH, side=BOTTOM)
-        self.viewer.pack(expand=YES, fill=BOTH, side=BOTTOM)
 
     def bindWidgets(self):
-        self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0, END))
-        self.sbox.bind('<Control-g>', lambda e: self.sbox.delete(0, END))
+        self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0, "end"))
+        self.sbox.bind('<Control-g>', lambda e: self.sbox.delete(0, "end"))
 
         # TODO: will do the complete search
         self.sbox.bind('<Return>', sbox_next_search)
@@ -108,7 +129,7 @@ class GUI(Frame):
 
     def sboxSetFocus(self, event):
         self.sbox.focus()
-        self.sbox.select_range(0, END)
+        self.sbox.select_range(0, "end")
         root.unbind('<Control-s>')
 
     def sbox_emacs_search_next(self, event):
@@ -136,6 +157,10 @@ class GUI(Frame):
     # TODO: add the decorator pattern in all this stuffs :D
     def open_gloss_item_locate(self, *events):
         # TODO : smart xdg-open with arguments
+        if not self.CURRENT_FOUND_ITEM:
+            open_gloss()
+            return
+
         tab, ID = self.CURRENT_FOUND_ITEM
         obj = self.glist[tab]
         arg = "--jump=%d"%(int(ID[1:], 16))
@@ -162,7 +187,7 @@ class GUI(Frame):
             if "main" in file_name:
                 self.MAIN_TAB = tab
 
-            obj = BL.BrowseList(PATH_GLOSS+file_name)
+            obj = BL.BrowseList(root, PATH_GLOSS+file_name)
             obj.tree.bind('<Double-Button-1>', _doubleClick)
             self.tabar.add(obj, text=file_name, padding=3)
             self.glist.append(obj)
@@ -182,7 +207,7 @@ class GUI(Frame):
 def key_press(event):
     typed = event.char
     if not typed.isalpha(): return
-    gui.sbox.delete(0, END)
+    gui.sbox.delete(0, "end")
     gui.sbox.insert(0, typed)
     gui.sbox.focus()
     root.unbind('<Key>')
@@ -205,7 +230,7 @@ def sbox_next_search(*args):
         return
 
     gui.CURRENT_FOUND_ITEM = id_lst[0]
-    gui.sbox.select_range(0, END)
+    gui.sbox.select_range(0, "end")
     gui.history.append(word)
     gui.sbox.config(values=gui.history)
 
@@ -235,7 +260,8 @@ def open_gloss(*args):
     obj = gui.glist[tab]
     arg = ""
     ID = obj.tree.focus()
-    arg = "--jump=%d"%(int(ID[1:], 16))
+    if ID:
+        arg = "--jump=%d"%(int(ID[1:], 16))
     os.system("setsid leafpad %s %s"%(arg, obj.GLOSS))
 BL.open_gloss = open_gloss
 
@@ -244,7 +270,7 @@ def _doubleClick(event):
     tab = gui.tabar.index(gui.tabar.select())
     obj = gui.glist[tab]
     ID = obj.get_ID_below_mouse(event)
-    item =  obj.tree.item(ID)
+    item = obj.tree.item(ID)
     gui.viewer.parser([tab, ID] + item['values'][1:])
 
 
@@ -298,7 +324,7 @@ def main():
     # TODO: Ctrl+click follow the link
 
     global root
-    root = Tk()
+    root = tk.Tk()
     root.title("anubad - अनुवाद")
 
     global gui
@@ -310,6 +336,10 @@ def main():
 
     root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())
+
+    style = Style(root)
+    style.theme_use("clam")
+
 
 if __name__ == '__main__':
     main()

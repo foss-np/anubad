@@ -38,8 +38,16 @@ class Viewer(Text):
         self.tag_config("li", font=def_font[:2] + ["bold"], foreground="gray", lmargin1=20)
         self.tag_config("tsl", foreground="blue")
 
+        self.tag_config("em", font=def_font[:2] + ["italic"], foreground="gray")
+
+        self.tag_config("web", font=def_font[:2] + ["underline"], foreground="blue")
+        self.tag_bind("web", "<Enter>", self._enter)
+        self.tag_bind("web", "<Leave>", self._leave)
+
+
     def bindWidgets(self):
         self.root.bind('<Control-l>', lambda e: self.clear_viewer())
+
 
     def clear_viewer(self):
         self.config(state=NORMAL)
@@ -49,12 +57,11 @@ class Viewer(Text):
 
     def parser(self, lst):
         """
-        parser
-
         >>> obj = Viewer(root=root)
         >>> obj.pack()
-        >>> data = [1, 'I001', "hello", "नमस्कार"]
+        >>> data = [1, 'I001', 'hello', 'नमस्कार']
         >>> obj.parser(data)
+        [1, 'I001', 'hello', 'नमस्कार']
         """
         print(lst)
         href = lst[0:2]
@@ -63,15 +70,11 @@ class Viewer(Text):
         self.tag_bind(ahref, "<Enter>", self._enter)
         self.tag_bind(ahref, "<Leave>", self._leave)
         self.tag_bind(ahref, "<Button-1>", lambda e: _click(e, href))
-
-        # TODO: click, double click behaviour
-        # click: show in list
-        # double click: search that text again
+        self.tag_bind(ahref, "<Button-3>", lambda e: _click_secondary(e, href))
 
         self.config(state=NORMAL)
         self.insert(END, lst[2], ("h1", ahref))
         raw = lst[3]
-
 
         trasliterate = ""
         traslation = []
@@ -120,7 +123,13 @@ class Viewer(Text):
         self.config(state=NORMAL)
         self.insert(END, word, "h1")
         self.insert(END, " Not Found\n")
+        self.insert(END, "search: ", "em")
+        self.insert(END, "web", "web")
+        self.insert(END, " ")
+        self.insert(END, "other")
+        self.insert(END, "\n")
         self.config(state=DISABLED)
+        self.tag_bind("web", "<Button-1>", lambda e: web_search(word))
 
     def _enter(self, event):
         self.config(cursor="hand2")
@@ -134,6 +143,12 @@ def _click(event, link):
     href = Menu(tearoff=0)
     href.add_command(label=link)
     href.tk_popup(ex, ey)
+_click_secondary=_click
+
+
+def web_search(word):
+    print("dummy %s.web_search()"%__name__)
+
 
 def main():
     global def_font

@@ -31,14 +31,13 @@ class BrowseList(Frame):
     >>> obj = BrowseList()
     """
 
-    def __init__(self, _gloss=None, parent=None):
+    def __init__(self, parent=None, gloss=None):
         Frame.__init__(self, parent)
-        self.visible = True
         self.popup = None
         self.copy_smart = False
         self.makeWidgets(cols, col_attrib)
         self.bindWidgets()
-        self.GLOSS = _gloss
+        self.GLOSS = gloss
         self.h1 = def_font[:2] + ["bold"]
         if self.GLOSS:
             # avoid utf-8 print in terminal
@@ -171,18 +170,18 @@ class BrowseList(Frame):
 
         print("smart clipboard")
 
-    def make_popup(self, name):
+    def make_popup(self, ID, word):
         popup = Menu(self, tearoff=0)
-        popup.add_command(label=name, state=DISABLED, font=self.h1)
+        popup.add_command(label=ID + ' : ' + word, state=DISABLED, font=self.h1)
         popup.add_command(label="Edit", command=lambda: open_gloss())
         popup.add_command(label="Open Gloss", command=lambda: open_gloss())
         popup.add_separator()
-        popup.add_command(label="Search online", command=None)
+        popup.add_command(label="Search online", command=lambda: web_search(word))
         return popup
 
     def get_ID_below_mouse(self, event):
         HEIGHT = 19
-        offset = HEIGHT * 16
+        offset = HEIGHT * 15
         ex, ey = event.x_root, event.y_root - offset
         ID = ttk.Treeview.identify(self.tree, component='item', x=ex, y=ey)
 
@@ -194,14 +193,18 @@ class BrowseList(Frame):
 
     def call_popup(self, event):
         ID = self.get_ID_below_mouse(event)
-        value = self.tree.item(ID)['values'][1]
-        popup = self.make_popup(ID + ': ' + value)
+        word = self.tree.item(ID)['values'][1]
+        popup = self.make_popup(ID, word)
         popup.tk_popup(event.x_root, event.y_root)
         del popup
 
 
 def open_gloss():
-    print("dummy function")
+    print("dummy %s.open_gloss()"%__name__)
+
+
+def web_search(word):
+    print("dummy %s.web_search()"%__name__)
 
 
 def main():
