@@ -174,8 +174,8 @@ class BrowseList(Frame):
     def make_popup(self, name):
         popup = Menu(self, tearoff=0)
         popup.add_command(label=name, state=DISABLED, font=self.h1)
-        popup.add_command(label="Edit", command=None)
-        popup.add_command(label="Open Gloss", command=None)
+        popup.add_command(label="Edit", command=lambda: open_gloss())
+        popup.add_command(label="Open Gloss", command=lambda: open_gloss())
         popup.add_separator()
         popup.add_command(label="Search online", command=None)
         return popup
@@ -198,6 +198,10 @@ class BrowseList(Frame):
         popup = self.make_popup(ID + ': ' + value)
         popup.tk_popup(event.x_root, event.y_root)
         del popup
+
+
+def open_gloss():
+    print("dummy function")
 
 
 def main():

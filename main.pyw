@@ -27,9 +27,9 @@ if PATH_MYLIB:
     from debugly import *
 
 import browselst as BL
-BL.def_font = def_font
-
 import viewer as Vi
+
+BL.def_font = def_font
 Vi.def_font = def_font
 
 PATH_GLOSS = fullpath + PATH_GLOSS
@@ -89,7 +89,7 @@ class GUI(Frame):
         self.sbox.bind('<Control-i>', add_to_list)
 
         root.bind('<Control-o>', self.open_dir)
-        root.bind('<Control-u>', self.open_gloss)
+        root.bind('<Control-u>', self.open_gloss_item_locate)
         root.bind('<Key-F5>', self.reload_gloss)
 
         root.bind('<Control-f>', self.sboxSetFocus)
@@ -133,19 +133,13 @@ class GUI(Frame):
         self.tabar.select(tab)
         obj.treeSetFocus()
 
-    # TODO: add the decorator in all this stuffs :D
-    def open_gloss(self, *events):
-        tab = self.tabar.index(self.tabar.select())
-        obj = self.glist[tab]
-        arg = ""
-
+    # TODO: add the decorator pattern in all this stuffs :D
+    def open_gloss_item_locate(self, *events):
         # TODO : smart xdg-open with arguments
-        if jump:
-            # ID = obj.tree.focus()
-            arg = "--jump=%d"%(int(jump[1:], 16))
-
+        tab, ID = self.CURRENT_FOUND_ITEM
+        obj = self.glist[tab]
+        arg = "--jump=%d"%(int(ID[1:], 16))
         os.system("setsid leafpad %s %s"%(arg, obj.GLOSS))
-
 
     def open_dir(self, *events):
         tab = self.tabar.index(self.tabar.select())
@@ -169,6 +163,7 @@ class GUI(Frame):
                 self.MAIN_TAB = tab
 
             obj = BL.BrowseList(PATH_GLOSS+file_name)
+            obj.tree.bind('<Double-Button-1>', _doubleClick)
             self.tabar.add(obj, text=file_name, padding=3)
             self.glist.append(obj)
 
@@ -232,9 +227,25 @@ def _click(event, href):
     obj.tree.focus_set()
     root.update()
     obj.tree.yview(int(href[1][1:], 16)-1)
-
-
 Vi._click = _click
+
+
+def open_gloss(*args):
+    tab = gui.tabar.index(gui.tabar.select())
+    obj = gui.glist[tab]
+    arg = ""
+    ID = obj.tree.focus()
+    arg = "--jump=%d"%(int(ID[1:], 16))
+    os.system("setsid leafpad %s %s"%(arg, obj.GLOSS))
+BL.open_gloss = open_gloss
+
+
+def _doubleClick(event):
+    tab = gui.tabar.index(gui.tabar.select())
+    obj = gui.glist[tab]
+    ID = obj.get_ID_below_mouse(event)
+    item =  obj.tree.item(ID)
+    gui.viewer.parser([tab, ID] + item['values'][1:])
 
 
 def add_to_list(*args):
