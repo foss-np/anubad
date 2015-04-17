@@ -20,8 +20,8 @@ cols = ["#", "en", "ne"]
 col_attrib = [
    #["id", "label", min-width, width, stretch, !show],
     ["#", "#", 50, 50, 0, False],
-    ["en", "English", 250, 300, 1, False],
-    ["ne", "नेपाली", 250, 90, 1, False]
+    ["en", "English", 90, 90, 1, False],
+    ["ne", "नेपाली", 250, 170, 1, False]
 ]
 
 class BrowseList(Frame):
@@ -39,21 +39,19 @@ class BrowseList(Frame):
         self.makeWidgets(cols, col_attrib)
         self.bindWidgets()
         self.GLOSS = _gloss
+        self.h1 = def_font[:2] + ["bold"]
         if self.GLOSS:
             # avoid utf-8 print in terminal
             # print("loading", self.GLOSS.split('/')[-1])
             self.fill_tree(self.GLOSS)
 
         self.pack(expand=YES, side=TOP, fill=BOTH, anchor=N)
-        self.make_popup()
+
 
     def makeWidgets(self, _c, _a):
         # a treeview
         self.tree = ttk.Treeview(self, show="headings", columns=_c)
         self.tree.config(selectmode="browse")
-
-        #self.tree.config(height=8) #def=10
-        #self.tree.config(height=8, font=[ "DejaVuSansMono", 11 ])
 
         # adding header
         for a in _a:
@@ -96,20 +94,17 @@ class BrowseList(Frame):
             command=lambda C=c: self.sortby(C, int(not descending)))
 
     def fill_tree(self, _gloss):
-        # TODO: py2/3 and file load error case
         try: # py2/3 compatibility
-            file = open(self.GLOSS, encoding="UTF-8").read().splitlines()
-        except: # handle other exception
-            file = open(self.GLOSS).read().splitlines()
+            data = open(self.GLOSS, encoding="UTF-8").read()
+        except:
+            # for python2
+            data = open(self.GLOSS).read()
+            data = data.decode('utf-8')
 
         self.count = 0
 
-        for line in file:
+        for line in data.splitlines():
             self.count += 1
-            try:  # py2/3 compatibility
-                line = line.decode('utf-8')
-            except:
-                pass
 
             row = line.split(';')
             row.insert(0, self.count)
@@ -117,6 +112,7 @@ class BrowseList(Frame):
                 row[2] = row[2][1:] # remove space
             except:
                 print("File Format Error: %s: %d"%(self.GLOSS, self.count))
+                # TODO: open leafpad automatically with the current error line
                 exit()
 
             self.select = self.tree.insert('', 'end', values=row, tag="npfont")
@@ -175,27 +171,46 @@ class BrowseList(Frame):
 
         print("smart clipboard")
 
-    def make_popup(self):
+    def make_popup(self, name):
         popup = Menu(self, tearoff=0)
+        popup.add_command(label=name, state=DISABLED, font=self.h1)
         popup.add_command(label="Edit", command=None)
-        popup.add_command(label="Open Directory", accelerator="Ctrl+o")
         popup.add_command(label="Open Gloss", command=None)
         popup.add_separator()
-        popup.add_command(label="Reload", command=None)
-        self.popup = popup
+        popup.add_command(label="Search online", command=None)
+        return popup
 
-    def call_popup(self, event):
-        offset = 19*4
+    def get_ID_below_mouse(self, event):
+        HEIGHT = 19
+        offset = HEIGHT * 16
         ex, ey = event.x_root, event.y_root - offset
-        self.popup.tk_popup(ex, ey)
-        SEL = ttk.Treeview.identify(self.tree, component='item', x=ex, y=ey)
-        self.tree.selection_set(POP_SELECT)
-        self.tree.focus(POP_SELECT)
+        ID = ttk.Treeview.identify(self.tree, component='item', x=ex, y=ey)
+
+        self.tree.selection_set(ID)
+        self.tree.focus(ID)
         self.tree.focus_set()
 
-if __name__ == '__main__':
+        return ID
+
+    def call_popup(self, event):
+        ID = self.get_ID_below_mouse(event)
+        value = self.tree.item(ID)['values'][1]
+        popup = self.make_popup(ID + ': ' + value)
+        popup.tk_popup(event.x_root, event.y_root)
+        del popup
+
+
+def main():
+    global def_font
+    def_font = ["DejaVuSansMono", 12, "normal"]
+
+    global root
     root = Tk()
     root.bind('<Key-Escape>', lambda event: quit())
+
+
+if __name__ == '__main__':
+    main()
     import doctest
     doctest.testmod()
     root.mainloop()

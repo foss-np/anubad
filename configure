@@ -1,11 +1,8 @@
 #!/bin/bash
 
-if [[ -e .git ]]; then
-    git submodule init
-    git submodule update
-    touch ttksearchbox/__init__.py
+if [[ -e mysetting.conf ]]; then
+    # TODO: generate the config
+    touch mysetting.conf
 fi
 
-
-wget https://github.com/bekar/ttksearchbox/archive/0.5-alpha.tar.gz
-wget https://github.com/foss-np/np-l10n-glossary/archive/0.5.tar.gz
+# wget https://github.com/foss-np/np-l10n-glossary/archive/0.5.tar.gz

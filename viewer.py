@@ -6,13 +6,20 @@
 A module for the interactive text interface and Decoration.
 """
 
+exec(open("gsettings.conf").read())
+
 try: #py2/3 compatibiliy
     from tkinter import *
     import tkinter.ttk as ttk
     import tkinter.font as font
+    exec(open("mysettings.conf").read())
 except:
     from Tkinter import *
     import ttk
+
+if PATH_MYLIB:
+    sys.path.append(PATH_MYLIB)
+    from debugly import *
 
 class Viewer(Text):
     def __init__(self, parent=None, root=None):
@@ -50,12 +57,13 @@ class Viewer(Text):
         >>> obj.parser(data)
         """
         print(lst)
-        href=lst[0:2]
-        ahref=str(href)
+        href = lst[0:2]
+        ahref = str(href)
         self.tag_config(ahref)
         self.tag_bind(ahref, "<Enter>", self._enter)
         self.tag_bind(ahref, "<Leave>", self._leave)
         self.tag_bind(ahref, "<Button-1>", lambda e: _click(e, href))
+
         # TODO: click, double click behaviour
         # click: show in list
         # double click: search that text again
@@ -127,10 +135,16 @@ def _click(event, link):
     href.add_command(label=link)
     href.tk_popup(ex, ey)
 
-if __name__ == '__main__':
-    def_font=[ "DejaVuSansMono", 12, "normal" ]
+def main():
+    global def_font
+    def_font = ["DejaVuSansMono", 12, "normal"]
+
+    global root
     root = Tk()
     root.bind('<Key-Escape>', lambda event: quit())
+
+if __name__ == '__main__':
+    main()
     import doctest
     doctest.testmod()
     root.mainloop()

@@ -5,36 +5,34 @@
 import os, sys
 import copy
 
+filepath = os.path.abspath(__file__)
+fullpath = os.path.dirname(filepath) + '/'
+
+exec(open(fullpath+"/gsettings.conf").read())
+
 try: # py2/3 compatibility
     import tkinter as tk
     from tkinter import *
     from tkinter import ttk
-    from tkinter.ttk import *
     from tkinter.simpledialog import askstring
+    exec(open(fullpath+"mysettings.conf").read())
 except:
     import Tkinter as tk
     from Tkinter import *
     import ttk
-    from ttk import *
     from tkSimpleDialog import askstring
 
-filepath = os.path.abspath(__file__)
-fullpath = os.path.dirname(filepath)
-
-exec(open(fullpath+"/settings.conf").read())
-exec(open(fullpath+"/my.conf").read())
-PATH_GLOSS = fullpath+PATH_GLOSS
+if PATH_MYLIB:
+    sys.path.append(PATH_MYLIB)
+    from debugly import *
 
 import browselst as BL
-from browselst import *
-BL.def_font=def_font
+BL.def_font = def_font
 
 import viewer as Vi
-from viewer import *
-Vi.def_font=def_font
+Vi.def_font = def_font
 
-DIRTY = False
-ADD_LOCK = True
+PATH_GLOSS = fullpath + PATH_GLOSS
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
@@ -45,9 +43,11 @@ ADD_LOCK = True
 class GUI(Frame):
     def __init__(self, parent=None):
         Frame.__init__(self, parent)
-        self.visible = True
+        self.CURRENT_FOUND_ITEM = None
+        self.MAIN_TAB = 0
         self.glist = []
-        self.word = []
+        self.history = []
+
         self.makeWidgets()
         self.bindWidgets()
         self.pack(expand=NO, fill=X, side=TOP)
@@ -64,18 +64,18 @@ class GUI(Frame):
         self.cbox_acopy.config(variable=var, takefocus=0)
         var.set(1)
 
-        self.nb = ttk.Notebook(takefocus=0)
-        self.nb.enable_traversal()
+        self.tabar = ttk.Notebook(takefocus=0)
+        self.tabar.enable_traversal()
 
-        self.out = Viewer(self, root)
-        #self.out = Text(root)
+        self.viewer = Vi.Viewer(self, root)
+        #self.viewer = Text(root)
 
         #packing
         self.sbox.pack(expand=YES, side=LEFT, fill=X)
         self.cbox_acopy.pack(side=RIGHT)
         search_frame.pack(expand=YES, side=TOP, fill=X)
-        self.nb.pack(expand=YES, fill=BOTH, side=BOTTOM)
-        self.out.pack(expand=YES, fill=BOTH, side=BOTTOM)
+        self.tabar.pack(expand=YES, fill=BOTH, side=BOTTOM)
+        self.viewer.pack(expand=YES, fill=BOTH, side=BOTTOM)
 
     def bindWidgets(self):
         self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0, END))
@@ -130,30 +130,31 @@ class GUI(Frame):
         obj = self.glist[tab]
         # BUG: object focus after tabswitch not working properly
         # print(index, tab, tab_info[tab])
-        self.nb.select(tab)
+        self.tabar.select(tab)
         obj.treeSetFocus()
 
     # TODO: add the decorator in all this stuffs :D
     def open_gloss(self, *events):
-        index = self.nb.index(self.nb.select())
-        obj = self.glist[index]
-        # TODO : smart xdg-open with arguments
-        id = obj.tree.focus()
-        if id != "":
-            jump = "--jump=%d"%(int(id[1:], 16))
-        else:
-            jump = ""# "--jump=%d"%(int(id[1:], 16))
+        tab = self.tabar.index(self.tabar.select())
+        obj = self.glist[tab]
+        arg = ""
 
-        os.system("setsid leafpad %s %s"%(jump, obj.GLOSS))
+        # TODO : smart xdg-open with arguments
+        if jump:
+            # ID = obj.tree.focus()
+            arg = "--jump=%d"%(int(jump[1:], 16))
+
+        os.system("setsid leafpad %s %s"%(arg, obj.GLOSS))
+
 
     def open_dir(self, *events):
-        index = self.nb.index(self.nb.select())
-        obj = self.glist[index]
+        tab = self.tabar.index(self.tabar.select())
+        obj = self.glist[tab]
         os.system("setsid nemo %s"%obj.GLOSS)
 
     def reload_gloss(self, *events):
-        index = self.nb.index(self.nb.select())
-        obj = self.glist[index]
+        tab = self.tabar.index(self.tabar.select())
+        obj = self.glist[tab]
         obj.reload_tree()
         print("Reload %s"%obj.GLOSS)
 
@@ -161,32 +162,19 @@ class GUI(Frame):
         # TODO: here prototype pattern can be applied
         # WISH: do the profile before and after
         # NOTE: some other patterns is here
-        i = 0
+        tab = 0
         for file_name in os.listdir(PATH_GLOSS):
             if not file_name[-4:] in FILE_TYPES: continue
             if "main" in file_name:
-                self.MAIN_INDEX = i
-            obj = BrowseList(PATH_GLOSS+file_name)
-            self.nb.add(obj, text=file_name, padding=3)
-            self.glist.append(obj)
-            if i < 9:
-                root.bind('<Alt-KeyPress-%d>'%(i+1), self.switch_tab)
-            i += 1
+                self.MAIN_TAB = tab
 
-        return self.glist
-
-    def load_files_prototype_pattern(self):
-        ori_obj = BrowseList()
-        # NOTE: this should be re: written
-        for i, file in enumerate(os.listdir(PATH_GLOSS)):
-            if not file[-4:] in FILE_TYPES: continue
-            obj = copy.deepcopy(ori_obj)
-            obj.GLOSS = PATH_GLOSS+file
-            obj.fill_tree(PATH_GLOSS+file)
-            self.nb.add(obj, text=file, padding=3)
+            obj = BL.BrowseList(PATH_GLOSS+file_name)
+            self.tabar.add(obj, text=file_name, padding=3)
             self.glist.append(obj)
-            if i < 10:
-                root.bind('<Alt-KeyPress-%d>'%(i+1), self.switch_tab)
+
+            if tab < 9:
+                root.bind('<Alt-KeyPress-%d>'%(tab+1), self.switch_tab)
+            tab += 1
 
         return self.glist
 
@@ -204,45 +192,40 @@ def key_press(event):
     gui.sbox.focus()
     root.unbind('<Key>')
 
+
 def sbox_next_search(*args):
-    global word
+    ## TODO: Reverse search in nepali
+    # grep might be useful for quick implementation
     word = gui.sbox.get().lower().strip()
 
-    if word.isalpha(): lang = 1;
-    else: lang = 2
-
-    flag = False
-
     # TODO: Chain of Command Can be implimented
-    gui.sbox.select_range(0, END)
-    for i, obj in enumerate(gui.glist):
-        flag = search_tree(i, obj, word, lang) or flag
+    id_lst = []
+    for tab, obj in enumerate(gui.glist):
+        ID = search_tree(tab, obj, word)
+        if ID: id_lst.append((tab, ID))
 
-    if not flag:
+    if not id_lst:
         print("\"%s\" not found"%word)
-        gui.out.not_found(word)
+        gui.viewer.not_found(word)
+        return
 
-    global ADD_LOCK
-    ADD_LOCK = False
+    gui.CURRENT_FOUND_ITEM = id_lst[0]
+    gui.sbox.select_range(0, END)
+    gui.history.append(word)
+    gui.sbox.config(values=gui.history)
 
-def search_tree(tab, obj, word, lang):
-    list = obj.tree.get_children()
-    for item in list:
-        sel = obj.tree.item(item)
-        if sel['values'][lang] == word:
-            try:
-                gui.out.parser([tab, item]+sel['values'][1:])
-            except:
-                gui.out.insert(END, [tab, item]+sel['values'][1:])
 
-            gui.word.append(word)
-            gui.sbox.config(values=gui.word)
-            return True
+def search_tree(tab, obj, word):
+    for item_ID in obj.tree.get_children():
+        item = obj.tree.item(item_ID)
+        if item['values'][1] != word: continue
+        gui.viewer.parser([tab, item_ID] + item['values'][1:])
+        return item_ID
     return False
 
 # NOTE: this is not the decorator pattern
 def _click(event, href):
-    gui.nb.select(href[0])
+    gui.tabar.select(href[0])
     obj = gui.glist[href[0]]
     obj.tree.selection_set(href[1])
     obj.tree.focus(href[1])
@@ -250,21 +233,16 @@ def _click(event, href):
     root.update()
     obj.tree.yview(int(href[1][1:], 16)-1)
 
-Vi._click=_click
+
+Vi._click = _click
+
 
 def add_to_list(*args):
-    global ADD_LOCK, word
-
-    if ADD_LOCK:
-        print("World already Exist, only edit possible")
-        return 1;
-
-    DIRTY = True
-    ADD_LOCK = True
+    word = gui.sbox.get().lower().strip()
     anubad = askstring("Entry", "anubad: %s"%word)
     if not anubad: return
 
-    i = gui.nb.index(gui.nb.select())
+    i = gui.tabar.index(gui.tabar.select())
     obj = gui.glist[i]
 
     obj.count += 1
@@ -276,7 +254,7 @@ def add_to_list(*args):
     obj.tree.focus(select)
     obj.tree.focus_set()
     obj.tree.yview(int(select[1:], 16)-1)
-    fp = open(obj.GLOSS, 'a').write("\n"+word+"; "+anubad)
+    fp = open(obj.GLOSS, 'a').write("\n" + word + "; " + anubad)
     print(fp)
 
 def cli_mode(list):
@@ -291,54 +269,44 @@ def cli_mode(list):
     #         if char=='\n': break
     #         print(char)
     #     #os.system("echo %s | xclip -i"%file[found:found+i])
-
     #     print()
 
-#  _  __                 _
-# (_)/ _|_ __ ___   __ _(_)_ __
-# | | |_| '_ ` _ \ / _` | | '_ \
-# | |  _| | | | | | (_| | | | | |
-# |_|_| |_| |_| |_|\__,_|_|_| |_|
-
-if __name__ == '__main__':
+def main():
     if len(sys.argv) > 1:
         cli_mode(sys.argv[1:])
         exit()
 
-    # TODO: memory list (or scroll the textbox)
-    # search history
-
-    # TODO: command line argument to ignore faulty gloss
+    ## TODO: command line argument to ignore faulty gloss
     # -k ignore faulty gloss
 
-    # TODO: use parallel database & sync function
+    ## TODO: use parallel database & sync function
     # db design
     # {word, meaning, vote, link}
 
-    # TODO: plugin module: trasliterate validity test
-
     # TODO: import mechanism
+    # TODO: Ctrl+click follow the link
 
+    global root
     root = Tk()
     root.title("anubad - अनुवाद")
 
-    # BL.root = root
-    # Vi.root = root
-
+    global gui
     gui = GUI()
     gui.load_files()
-    #gui.load_files_prototype_pattern()
     root.update()
-    gui.nb.select(str(gui.MAIN_INDEX))
-    gui.glist[gui.MAIN_INDEX-1].treeSetFocus()
+
+    gui.tabar.select(str(gui.MAIN_TAB))
 
     root.bind('<Key-Escape>', lambda event: quit())
     root.bind('<Control-d>', lambda event: quit())
 
-    # TODO: auto-add plug-ins
-    try:
-        exec(open(fullpath+"/plug_ins/dicts.py").read())
-    except:
-        pass
+if __name__ == '__main__':
+    main()
+    if PATH_PLUGINS:
+        # TODO: trasliterate, espeak
+        PATH_PLUGINS = fullpath + PATH_PLUGINS
+        for file_name in os.listdir(PATH_PLUGINS):
+            print(file_name, "loaded")
+            exec(open(PATH_PLUGINS + file_name).read())
 
     root.mainloop()

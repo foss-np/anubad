@@ -1,20 +1,22 @@
 NAME=`basename $(PWD)`
 
-default: run
+default: py3
 
-run:
+py: py3
+
+py3: mysettings.conf
 	./main.pyw
 
-py2:
+py2: mysettings.conf
 	python2 main.pyw
 
-cli:
+cli: mysettings.conf
 	./main.pyw hello
 
-gtk:
+gtk: mysettings.conf
 	./gtk3.py
 
-wine:
+wine: mysettings.conf
 	# note should load from same directory
 	# and please set the python path in wine
 	wine python main.pyw
