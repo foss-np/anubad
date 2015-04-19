@@ -1,135 +1,83 @@
 #!/usr/bin/env python
 
-import os
+import os, sys
 
 filepath = os.path.abspath(__file__)
-fullpath = os.path.dirname(filepath)
+fullpath = os.path.dirname(filepath) + '/'
 
-exec(open(fullpath+"/settings.conf").read())
-PATH_GLOSS = fullpath+PATH_GLOSS
+exec(open(fullpath+"gsettings.conf").read())
+exec(open(fullpath+"mysettings.conf").read())
 
-from gi.repository import Gtk, Pango
+PATH_GLOSS = fullpath + PATH_GLOSS
 
-class List_view(Gtk.ScrolledWindow):
-    def __init__(self, gloss, parent=None):
-        self.GLOSS = gloss
+if PATH_MYLIB:
+    sys.path.append(PATH_MYLIB)
+    from debugly import *
 
-        Gtk.ScrolledWindow.__init__(self)
-        self.set_hexpand(True)
-        self.set_vexpand(True)
+from gi.repository import Gtk, Gdk, Pango
+import browselst2 as BL
+import viewer2 as Vi
 
-        self.liststore = Gtk.ListStore(int, str, str)
-        self.makeWidgets()
-        self.fill_tree(gloss)
-
-    def makeWidgets(self):
-        self.treeview = Gtk.TreeView(model=self.liststore)
-        self.add(self.treeview)
-
-        renderer_text = Gtk.CellRendererText()
-        c0 = Gtk.TreeViewColumn("#", renderer_text, text=0)
-        self.treeview.append_column(c0)
-
-        c1 = Gtk.TreeViewColumn("English", renderer_text, text=1)
-        self.treeview.append_column(c1)
-
-        renderer_editabletext = Gtk.CellRendererText()
-        renderer_editabletext.set_property("editable", True)
-
-        c2 = Gtk.TreeViewColumn("नेपाली", renderer_editabletext, text=2)
-        self.treeview.append_column(c2)
-
-        renderer_editabletext.connect("edited", self.text_edited)
-
-    def text_edited(self, widget, path, text):
-        self.liststore[path][2] = text
-
-    def fill_tree(self, gloss):
-        data = open(self.GLOSS, encoding="UTF-8").read().splitlines()
-        self.count = 0
-
-        for line in data:
-            self.count += 1
-            row = line.split('; ')
-            if len(row) != 2:
-                print("File Format Error: %s: %d"%(self.GLOSS, self.count))
-                exit(1)
-            row.insert(0, self.count)
-            self.liststore.append(row)
-
-class GUI():
+class GUI(Gtk.Grid):
     def __init__(self, parent=None):
+        Gtk.Grid.__init__(self)
         self.parent = parent
         self.makeWidgets()
 
-    def makeWidgets(self, ):
-        layout = Gtk.Grid()
-        self.parent.add(layout)
 
+    def makeWidgets(self ):
         ## Combo box
+        label = Gtk.Label("Query")
+        self.attach(label, 0, 0, 1, 1)
+
         self.search_history = Gtk.ListStore(int, str)
         self.cb_search = Gtk.ComboBox.new_with_model_and_entry(self.search_history)
-        self.cb_search.connect('key_release_event', self.cb_bind_enter)
         self.cb_search.set_entry_text_column(1)
-        #self.cb_search.set_icon_from_stock(Gtk.EntryIconPosition.PRIMARY, Gtk.STOCK_FIND)
+        self.attach(self.cb_search, 1, 0, 1, 1)
 
-        layout.add(self.cb_search)#, 0, 0, 2, 1)
+        ### binding
+        self.cb_search.connect('key_release_event', self.cb_binds)
+        accel_search = Gtk.AccelGroup()
+        root.add_accel_group(accel_search)
+        self.cb_search.add_accelerator("grab_focus", accel_search, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
+        self.cb_search.add_accelerator("grab_focus", accel_search, ord('s'), Gdk.ModifierType.CONTROL_MASK, 0)
+        self.cb_search.add_accelerator("grab_focus", accel_search, ord('l'), Gdk.ModifierType.CONTROL_MASK, 0)
 
-
+        ## Button
         self.b_search = Gtk.Button(label="Search")
-        self.b_search.connect('clicked', self.searchWord)
-        layout.attach(self.b_search, 1, 0, 1, 1)
+        self.b_search.connect('clicked', lambda e: self.searchWord())
+        self.attach(self.b_search, 2, 0, 1, 1)
 
         ## Viewer
-        scrolledwindow = Gtk.ScrolledWindow()
-        scrolledwindow.set_hexpand(True)
-        scrolledwindow.set_vexpand(True)
-        layout.attach(scrolledwindow, 0, 1, 2, 2)
+        self.textview = Vi.Viewer(self)
+        self.attach(self.textview, 0, 1, 3, 2)
 
-        self.textview = Gtk.TextView()
-        self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
+        ## browser
+        self.lview = BL.BrowseList(self.parent, PATH_GLOSS+'main.tra')
+        self.attach(self.lview, 0, 3, 3, 1)
 
-        self.textbuffer = self.textview.get_buffer()
-        self.textbuffer.set_text('Type Something to Search')
-        scrolledwindow.add(self.textview)
 
-        self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
-        self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
-        self.tag_underline = self.textbuffer.create_tag("underline",  underline=Pango.Underline.SINGLE)
-        self.tag_found = self.textbuffer.create_tag("found",  background="yellow")
+    def cb_binds(self, widget, event):
+        # print(event.keyval, event.type)
+        if event.keyval == 65293: # return key
+            self.searchWord()
+            self.cb_search.grab_focus()
 
-        ## tree-viewer
-        # for i, f in enumerate(os.listdir(PATH_GLOSS)):
-        #     #if not f[-4:] in FILE_TYPES: continue
-        self.lview = List_view(PATH_GLOSS+'main.tra', self.parent)
-        layout.attach(self.lview, 0, 3, 2, 1)
 
-    def cb_bind_enter(self, widget, event):
-        # print(event.keyval)
-        if event.keyval == 65293:
-            self.searchWord(widget, event)
-
-    def searchWord(self, widget, event):
+    def searchWord(self):
         entry = self.cb_search.get_child()
         val = entry.get_text().strip().lower()
 
         foundFlag = False
-        for i, en, np in self.lview.liststore:
-            if en != val : continue
-            print("#%-4d %s - %s "%(i, en, np))
-            self.textbuffer.set_text("%s -> %s" %(en, np))
+        tab = 0
+        for i in self.lview.liststore:
+            if i[1] != val : continue
+            self.textview.parser([tab] + list(i))
             foundFlag = True
             break
 
         if foundFlag is False:
-            self.textbuffer.set_text('Sorry, "%s" was not found'%val)
-
-        #Now perform Lev Distance
-        #calc_lev_dist() -- future
-        # print(self.lview.liststore.iter_next(0))
-        # help(self.lview.liststore.get_data)
-        # print(self.lview.liststore.get_data)
-        # print(dir(self.lview.liststore))
+            self.textview.not_found(val)
 
 
 def on_key_press(widget, event):
@@ -137,17 +85,26 @@ def on_key_press(widget, event):
     if event.keyval == 65307:
         Gtk.main_quit()
 
+    if Gdk.ModifierType.CONTROL_MASK & event.state:
+        if event.keyval == ord('c'):
+            entry = gui.cb_search.get_child()
+            entry.set_text("")
+
+
 def main():
+    global root
+    root = Gtk.Window()
+    root.connect('delete-event', Gtk.main_quit)
+    root.connect('key_release_event', on_key_press)
+    root.set_default_size(600, 500)
+
     global gui
-    win = Gtk.Window()
-    win.connect('delete-event', Gtk.main_quit)
-    win.connect('key_release_event', on_key_press)
-    win.set_default_size(600, 500)
+    gui = GUI(root)
 
-    gui = GUI(win)
+    root.add(gui)
 
-    win.show_all()
-    Gtk.main()
 
 if __name__ == '__main__':
     main()
+    root.show_all()
+    Gtk.main()
