@@ -1,6 +1,6 @@
 NAME=`basename $(PWD)`
 
-default: py3
+default: gtk
 
 py: py3
 

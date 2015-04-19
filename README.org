@@ -1,0 +1,43 @@
+#+TITLE: anubad
+#+DATE: Sunday, Apr 19 2015
+
+Graphical Interface for glossary browsing.
+
+[[http://i.creativecommons.org/l/by/3.0/88x31.png][Creative Commons Attribution 3.0 Unported License IMAGE]]
+Copyright © 2013 to the Anubad Authors.
+
+* How to get it
+
+  #+begin_src bash
+  git clone  https://github.com/foss-np/anubad
+  #+end_src
+
+* Use
+
+  #+begin_src bash
+  ./configure
+  #+end_src
+
+  Two version are avaliable one with native python tkinter, and other
+  in Gtk.
+
+** Tkinter Version
+   This was the earlier design with focus on making the code run with
+   various platforms, its pretty robust and workable.
+
+   - py2/3 compatible
+   - Cross Platform (linux/mswin/) hopefully mac
+
+   #+begin_src bash
+   ./main.pyw
+   #+end_src
+
+
+** Gtk Version
+   Due to the font rendering issues, and poor system intergation in
+   linux tkinter, it was rewritten in Gtk with is still in development
+   although both version will be supported for now.
+
+   #+begin_src bash
+   ./gtk3.py
+   #+end_src

@@ -9,6 +9,7 @@ A module for the interactive text interface and Decoration.
 if __name__ == '__main__':
     exec(open("mysettings.conf").read())
     exec(open("gsettings.conf").read())
+    import sys
     sys.path.append(PATH_MYLIB)
     from debugly import *
 

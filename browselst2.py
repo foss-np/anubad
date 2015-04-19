@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-import sys
-
-exec(open("mysettings.conf").read())
-if PATH_MYLIB:
+if __name__ == '__main__':
+    exec(open("mysettings.conf").read())
+    exec(open("gsettings.conf").read())
+    import sys
     sys.path.append(PATH_MYLIB)
     from debugly import *
 

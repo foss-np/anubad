@@ -1,6 +1,10 @@
-TAGS
-main.py
-*.pyc
-*.bak
 *.7z
+*.bak
+*.pyc
+TAGS
 _*
+doc
+gloss
+main.py
+mysetting.conf
+plug_ins
