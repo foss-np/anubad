@@ -6,20 +6,20 @@
 A module for the interactive text interface and Decoration.
 """
 
-exec(open("gsettings.conf").read())
+if __name__ == '__main__':
+    exec(open("mysettings.conf").read())
+    exec(open("gsettings.conf").read())
+    sys.path.append(PATH_MYLIB)
+    from debugly import *
 
 try: #py2/3 compatibiliy
     from tkinter import *
     import tkinter.ttk as ttk
     import tkinter.font as font
-    exec(open("mysettings.conf").read())
 except:
     from Tkinter import *
     import ttk
 
-if PATH_MYLIB:
-    sys.path.append(PATH_MYLIB)
-    from debugly import *
 
 class Viewer(Text):
     def __init__(self, parent=None, root=None):

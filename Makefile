@@ -28,5 +28,11 @@ dist:
 browser:
 	./browselst.py
 
+browser2:
+	./browselst2.py
+
 viewer:
 	./viewer.py
+
+viewer2:
+	./viewer2.py
