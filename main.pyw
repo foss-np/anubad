@@ -24,14 +24,13 @@ if PATH_MYLIB:
     sys.path.append(PATH_MYLIB)
     from debugly import *
 
-from subprocess import check_output
 import browselst as BL
 import viewer as Vi
 
 BL.def_font = def_font
 Vi.def_font = def_font
 
-PATH_GLOSS = fullpath + PATH_GLOSS
+PATH_GLOSS = fullpath + PATH_GLOSS + '/'
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
@@ -63,22 +62,6 @@ class GUI(Frame):
         self.sbox.pack(side="left")
         self.sbox.insert(0, "Here")
 
-        Button(button_frame, text="Previous").pack(side="left", padx=5)
-        Button(button_frame, text="Next").pack(side="left", padx=5)
-
-        # searchbox
-        history_frame = tk.Frame(self)
-        history_frame.pack(expand=1, side="left", fill="both")
-
-        self.suggestion = tk.Listbox(history_frame)
-        self.suggestion.pack(expand=1, side="top", fill="both")
-
-        variable = tk.StringVar(self)
-        variable.set("one") # default value
-
-        self.gloss_list = OptionMenu(history_frame, variable, "one", "two", "three")
-        self.gloss_list.pack(fill="x")
-
         # viewer
         view_frame = Frame(self)
         view_frame.pack(expand=1, side="right", fill="both")
@@ -89,7 +72,6 @@ class GUI(Frame):
         self.tabar = Notebook(view_frame, takefocus=0)
         self.tabar.pack(expand=1, side="top", fill="both")
         self.tabar.enable_traversal()
-        #self.viewer = Text(root)
 
         var = tk.IntVar() # TODO: autocopy to clipboard
         self.cbox_acopy = tk.Checkbutton(view_frame, text="auto copy")
@@ -343,11 +325,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-    if PATH_PLUGINS:
-        # TODO: trasliterate, espeak
-        PATH_PLUGINS = fullpath + PATH_PLUGINS
-        for file_name in os.listdir(PATH_PLUGINS):
-            print(file_name, "loaded")
-            exec(open(PATH_PLUGINS + file_name).read())
-
     root.mainloop()

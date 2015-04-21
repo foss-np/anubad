@@ -41,3 +41,9 @@ Copyright © 2013 to the Anubad Authors.
    #+begin_src bash
    ./gtk3.py
    #+end_src
+* Running Gtk Version on Windows
+** Requirement
+   - git
+   - python 3
+   - pygtk
+http://sourceforge.net/projects/pygobjectwin32/files/pygi-aio-3.10.2-win32_rev10-setup.exe/download

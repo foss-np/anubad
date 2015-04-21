@@ -78,8 +78,6 @@ class BrowseList(Frame):
 
     def bindWidgets(self):
         self.tree.bind('<Button-3>', self.call_popup)
-        self.tree.bind('<Control-Insert>', self.clipboard)
-        self.tree.bind('<Control-c>', self.clipboard_smart)
 
     def sortby(self, c, descending): #column click sort
         data = [(self.tree.set(n, c), n) for n in self.tree.get_children('')]
@@ -141,34 +139,6 @@ class BrowseList(Frame):
         else: self.pack(expand=NO, side=TOP, fill=BOTH, anchor=N)
         self.visible = not self.visible
 
-    def clipboard(self, *event):
-        # index = nb.index(nb.select())
-        # obj = glist[index]
-        sel = self.tree.item(self.tree.focus())
-        val = sel['values']
-        self.master.clipboard_clear()
-        self.master.clipboard_append(val[2])
-        print("Copied to clipboard")
-
-    def clipboard_smart(self, event):
-        try: # seem like in there is no var defined
-            old_val = root.clipboard_get()
-        except:
-            old_val = ""
-
-        sel = self.tree.item(self.tree.focus())
-        val = sel['values']
-        new_val = val[2].split(',')[0]
-
-        self.master.clipboard_clear()
-
-        if old_val == new_val:
-            self.copy_smart = True
-            self.master.clipboard_append(val[2])
-        else:
-            self.master.clipboard_append(new_val)
-
-        print("smart clipboard")
 
     def make_popup(self, ID, word):
         popup = Menu(self, tearoff=0)

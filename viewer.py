@@ -124,13 +124,7 @@ class Viewer(Text):
         self.config(state=NORMAL)
         self.insert(END, word, "h1")
         self.insert(END, " Not Found\n")
-        self.insert(END, "search: ", "em")
-        self.insert(END, "web", "web")
-        self.insert(END, " ")
-        self.insert(END, "other")
-        self.insert(END, "\n")
         self.config(state=DISABLED)
-        self.tag_bind("web", "<Button-1>", lambda e: web_search(word))
 
     def _enter(self, event):
         self.config(cursor="hand2")
@@ -145,10 +139,6 @@ def _click(event, link):
     href.add_command(label=link)
     href.tk_popup(ex, ey)
 _click_secondary=_click
-
-
-def web_search(word):
-    print("dummy %s.web_search()"%__name__)
 
 
 def main():
