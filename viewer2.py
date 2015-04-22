@@ -21,9 +21,10 @@ class Viewer(Gtk.ScrolledWindow):
     def makeWidgets(self):
         self.textview = Gtk.TextView()
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
-
         self.textbuffer = self.textview.get_buffer()
-        self.add(self.textview)
+        self.add_with_viewport(self.textview)
+        self.textview.connect("size-allocate", self._autoscroll)
+        # self.add(self.textview)
 
         self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
         self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
@@ -52,12 +53,16 @@ class Viewer(Gtk.ScrolledWindow):
         # """
         print(lst)
         word = lst[2]
-        # ahref = str(href)
-        # self.tag_config(ahref)
-        # self.tag_bind(ahref, "<Enter>", self._enter)
-        # self.tag_bind(ahref, "<Leave>", self._leave)
-        # self.tag_bind(ahref, "<Button-1>", lambda e: _click(e, href))
-        # self.tag_bind(ahref, "<Button-3>", lambda e: _click_secondary(e, href))
+        # # ahref = str(href)
+        # # self.tag_config(ahref)
+        # # self.tag_bind(ahref, "<Enter>", self._enter)
+        # # self.tag_bind(ahref, "<Leave>", self._leave)
+        # # self.tag_bind(ahref, "<Button-1>", lambda e: _click(e, href))
+        # # self.tag_bind(ahref, "<Button-3>", lambda e: _click_secondary(e, href))
+        # # self.insert(END, lst[2], ("h1", ahref))
+
+        # buffer = "<b>%s</b>"%word
+        # self.textbuffer.set_markup(buffer)
 
         start = self.textbuffer.get_end_iter()
         self.textbuffer.insert(start, word)
@@ -65,11 +70,9 @@ class Viewer(Gtk.ScrolledWindow):
         end = self.textbuffer.get_end_iter()
         self.textbuffer.apply_tag(self.tag_bold, start, end)
 
-        # self.insert(END, lst[2], ("h1", ahref))
         raw = lst[3]
-
         trasliterate = ""
-        traslation = []
+        translations = []
         pos = "undefined"
         level = 0
 
@@ -89,36 +92,45 @@ class Viewer(Gtk.ScrolledWindow):
             elif c == ',':
                 if raw[i-1] in ')]': continue
                 if level > 0: continue
-                traslation.append([pos, raw[fbreak:i]])
+                translations.append([pos, raw[fbreak:i]])
                 fbreak = i+2
             elif c == ')':
-                traslation.append([pos, raw[fbreak:i]])
+                translations.append([pos, raw[fbreak:i]])
                 pos = ""
                 fbreak = i+3
                 level -= 1
 
-        if i - fbreak > 2 or len(traslation) < 1:
-            traslation.append([pos, raw[fbreak:]])
+        if i - fbreak > 2 or len(translations) < 1:
+            translations.append([pos, raw[fbreak:]])
 
         # self.insert(END, '\t['+trasliterate+']\n', "tsl")
         self.textbuffer.insert(end, '\t['+trasliterate+']\n')
         end = self.textbuffer.get_end_iter()
 
-        for c, t in enumerate(traslation):
+        for c, t in enumerate(translations):
             # self.insert(END, "%d. "%(c+1), "li")
             self.textbuffer.insert(end, "%4d. "%(c+1))
             end = self.textbuffer.get_end_iter()
             if t[0] == "": pos_ = "undefined"
             else: pos_ = t[0]
 
-            self.textbuffer.insert(end, pos_)
+            self.textbuffer.insert(end, pos_.strip())
             end = self.textbuffer.get_end_iter()
 
-            self.textbuffer.insert(end, " ~ ")
+            self.textbuffer.insert(end, " » ")
             end = self.textbuffer.get_end_iter()
 
-            self.textbuffer.insert(end, t[1]+"\n")
+            self.textbuffer.insert(end, t[1].strip()+"\n")
             end = self.textbuffer.get_end_iter()
+
+            # print(self.textview.scroll_to_iter(end, 0, True, 1.0, 0.0 ))
+
+        return [ t.strip() for p, t in translations ]
+
+    def _autoscroll(self, *args):
+        adj = self.get_vadjustment()
+        adj.set_value(adj.get_upper() - adj.get_page_size())
+
 
     def not_found(self, word):
         end = self.textbuffer.get_end_iter()
@@ -164,8 +176,6 @@ def on_key_press(widget, event):
     # print(event.keyval)
     if event.keyval == 65307:
         Gtk.main_quit()
-    # else:
-    #     gui.
 
 
 def main():

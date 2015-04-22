@@ -7,6 +7,7 @@ if __name__ == '__main__':
     sys.path.append(PATH_MYLIB)
     from debugly import *
 
+import os
 from gi.repository import Gtk, Pango
 
 class BrowseList(Gtk.ScrolledWindow):
@@ -61,9 +62,16 @@ class BrowseList(Gtk.ScrolledWindow):
             if len(row) != 2:
                 # TODO: open leafpad automatically with the current error line
                 print("File Format Error: %s: %d"%(self.GLOSS, self.count))
+                arg = "--jump=%d"%self.count
+                os.system("setsid leafpad %s %s"%(arg, self.GLOSS))
                 exit(1)
             row.insert(0, self.count)
             self.liststore.append(row)
+
+
+    def add_to_tree(self, row):
+        self.count += 1
+        self.liststore.append([self.count] + row)
 
 
     def clear_tree(self):
@@ -74,8 +82,19 @@ class BrowseList(Gtk.ScrolledWindow):
         pass
 
 
-    def treeSetFocus(self):
-        if not self.count: return # if no data
+    def open_gloss(self, ID):
+        # TODO : smart xdg-open with arguments
+        # if not self.CURRENT_FOUND_ITEM:
+        #     open_gloss()
+        #     return
+
+        # tab, ID = self.CURRENT_FOUND_ITEM
+        # obj = self.glist[tab]
+        arg = "--jump=%d"%ID
+        os.system("setsid leafpad %s %s"%(arg, self.GLOSS))
+
+    def open_dir(self):
+        os.system("setsid nemo %s"%(self.GLOSS))
 
 
     def make_popup(self, ID, word):
