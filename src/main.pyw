@@ -30,7 +30,7 @@ import viewer as Vi
 BL.def_font = def_font
 Vi.def_font = def_font
 
-PATH_GLOSS = fullpath + PATH_GLOSS + '/'
+PATH_GLOSS = fullpath + PATH_GLOSS + '/' + LIST_GLOSS[0].replace("main.tra", "")
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
@@ -73,18 +73,11 @@ class GUI(Frame):
         self.tabar.pack(expand=1, side="top", fill="both")
         self.tabar.enable_traversal()
 
-        var = tk.IntVar() # TODO: autocopy to clipboard
-        self.cbox_acopy = tk.Checkbutton(view_frame, text="auto copy")
-        self.cbox_acopy.pack(side="right")
-        self.cbox_acopy.config(variable=var, takefocus=0)
-        var.set(1)
-
 
     def bindWidgets(self):
         self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0, "end"))
         self.sbox.bind('<Control-g>', lambda e: self.sbox.delete(0, "end"))
 
-        # TODO: will do the complete search
         self.sbox.bind('<Return>', sbox_next_search)
 
         self.sbox.bind('<FocusIn>', self.sboxFocusIn)
@@ -92,7 +85,6 @@ class GUI(Frame):
         self.sbox.bind('<Control-i>', add_to_list)
 
         root.bind('<Control-o>', self.open_dir)
-        root.bind('<Control-u>', self.open_gloss_item_locate)
         root.bind('<Key-F5>', self.reload_gloss)
 
         root.bind('<Control-f>', self.sboxSetFocus)
@@ -136,18 +128,6 @@ class GUI(Frame):
         self.tabar.select(tab)
         obj.treeSetFocus()
 
-    # TODO: add the decorator pattern in all this stuffs :D
-    def open_gloss_item_locate(self, *events):
-        # TODO : smart xdg-open with arguments
-        if not self.CURRENT_FOUND_ITEM:
-            open_gloss()
-            return
-
-        tab, ID = self.CURRENT_FOUND_ITEM
-        obj = self.glist[tab]
-        arg = "--jump=%d"%(int(ID[1:], 16))
-        os.system("setsid leafpad %s %s"%(arg, obj.GLOSS))
-
     def open_dir(self, *events):
         tab = self.tabar.index(self.tabar.select())
         obj = self.glist[tab]
@@ -160,9 +140,6 @@ class GUI(Frame):
         print("Reload %s"%obj.GLOSS)
 
     def load_files(self):
-        # TODO: here prototype pattern can be applied
-        # WISH: do the profile before and after
-        # NOTE: some other patterns is here
         tab = 0
         for file_name in os.listdir(PATH_GLOSS):
             if not file_name[-4:] in FILE_TYPES: continue
@@ -196,11 +173,7 @@ def key_press(event):
 
 
 def sbox_next_search(*args):
-    ## TODO: Reverse search in nepali
-    # grep might be useful for quick implementation
     word = gui.sbox.get().lower().strip()
-
-    # TODO: Chain of Command Can be implimented
     id_lst = []
     for tab, obj in enumerate(gui.glist):
         ID = search_tree(tab, obj, word)
@@ -237,17 +210,6 @@ def _click(event, href):
 Vi._click = _click
 
 
-def open_gloss(*args):
-    tab = gui.tabar.index(gui.tabar.select())
-    obj = gui.glist[tab]
-    arg = ""
-    ID = obj.tree.focus()
-    if ID:
-        arg = "--jump=%d"%(int(ID[1:], 16))
-    os.system("setsid leafpad %s %s"%(arg, obj.GLOSS))
-BL.open_gloss = open_gloss
-
-
 def _doubleClick(event):
     tab = gui.tabar.index(gui.tabar.select())
     obj = gui.glist[tab]
@@ -268,7 +230,6 @@ def add_to_list(*args):
     row = [obj.count, word, anubad]
     select = obj.tree.insert('', 'end', values=row)
 
-    # TODO: make class method do view
     obj.tree.selection_set(select)
     obj.tree.focus(select)
     obj.tree.focus_set()
@@ -276,35 +237,8 @@ def add_to_list(*args):
     fp = open(obj.GLOSS, 'a').write("\n" + word + "; " + anubad)
     print(fp)
 
-def cli_mode(list):
-    file = open(GLOSS).read()
-    print("CLI-mode Currenly Disabled")
-    # for word in list:
-    #     found = file.find(word)
-    #     if found == -1:
-    #         print("%s Not Found"%word)
-    #         break
-    #     for i, char in enumerate(file[found:]):
-    #         if char=='\n': break
-    #         print(char)
-    #     #os.system("echo %s | xclip -i"%file[found:found+i])
-    #     print()
 
 def main():
-    if len(sys.argv) > 1:
-        cli_mode(sys.argv[1:])
-        exit()
-
-    ## TODO: command line argument to ignore faulty gloss
-    # -k ignore faulty gloss
-
-    ## TODO: use parallel database & sync function
-    # db design
-    # {word, meaning, vote, link}
-
-    # TODO: import mechanism
-    # TODO: Ctrl+click follow the link
-
     global root
     root = tk.Tk()
     root.title("anubad - अनुवाद")

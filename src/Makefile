@@ -2,6 +2,8 @@ NAME=`basename $(PWD)`
 
 default: gtk3
 
+tk-py: tk-py3
+
 tk-py3: mysettings.conf
 	./main.pyw
 

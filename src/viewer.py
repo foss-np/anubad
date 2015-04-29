@@ -56,6 +56,7 @@ class Viewer(Text):
         self.config(state=DISABLED)
         # TODO: clear all history tags
 
+
     def parser(self, lst):
         """
         >>> obj = Viewer(root=root)

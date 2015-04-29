@@ -109,7 +109,6 @@ class BrowseList(Frame):
                 row[2] = row[2][1:] # remove space
             except:
                 print("File Format Error: %s: %d"%(self.GLOSS, self.count))
-                # TODO: open leafpad automatically with the current error line
                 exit()
 
             self.select = self.tree.insert('', 'end', values=row, tag="npfont")
@@ -134,11 +133,6 @@ class BrowseList(Frame):
 
         self.tree.focus_set()
 
-    def toggle_display(self, *args):
-        if self.visible: self.pack_forget()
-        else: self.pack(expand=NO, side=TOP, fill=BOTH, anchor=N)
-        self.visible = not self.visible
-
 
     def make_popup(self, ID, word):
         popup = Menu(self, tearoff=0)
@@ -148,6 +142,7 @@ class BrowseList(Frame):
         popup.add_separator()
         popup.add_command(label="Search online", command=lambda: web_search(word))
         return popup
+
 
     def get_ID_below_mouse(self, event):
         HEIGHT = 19
@@ -167,14 +162,6 @@ class BrowseList(Frame):
         popup = self.make_popup(ID, word)
         popup.tk_popup(event.x_root, event.y_root)
         del popup
-
-
-def open_gloss():
-    print("dummy %s.open_gloss()"%__name__)
-
-
-def web_search(word):
-    print("dummy %s.web_search()"%__name__)
 
 
 def main():

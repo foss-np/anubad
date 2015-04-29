@@ -278,11 +278,10 @@ def reload(gloss):
         xcowsay()
         return
 
-    print("loading:", "gloss/" + gloss)
     gui.remove(gui.browser)
     del gui.browser
     gui.browser = BL.BrowseList(gui.parent, PATH_GLOSS + gloss)
-    gui.attach(gui.browser, 0, 2, 2, 1)
+    gui.attach(gui.browser, 0, 3, 2, 1)
     root.show_all()
 
     gui.searchWord()
