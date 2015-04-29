@@ -36,14 +36,51 @@ class GUI(Gtk.Grid):
 
 
     def makeWidgets(self):
+        self.attach(self.makeWidgets_toolbar(), 0, 0, 3, 1)
         # self.attach(self.makeWidgets_sidebar(), 0, 0, 1, 2)
-        self.attach(self.makeWidgets_searchbar(), 1, 0, 1, 1)
-        self.attach(self.makeWidgets_viewer(), 1, 1, 1, 1)
+        self.attach(self.makeWidgets_searchbar(), 1, 1, 1, 1)
+        self.attach(self.makeWidgets_viewer(), 1, 2, 1, 1)
 
         ## browser
         self.browser = BL.BrowseList(self.parent, PATH_GLOSS + LIST_GLOSS[0])
-        self.attach(self.browser, 0, 2, 2, 1)
+        self.attach(self.browser, 0, 3, 2, 1)
 
+
+    def makeWidgets_toolbar(self):
+        toolbar = Gtk.Toolbar()
+
+        # button_previous = Gtk.ToolButton.new_from_stock(Gtk.STOCK_)
+        # toolbar.insert(button_previous, 0)
+
+        button_about = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ABOUT)
+        # button_about.connect("clicked", self.on_clear_clicked)
+        toolbar.insert(button_about, 0)
+        toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_PREFERENCES), 0)
+
+        toolbar.insert(Gtk.SeparatorToolItem(), 0)
+
+        button_clear = Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLEAR)
+        button_clear.connect("clicked", lambda e: self.textview.textbuffer.set_text(""))
+        toolbar.insert(button_clear, 0)
+
+        button_spell = Gtk.RadioToolButton()
+        button_spell.set_stock_id(Gtk.STOCK_SPELL_CHECK)
+        button_spell.connect("toggled", self._spell_check_toggled)
+        toolbar.insert(button_spell, 0)
+
+        toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_ADD), 0)
+
+        toolbar.insert(Gtk.SeparatorToolItem(), 0)
+
+        toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_FORWARD), 0)
+        toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_BACK), 0)
+
+        return toolbar
+
+
+    def _spell_check_toggled(self):
+        print("button pressed")
+        pass
 
     def makeWidgets_sidebar(self):
         f_sidebar = Gtk.VBox()
@@ -93,19 +130,12 @@ class GUI(Gtk.Grid):
     def makeWidgets_searchbar(self):
         layout = Gtk.HBox()
 
-        label = Gtk.Label("Query")
-        layout.add(label)
-
-        #self.cb_search.set_icon_from_stock(Gtk.EntryIconPosition.PRIMARY, Gtk.STOCK_FIND)
+        layout.add(Gtk.Label("Query"))
 
         self.search_history = Gtk.ListStore(int, str)
         self.cb_search = Gtk.ComboBox.new_with_model_and_entry(self.search_history)
         self.cb_search.set_entry_text_column(1)
         layout.add(self.cb_search)
-
-        # button_clear = Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLEAR)
-        # button_clear.connect("clicked", self.on_clear_clicked)
-        # toolbar.insert(button_clear, 9)
 
         ### binding
         self.cb_search.connect('key_release_event', self.cb_binds)
@@ -115,7 +145,7 @@ class GUI(Gtk.Grid):
         self.cb_search.add_accelerator("grab_focus", accel_search, ord('l'), Gdk.ModifierType.CONTROL_MASK, 0)
 
         ## Button
-        self.b_search = Gtk.Button(label="Search")
+        self.b_search = Gtk.Button(label="Search", stock=Gtk.STOCK_FIND)
         layout.add(self.b_search)
         self.b_search.connect('clicked', self.searchWord)
 
@@ -133,7 +163,7 @@ class GUI(Gtk.Grid):
                 entry.set_text("")
 
 
-    def searchWord(self):
+    def searchWord(self, *args):
         entry = self.cb_search.get_child()
         text = entry.get_text().strip().lower()
         if not text: return
@@ -153,10 +183,9 @@ class GUI(Gtk.Grid):
 
         if len(clip_out) == 0: return
 
-
         self.textview.mark_found(clip_out[0])
-        global clipboard
         self.clip_cycle = cycle(clip_out)
+        global clipboard
         clipboard.set_text(next(self.clip_cycle), -1)
         self.CURRENT_FOUND_ITEM = item
         self.cb_search.grab_focus()
@@ -241,11 +270,12 @@ def main():
     global root
     root = Gtk.Window(title="anubad - अनुवाद")
     root.connect('delete-event', Gtk.main_quit)
-    root.connect('key_release_event', on_key_press)
+    root.connect('key_press_event', on_key_press)
     root.set_default_size(600, 500)
 
     global gui
     gui = GUI(root)
+    gui.cb_search.grab_focus()
     root.add(gui)
 
     global clipboard
