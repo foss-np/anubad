@@ -1,20 +1,18 @@
 NAME=`basename $(PWD)`
 
-default: gtk
+default: gtk3
 
-py: py3
-
-py3: mysettings.conf
+tk-py3: mysettings.conf
 	./main.pyw
 
-py2: mysettings.conf
+tk-py2: mysettings.conf
 	python2 main.pyw
 
 cli: mysettings.conf
 	./main.pyw hello
 
-gtk: mysettings.conf
-	./gtk3.py
+gtk3: mysettings.conf
+	./main.py
 
 wine: mysettings.conf
 	# note should load from same directory
