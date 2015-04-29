@@ -14,6 +14,7 @@ if PATH_MYLIB:
     sys.path.append(PATH_MYLIB)
     from debugly import *
 
+from itertools import cycle
 from gi.repository import Gtk, Gdk, Pango
 import browselst2 as BL
 import viewer2 as Vi
@@ -28,8 +29,11 @@ class GUI(Gtk.Grid):
     def __init__(self, parent=None):
         Gtk.Grid.__init__(self)
         self.parent = parent
+        self.CURRENT_FOUND_ITEM = None
+        self.clip_cycle = None
 
         self.makeWidgets()
+
 
     def makeWidgets(self):
         # self.attach(self.makeWidgets_sidebar(), 0, 0, 1, 2)
@@ -51,8 +55,8 @@ class GUI(Gtk.Grid):
         for country in countries:
             self.gloss_list.append([country])
 
-        # self.cb_gloss = Gtk.ComboBox(model=self.gloss_list)
-        # f_sidebar.add(self.cb_gloss)
+        self.cb_gloss = Gtk.ComboBox(model=self.gloss_list)
+        f_sidebar.add(self.cb_gloss)
 
         scroll = Gtk.ScrolledWindow()
         f_sidebar.add(scroll)
@@ -109,7 +113,6 @@ class GUI(Gtk.Grid):
         root.add_accel_group(accel_search)
         self.cb_search.add_accelerator("grab_focus", accel_search, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
         self.cb_search.add_accelerator("grab_focus", accel_search, ord('l'), Gdk.ModifierType.CONTROL_MASK, 0)
-        self.cb_search.add_accelerator("grab_focus", accel_search, ord('v'), Gdk.ModifierType.CONTROL_MASK, 0)
 
         ## Button
         self.b_search = Gtk.Button(label="Search")
@@ -121,31 +124,42 @@ class GUI(Gtk.Grid):
 
     def cb_binds(self, widget, event):
         # print(event.keyval)
-        if event.keyval == 65293:
+        if event.keyval == 65293: # <enter> return
             self.searchWord()
+
+        if Gdk.ModifierType.CONTROL_MASK & event.state:
+            if event.keyval == ord('c'):
+                entry = self.cb_search.get_child()
+                entry.set_text("")
+
 
     def searchWord(self):
         entry = self.cb_search.get_child()
         text = entry.get_text().strip().lower()
         if not text: return
-        out = []
+        clip_out = []
 
         for val in text.split():
             foundFlag = False
-            tab = 0
+            tab = 0 # NOTE: for notebook not implemented yet
             for item in self.browser.liststore:
                 if item[1] != val : continue
-                out += self.textview.parser([tab] + list(item))
+                clip_out += self.textview.parser([tab] + list(item))
                 foundFlag = True
                 break
 
             if foundFlag is False:
                 self.textview.not_found(val)
-                return
 
+        if len(clip_out) == 0: return
+
+
+        self.textview.mark_found(clip_out[0])
         global clipboard
-        clipboard.set_text(out[0], -1)
+        self.clip_cycle = cycle(clip_out)
+        clipboard.set_text(next(self.clip_cycle), -1)
         self.CURRENT_FOUND_ITEM = item
+        self.cb_search.grab_focus()
 
 
 def add_to_gloss(parent):
@@ -182,38 +196,36 @@ def add_to_gloss(parent):
 
 def on_key_press(widget, event):
     # print(event.keyval)
-    if event.keyval == 65307: Gtk.main_quit()
-    elif event.keyval == 65481: reload(LIST_GLOSS[0]) #F12
-    elif event.keyval == 65480: reload(LIST_GLOSS[1]) #F11
-    elif event.keyval == 65479: reload(LIST_GLOSS[2]) #F10
+    if event.keyval == 65307: Gtk.main_quit() # Esc
+    elif event.keyval == 65481: reload(LIST_GLOSS[0]) # F12
+    elif event.keyval == 65480: reload(LIST_GLOSS[1]) # F11
+    elif event.keyval == 65479: reload(LIST_GLOSS[2]) # F10
 
     if Gdk.ModifierType.CONTROL_MASK & event.state:
-        if event.keyval == ord('c'):
-            entry = gui.cb_search.get_child()
-            entry.set_text("")
-        elif event.keyval == ord('i'): add_to_gloss(root)
+        if event.keyval == ord('i'): add_to_gloss(root)
         elif event.keyval == ord('t'): dict_grep()
+        elif event.keyval == ord('o'): gui.browser.open_dir()
+        elif event.keyval == ord('s'):
+            if gui.clip_cycle:
+                text = next(gui.clip_cycle)
+                clipboard.set_text(text, -1)
+                gui.textview.mark_found(text)
+            else: gui.cb_search.grab_focus()
         elif event.keyval == ord('v'):
-            global clipboard
             text = clipboard.wait_for_text()
             entry = gui.cb_search.get_child()
             entry.set_text(text.strip().lower())
+            gui.cb_search.grab_focus()
             gui.searchWord()
-        elif event.keyval == ord('o'):
-            ID = 0
-            if gui.CURRENT_FOUND_ITEM:
-                ID = gui.CURRENT_FOUND_ITEM[0]
-            gui.browser.open_dir()
         elif event.keyval == ord('u'):
-            ID = 0
-            if gui.CURRENT_FOUND_ITEM:
-                ID = gui.CURRENT_FOUND_ITEM[0]
+            ID = gui.CURRENT_FOUND_ITEM[0] if gui.CURRENT_FOUND_ITEM else 0
             gui.browser.open_gloss(ID)
 
 
 def reload(gloss):
-    if not gloss: return
-    if gui.browser.GLOSS == PATH_GLOSS + gloss: return
+    if gui.browser.GLOSS == PATH_GLOSS + gloss:
+        xcowsay()
+        return
 
     print("loading:", "gloss/" + gloss)
     gui.remove(gui.browser)
@@ -238,6 +250,7 @@ def main():
 
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+
 
 if __name__ == '__main__':
     main()

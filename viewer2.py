@@ -37,6 +37,17 @@ class Viewer(Gtk.ScrolledWindow):
         pass
 
 
+    def mark_found(self, text):
+        begin = self.textbuffer.get_start_iter()
+        end = self.textbuffer.get_end_iter()
+        self.textbuffer.remove_all_tags(begin, end)
+
+        match = begin.forward_search(text, 0, end)
+        if match != None:
+            match_start, match_end = match
+            self.textbuffer.apply_tag(self.tag_found, match_start, match_end)
+
+
     def clear_viewer(self):
         # self.delete(1.0, END)
         # TODO: clear all history tags
@@ -125,7 +136,11 @@ class Viewer(Gtk.ScrolledWindow):
 
             # print(self.textview.scroll_to_iter(end, 0, True, 1.0, 0.0 ))
 
-        return [ t.strip() for p, t in translations ]
+        r = []
+        for p, t in translations:
+            r += [ u.strip() for u in t.split(',') ]
+
+        return r
 
     def _autoscroll(self, *args):
         adj = self.get_vadjustment()
