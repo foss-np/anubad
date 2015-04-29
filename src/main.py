@@ -14,7 +14,6 @@ if PATH_MYLIB:
     sys.path.append(PATH_MYLIB)
     from debugly import *
 
-from itertools import cycle
 from gi.repository import Gtk, Gdk, Pango
 import browselst2 as BL
 import viewer2 as Vi
@@ -81,6 +80,7 @@ class GUI(Gtk.Grid):
     def _spell_check_toggled(self):
         print("button pressed")
         pass
+
 
     def makeWidgets_sidebar(self):
         f_sidebar = Gtk.VBox()
@@ -184,8 +184,9 @@ class GUI(Gtk.Grid):
         if len(clip_out) == 0: return
 
         self.textview.mark_found(clip_out[0])
-        self.clip_cycle = cycle(clip_out)
-        global clipboard
+        self.clip_cycle = circle(clip_out)
+        global clipboard, diff
+        diff = 1
         clipboard.set_text(next(self.clip_cycle), -1)
         self.CURRENT_FOUND_ITEM = item
         self.cb_search.grab_focus()
@@ -229,13 +230,21 @@ def on_key_press(widget, event):
     elif event.keyval == 65481: reload(LIST_GLOSS[0]) # F12
     elif event.keyval == 65480: reload(LIST_GLOSS[1]) # F11
     elif event.keyval == 65479: reload(LIST_GLOSS[2]) # F10
-
+    global diff
     if Gdk.ModifierType.CONTROL_MASK & event.state:
         if event.keyval == ord('i'): add_to_gloss(root)
         elif event.keyval == ord('t'): dict_grep()
         elif event.keyval == ord('o'): gui.browser.open_dir()
+        elif event.keyval == ord('r'):
+            if gui.clip_cycle:
+                diff = -1
+                text = next(gui.clip_cycle)
+                clipboard.set_text(text, -1)
+                gui.textview.mark_found(text)
+            else: gui.cb_search.grab_focus()
         elif event.keyval == ord('s'):
             if gui.clip_cycle:
+                diff = 1
                 text = next(gui.clip_cycle)
                 clipboard.set_text(text, -1)
                 gui.textview.mark_found(text)
@@ -249,6 +258,19 @@ def on_key_press(widget, event):
         elif event.keyval == ord('u'):
             ID = gui.CURRENT_FOUND_ITEM[0] if gui.CURRENT_FOUND_ITEM else 0
             gui.browser.open_gloss(ID)
+
+
+diff = 1
+def circle(iterable):
+    saved = iterable[:]
+    i = -1
+    global diff
+    while saved:
+        l = len(saved)
+        i += diff
+        if diff == 1 and l <= i: i = 0
+        if diff == -1 and i < 0: i = l - 1
+        yield saved[i]
 
 
 def reload(gloss):
