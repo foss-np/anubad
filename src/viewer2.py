@@ -16,7 +16,7 @@ class Viewer(Gtk.ScrolledWindow):
         self.set_vexpand(True)
 
         self.makeWidgets()
-        self.bindWidgets()
+
 
     def makeWidgets(self):
         self.textview = Gtk.TextView()
@@ -28,19 +28,17 @@ class Viewer(Gtk.ScrolledWindow):
 
         self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
         self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
-        self.tag_underline = self.textbuffer.create_tag("underline",  underline=Pango.Underline.SINGLE)
-        self.tag_found = self.textbuffer.create_tag("found",  background="yellow")
+        self.tag_underline = self.textbuffer.create_tag("underline", underline=Pango.Underline.SINGLE)
 
-
-    def bindWidgets(self):
-        # self.root.bind('<Control-l>', lambda e: self.clear_viewer())
-        pass
+        self.tag_pos = self.textbuffer.create_tag("pos", foreground="red")
+        self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
+        self.tag_found = self.textbuffer.create_tag("found", background="yellow")
 
 
     def mark_found(self, text):
         begin = self.textbuffer.get_start_iter()
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.remove_all_tags(begin, end)
+        self.textbuffer.remove_tag(self.tag_found, begin, end)
 
         match = begin.forward_search(text, 0, end)
         if match != None:
@@ -71,15 +69,6 @@ class Viewer(Gtk.ScrolledWindow):
         # # self.tag_bind(ahref, "<Button-1>", lambda e: _click(e, href))
         # # self.tag_bind(ahref, "<Button-3>", lambda e: _click_secondary(e, href))
         # # self.insert(END, lst[2], ("h1", ahref))
-
-        # buffer = "<b>%s</b>"%word
-        # self.textbuffer.set_markup(buffer)
-
-        start = self.textbuffer.get_end_iter()
-        self.textbuffer.insert(start, word)
-
-        end = self.textbuffer.get_end_iter()
-        self.textbuffer.apply_tag(self.tag_bold, start, end)
 
         raw = lst[3]
         trasliterate = ""
@@ -115,24 +104,26 @@ class Viewer(Gtk.ScrolledWindow):
             translations.append([pos, raw[fbreak:]])
 
         # self.insert(END, '\t['+trasliterate+']\n', "tsl")
-        self.textbuffer.insert(end, '\t['+trasliterate+']\n')
+
         end = self.textbuffer.get_end_iter()
+        self.textbuffer.insert_with_tags(end, word, self.tag_bold)
+        end = self.textbuffer.get_end_iter()
+        self.textbuffer.insert_with_tags(end, '\t['+trasliterate+']\n', self.tag_trans)
 
         for c, t in enumerate(translations):
-            # self.insert(END, "%d. "%(c+1), "li")
+            end = self.textbuffer.get_end_iter()
             self.textbuffer.insert(end, "%4d. "%(c+1))
-            end = self.textbuffer.get_end_iter()
-            if t[0] == "": pos_ = "undefined"
-            else: pos_ = t[0]
 
-            self.textbuffer.insert(end, pos_.strip())
-            end = self.textbuffer.get_end_iter()
+            pos_ = t[0].strip() if t[0] == "" else "undefined"
 
+            end = self.textbuffer.get_end_iter()
+            self.textbuffer.insert_with_tags(end, pos_, self.tag_pos)
+
+            end = self.textbuffer.get_end_iter()
             self.textbuffer.insert(end, " » ")
-            end = self.textbuffer.get_end_iter()
 
-            self.textbuffer.insert(end, t[1].strip()+"\n")
             end = self.textbuffer.get_end_iter()
+            self.textbuffer.insert(end, t[1].strip()+"\n")
 
             # print(self.textview.scroll_to_iter(end, 0, True, 1.0, 0.0 ))
 
@@ -141,6 +132,7 @@ class Viewer(Gtk.ScrolledWindow):
             r += [ u.strip() for u in t.split(',') ]
 
         return r
+
 
     def _autoscroll(self, *args):
         adj = self.get_vadjustment()
