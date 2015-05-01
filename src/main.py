@@ -47,28 +47,14 @@ class GUI(Gtk.Grid):
 
 
     def makeWidgets_viewer(self):
-        layout = Gtk.Overlay()
-
         #
         ## Text Viewer
         self.viewer = Vi.Viewer(self)
-        layout.add(self.viewer)
-        self.viewer.connect('key_press_event', self.viewer_binds)
+        # self.viewer.connect('key_press_event', self.viewer_binds)
         # self.viewer.override_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
         self.viewer.modify_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
 
-        #
-        ## Setting
-        # self.edit_lock = Gtk.ToolButton.new_from_stock(Gtk.STOCK_EXECUTE)
-        self.edit_lock = Gtk.Button(label="edit")
-        self.edit_lock.set_valign(Gtk.Align.CENTER)
-        self.edit_lock.set_halign(Gtk.Align.CENTER)
-        layout.add(self.edit_lock)
-
-
-        layout.show_all()
-
-        return layout
+        return self.viewer
 
 
     def makeWidgets_toolbar(self):

@@ -9,22 +9,37 @@ if __name__ == '__main__':
 
 from gi.repository import Gtk, Pango
 
-class Viewer(Gtk.ScrolledWindow):
+class Viewer(Gtk.Overlay):
+# class Viewer(Gtk.ScrolledWindow):
     def __init__(self, parent=None):
-        Gtk.ScrolledWindow.__init__(self)
-        self.set_hexpand(True)
-        self.set_vexpand(True)
+        # self.parent = parent
+        # Gtk.ScrolledWindow.__init__(self)
+        Gtk.Overlay.__init__(self)
 
         self.makeWidgets()
 
 
     def makeWidgets(self):
+        self.scroll = Gtk.ScrolledWindow()
+        self.add(self.scroll)
+        self.scroll.set_hexpand(True)
+        self.scroll.set_vexpand(True)
+
+        #
+        ## Setting
+        ## TODO: PUT THE LOCK ICON
+        self.toggle_edit = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_EXECUTE)
+        self.add_overlay(self.toggle_edit)
+        self.toggle_edit.connect("toggled", self._edit_toggle)
+        self.toggle_edit.set_valign(Gtk.Align.START)
+        self.toggle_edit.set_halign(Gtk.Align.END)
+
         self.textview = Gtk.TextView()
+        self.scroll.add(self.textview)
+        self.textview.set_editable(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
         self.textbuffer = self.textview.get_buffer()
-        self.add_with_viewport(self.textview)
         self.textview.connect("size-allocate", self._autoscroll)
-        # self.add(self.textview)
 
         self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
         self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
@@ -33,6 +48,10 @@ class Viewer(Gtk.ScrolledWindow):
         self.tag_pos = self.textbuffer.create_tag("pos", foreground="red")
         self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
         self.tag_found = self.textbuffer.create_tag("found", background="yellow")
+
+
+    def _edit_toggle(self, widget):
+        self.textview.set_editable(widget.get_active())
 
 
     def mark_found(self, text):
@@ -73,7 +92,7 @@ class Viewer(Gtk.ScrolledWindow):
         raw = lst[3]
         trasliterate = ""
         translations = []
-        pos = "undefined"
+        pos = ""
         level = 0
 
         fbreak = ftsl = 0
@@ -114,8 +133,7 @@ class Viewer(Gtk.ScrolledWindow):
             end = self.textbuffer.get_end_iter()
             self.textbuffer.insert(end, "%4d. "%(c+1))
 
-            pos_ = t[0].strip() if t[0] == "" else "undefined"
-
+            pos_ = t[0].strip() if t[0] else "undefined"
             end = self.textbuffer.get_end_iter()
             self.textbuffer.insert_with_tags(end, pos_, self.tag_pos)
 
@@ -135,7 +153,7 @@ class Viewer(Gtk.ScrolledWindow):
 
 
     def _autoscroll(self, *args):
-        adj = self.get_vadjustment()
+        adj = self.scroll.get_vadjustment()
         adj.set_value(adj.get_upper() - adj.get_page_size())
 
 
