@@ -28,6 +28,7 @@ class GUI(Gtk.Grid):
     def __init__(self, parent=None):
         Gtk.Grid.__init__(self)
         self.parent = parent
+
         self.CURRENT_FOUND_ITEM = None
         self.clip_cycle = None
 
@@ -39,47 +40,118 @@ class GUI(Gtk.Grid):
         # self.attach(self.makeWidgets_sidebar(), 0, 0, 1, 2)
         self.attach(self.makeWidgets_searchbar(), 1, 1, 1, 1)
         self.attach(self.makeWidgets_viewer(), 1, 2, 1, 1)
-
+        # self.attach(self.makeWidgets_settings(), 0, 3, 2, 1)
         ## browser
         self.browser = BL.BrowseList(self.parent, PATH_GLOSS + LIST_GLOSS[0])
-        self.attach(self.browser, 0, 3, 2, 1)
+        self.attach(self.browser, 0, 4, 2, 1)
+
+
+    def makeWidgets_viewer(self):
+        layout = Gtk.Overlay()
+
+        #
+        ## Text Viewer
+        self.viewer = Vi.Viewer(self)
+        layout.add(self.viewer)
+        self.viewer.connect('key_press_event', self.viewer_binds)
+        # self.viewer.override_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
+        self.viewer.modify_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
+
+        #
+        ## Setting
+        # self.edit_lock = Gtk.ToolButton.new_from_stock(Gtk.STOCK_EXECUTE)
+        self.edit_lock = Gtk.Button(label="edit")
+        self.edit_lock.set_valign(Gtk.Align.CENTER)
+        self.edit_lock.set_halign(Gtk.Align.CENTER)
+        layout.add(self.edit_lock)
+
+
+        layout.show_all()
+
+        return layout
 
 
     def makeWidgets_toolbar(self):
         toolbar = Gtk.Toolbar()
-
-        # button_previous = Gtk.ToolButton.new_from_stock(Gtk.STOCK_)
-        # toolbar.insert(button_previous, 0)
-
-        button_about = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ABOUT)
+        #
+        ## About Button
+        self.button_about = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ABOUT)
         # button_about.connect("clicked", self.on_clear_clicked)
-        toolbar.insert(button_about, 0)
+        toolbar.insert(self.button_about, 0)
+        ##
+        #
+        ##
         toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_PREFERENCES), 0)
-
+        ##
+        #
         toolbar.insert(Gtk.SeparatorToolItem(), 0)
-
-        button_clear = Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLEAR)
-        button_clear.connect("clicked", lambda e: self.textview.textbuffer.set_text(""))
-        toolbar.insert(button_clear, 0)
-
-        button_spell = Gtk.RadioToolButton()
-        button_spell.set_stock_id(Gtk.STOCK_SPELL_CHECK)
-        button_spell.connect("toggled", self._spell_check_toggled)
-        toolbar.insert(button_spell, 0)
-
+        #
+        ## Clean Viewer
+        self.button_clear = Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLEAR)
+        toolbar.insert(self.button_clear, 0)
+        self.button_clear.connect("clicked", lambda e: self.viewer.textbuffer.set_text(""))
+        ##
+        #
+        ##
         toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_ADD), 0)
-
+        ##
+        #
         toolbar.insert(Gtk.SeparatorToolItem(), 0)
-
-        toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_FORWARD), 0)
-        toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_BACK), 0)
+        #
+        ## Copy Toggle Button
+        self.toggle_copy = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_COPY)
+        toolbar.insert(self.toggle_copy, 0)
+        self.toggle_copy.set_active(True)
+        self.toggle_copy.connect("toggled", self._spell_check_toggle, '1')
+        ##
+        #
+        ## Spell-check Toggle Button
+        self.toggle_spell = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_SPELL_CHECK)
+        toolbar.insert(self.toggle_spell, 0)
+        self.toggle_spell.set_active(True)
+        self.toggle_spell.connect("toggled", self._spell_check_toggle, '1')
+        ##
+        #
+        ## Auto Transliterate Button
+        self.toggle_trans = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_CONVERT)
+        toolbar.insert(self.toggle_trans, 0)
+        self.toggle_trans.set_active(True)
+        self.toggle_trans.connect("toggled", self._spell_check_toggle, '1')
+        ##
+        #
+        toolbar.insert(Gtk.SeparatorToolItem(), 0)
+        #
+        ## Button Forward Button
+        self.button_forward = Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_FORWARD)
+        toolbar.insert(self.button_forward, 0)
+        self.button_forward.connect("clicked", lambda e: self._forward_click())
+        self.button_forward.set_sensitive(False)
+        ##
+        #
+        ## Button Back Button
+        self.button_back = Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_BACK)
+        toolbar.insert(self.button_back, 0)
+        self.button_forward.connect("clicked", lambda e: self._back_click())
+        self.button_back.set_sensitive(False)
 
         return toolbar
 
 
-    def _spell_check_toggled(self):
-        print("button pressed")
-        pass
+    def _forward_click(self):
+        print("forward clicked")
+
+
+    def _back_click(self):
+        print("back clicked")
+        self.button_forward.set_sensitive(True)
+
+
+    def _spell_check_toggle(self, *args):
+        print("spell button pressed")
+
+
+    def _smart_copy_toggle(self):
+        print("smart copy pressed")
 
 
     def makeWidgets_sidebar(self):
@@ -111,18 +183,20 @@ class GUI(Gtk.Grid):
         return f_sidebar
 
 
-    def makeWidgets_viewer(self):
-        layout = Gtk.VBox()
+    def makeWidgets_settings(self):
+        layout = Gtk.HBox()
 
-        self.textview = Vi.Viewer(self)
-        layout.add(self.textview)
-        # self.textview.override_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
-        self.textview.modify_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
+        self.font_button = Gtk.FontButton()
+        layout.add(self.font_button)
+        self.font_button.set_font_name('DejaVu Sans Mono 12')
+        self.font_button.connect('font-set', lambda w: self.viewer.modify_font(w.get_font_desc()))
 
-        # self.font_button = Gtk.FontButton()
-        # f_viewer.add(self.font_button)
-        # self.font_button.set_font_name('DejaVu Sans Mono 12')
-        # self.font_button.connect('font-set', lambda w: self.textview.modify_font(w.get_font_desc()))
+        # SHOW HIDE GLOSS
+        #toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GOTO_TOP), 0)
+        # toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GOTO_BOTTOM), 0)
+
+        layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLOSE))
+        layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_APPLY))
 
         return layout
 
@@ -130,11 +204,14 @@ class GUI(Gtk.Grid):
     def makeWidgets_searchbar(self):
         layout = Gtk.HBox()
 
-        layout.add(Gtk.Label("Query"))
+        label = Gtk.Label() #"Query")
+        label.set_markup("<b>Query</b>")
+        layout.add(label)
 
-        self.search_history = Gtk.ListStore(int, str)
-        self.cb_search = Gtk.ComboBox.new_with_model_and_entry(self.search_history)
-        self.cb_search.set_entry_text_column(1)
+        self.search_history = []
+        self.cb_dropdown = Gtk.ListStore(str)
+        self.cb_search = Gtk.ComboBox.new_with_model_and_entry(self.cb_dropdown)
+        self.cb_search.set_entry_text_column(0)
         layout.add(self.cb_search)
 
         ### binding
@@ -142,7 +219,6 @@ class GUI(Gtk.Grid):
         accel_search = Gtk.AccelGroup()
         root.add_accel_group(accel_search)
         self.cb_search.add_accelerator("grab_focus", accel_search, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
-        self.cb_search.add_accelerator("grab_focus", accel_search, ord('l'), Gdk.ModifierType.CONTROL_MASK, 0)
 
         ## Button
         self.b_search = Gtk.Button(label="Search", stock=Gtk.STOCK_FIND)
@@ -163,27 +239,40 @@ class GUI(Gtk.Grid):
                 entry.set_text("")
 
 
+    def viewer_binds(self, widget, event):
+        if Gdk.ModifierType.CONTROL_MASK & event.state:
+            if event.keyval == ord('l'):
+                self.viewer.textbuffer.set_text("")
+
+
     def searchWord(self, *args):
+        ## TODO: Reverse search in nepali
+        # grep might be useful for quick implementation
+
         entry = self.cb_search.get_child()
         text = entry.get_text().strip().lower()
         if not text: return
         clip_out = []
 
-        for val in text.split():
+        for word in text.split():
             foundFlag = False
             tab = 0 # NOTE: for notebook not implemented yet
             for item in self.browser.liststore:
-                if item[1] != val : continue
-                clip_out += self.textview.parser([tab] + list(item))
+                if item[1] != word : continue
+                clip_out += self.viewer.parser([tab] + list(item))
                 foundFlag = True
+                self.cb_dropdown.insert(0, [word])
                 break
 
             if foundFlag is False:
-                self.textview.not_found(val)
+                self.viewer.not_found(word)
+
 
         if len(clip_out) == 0: return
+        if len(self.cb_dropdown) > 1:
+            self.button_back.set_sensitive(True)
 
-        self.textview.mark_found(clip_out[0])
+        self.viewer.mark_found(clip_out[0])
         self.clip_cycle = circle(clip_out)
         global clipboard, diff
         diff = 1
@@ -221,7 +310,8 @@ def add_to_gloss(parent):
     row = [word, text]
     obj = gui.browser
     fp = open(obj.GLOSS, 'a').write("\n" + '; '.join(row))
-    gui.browser.add_to_tree(row)
+    count = gui.browser.add_to_tree(row)
+    gui.viewer.parser([0, count] + row)
 
 
 def on_key_press(widget, event):
@@ -230,24 +320,26 @@ def on_key_press(widget, event):
     elif event.keyval == 65481: reload(LIST_GLOSS[0]) # F12
     elif event.keyval == 65480: reload(LIST_GLOSS[1]) # F11
     elif event.keyval == 65479: reload(LIST_GLOSS[2]) # F10
+
     global diff
     if Gdk.ModifierType.CONTROL_MASK & event.state:
         if event.keyval == ord('i'): add_to_gloss(root)
-        elif event.keyval == ord('t'): dict_grep()
+        elif event.keyval == ord('1'): dict_grep()
+        elif event.keyval == ord('2'): web_search()
         elif event.keyval == ord('o'): gui.browser.open_dir()
         elif event.keyval == ord('r'):
             if gui.clip_cycle:
                 diff = -1
                 text = next(gui.clip_cycle)
                 clipboard.set_text(text, -1)
-                gui.textview.mark_found(text)
+                gui.viewer.mark_found(text)
             else: gui.cb_search.grab_focus()
         elif event.keyval == ord('s'):
             if gui.clip_cycle:
                 diff = 1
                 text = next(gui.clip_cycle)
                 clipboard.set_text(text, -1)
-                gui.textview.mark_found(text)
+                gui.viewer.mark_found(text)
             else: gui.cb_search.grab_focus()
         elif event.keyval == ord('v'):
             text = clipboard.wait_for_text()
@@ -281,7 +373,7 @@ def reload(gloss):
     gui.remove(gui.browser)
     del gui.browser
     gui.browser = BL.BrowseList(gui.parent, PATH_GLOSS + gloss)
-    gui.attach(gui.browser, 0, 3, 2, 1)
+    gui.attach(gui.browser, 0, 4, 2, 1)
     root.show_all()
 
     gui.searchWord()

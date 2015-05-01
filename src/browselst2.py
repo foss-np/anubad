@@ -8,6 +8,7 @@ if __name__ == '__main__':
     from debugly import *
 
 import os
+from subprocess import call
 from gi.repository import Gtk, Pango
 
 class BrowseList(Gtk.ScrolledWindow):
@@ -25,6 +26,7 @@ class BrowseList(Gtk.ScrolledWindow):
         self.makeWidgets()
 
         if self.GLOSS:
+            print("loading: *" + gloss[-40:])
             self.fill_tree(gloss)
 
 
@@ -72,6 +74,7 @@ class BrowseList(Gtk.ScrolledWindow):
     def add_to_tree(self, row):
         self.count += 1
         self.liststore.append([self.count] + row)
+        return self.count
 
 
     def clear_tree(self):
@@ -91,10 +94,11 @@ class BrowseList(Gtk.ScrolledWindow):
         # tab, ID = self.CURRENT_FOUND_ITEM
         # obj = self.glist[tab]
         arg = "--jump=%d"%ID
-        os.system("setsid leafpad %s %s"%(arg, self.GLOSS))
+        call(["leafpad", arg, self.GLOSS])
+
 
     def open_dir(self):
-        os.system("setsid nemo %s"%(self.GLOSS))
+        os.system("nemo %s"%(self.GLOSS))
 
 
     def make_popup(self, ID, word):
