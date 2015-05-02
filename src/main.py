@@ -15,6 +15,7 @@ if PATH_MYLIB:
     from debugly import *
 
 from gi.repository import Gtk, Gdk, Pango
+from subprocess import Popen
 import browselst2 as BL
 import viewer2 as Vi
 
@@ -32,13 +33,9 @@ class GUI(Gtk.Grid):
         self.CLIP_CYCLE = None
         self.TAB_LST = []
         self.FOUND_ITEMS = []
-        self.CURRENT_TAB = 0
-
-        self.SPELL_CHECK = True
-        self.SMART_COPY = True
-        self.TRANSLITERATE = True
 
         self.makeWidgets()
+        self.connect('key_press_event', self.key_binds)
 
 
     def makeWidgets(self):
@@ -79,25 +76,28 @@ class GUI(Gtk.Grid):
         #
         toolbar.insert(Gtk.SeparatorToolItem(), 0)
         #
+        ## Search Toggle Button
+        self.toggle_search = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_DIALOG_INFO)
+        self.toggle_search.set_active(True)
+        toolbar.insert(self.toggle_search, 0)
+        ##
+        #
         ## Smart Copy Toggle Button
         self.toggle_copy = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_COPY)
         toolbar.insert(self.toggle_copy, 0)
-        self.toggle_copy.set_active(self.SMART_COPY)
-        self.toggle_copy.connect("toggled", self._smart_copy_toggle, '1')
+        self.toggle_copy.set_active(True)
         ##
         #
         ## Spell-check Toggle Button
         self.toggle_spell = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_SPELL_CHECK)
         toolbar.insert(self.toggle_spell, 0)
         self.toggle_spell.set_active(True)
-        self.toggle_spell.connect("toggled", self._spell_check_toggle, '1')
         ##
         #
         ## Auto Transliterate Button
         self.toggle_trans = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_CONVERT)
         toolbar.insert(self.toggle_trans, 0)
         self.toggle_trans.set_active(True)
-        self.toggle_trans.connect("toggled", self._spell_check_toggle, '1')
         ##
         #
         toolbar.insert(Gtk.SeparatorToolItem(), 0)
@@ -127,18 +127,6 @@ class GUI(Gtk.Grid):
         print("forward clicked")
 
 
-    def _transliterate_toggle(self, *args):
-        self.TRANSLITERATE = not self.TRANSLITERATE
-
-
-    def _spell_check_toggle(self, *args):
-        self.SPELL_CHECK = not self.SPELL_CHECK
-
-
-    def _smart_copy_toggle(self, *args):
-        self.SMART_COPY = not self.SMART_COPY
-
-
     def _clean_button(self, widget):
         self.viewer.textbuffer.set_text("")
         self.cb_dropdown.clear()
@@ -154,8 +142,10 @@ class GUI(Gtk.Grid):
         self.search_history = []
         self.cb_dropdown = Gtk.ListStore(str)
         self.cb_search = Gtk.ComboBox.new_with_model_and_entry(self.cb_dropdown)
-        self.cb_search.set_entry_text_column(0)
         layout.add(self.cb_search)
+        self.entry = self.cb_search.get_child()
+        self.cb_search.set_entry_text_column(0)
+
 
         ### binding
         self.cb_search.connect('key_release_event', self.searchbar_binds)
@@ -178,8 +168,15 @@ class GUI(Gtk.Grid):
 
         if Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('c'):
-                entry = self.cb_search.get_child()
-                entry.set_text("")
+                self.entry.set_text("")
+            elif event.keyval == ord('u'):
+                query = self.entry.get_text()
+                current_tab = self.notebook.get_current_page()
+                if not query.strip():
+                    self.TAB_LST[current_tab].open_src()
+                    return
+                t, _id, *etc = self.FOUND_ITEMS[0] if self.FOUND_ITEMS else [ current_tab, None]
+                self.TAB_LST[t].open_src(_id)
 
 
     def makeWidgets_sidebar(self):
@@ -251,8 +248,7 @@ class GUI(Gtk.Grid):
     def searchWord(self, *args):
         ## TODO: Reverse search in nepali
         # grep might be useful for quick implementation
-        entry = self.cb_search.get_child()
-        query = entry.get_text().strip().lower()
+        query = self.entry.get_text().strip().lower()
         if not query: return
 
         clip_out = []
@@ -262,6 +258,7 @@ class GUI(Gtk.Grid):
             for tab, obj in enumerate(self.TAB_LST):
                 for item in obj.liststore:
                     if word not in item[1]: continue
+                    if word != item[1] and not self.toggle_search.get_active(): continue
                     row = [tab] + list(item)
                     clip_out += self.viewer.parser(row)
                     foundFlag = True
@@ -282,7 +279,7 @@ class GUI(Gtk.Grid):
         self.CLIP_CYCLE = circle(clip_out)
         self.cb_search.grab_focus()
 
-        if not self.SMART_COPY: return
+        if not self.toggle_copy.get_active(): return
 
         global clipboard, diff
         diff = 1
@@ -291,7 +288,7 @@ class GUI(Gtk.Grid):
 
 
     def open_dir(self):
-        os.system("nemo %s"%(self.GLOSS))
+        print(Popen(["nemo", self.GLOSS]).pid)
 
 
     def reload(self, gloss):
@@ -310,9 +307,68 @@ class GUI(Gtk.Grid):
         gui.searchWord()
 
 
+    def _circular_search(self, d):
+        if not self.CLIP_CYCLE:
+            self.cb_search.grab_focus()
+            return
+
+        global diff
+        diff = d
+        text = next(self.CLIP_CYCLE)
+        self.viewer.mark_found(text)
+        if self.toggle_copy.get_active():
+            clipboard.set_text(text, -1)
+
+
+    def _circular_tab_switch(self, d):
+        c = self.notebook.get_current_page()
+        t = self.notebook.get_n_pages()
+        n = c + d
+        if n >= t: n = 0
+        elif n < 0: n = t - 1
+        self.notebook.set_current_page(n)
+
+
+    def key_binds(self, widget, event):
+        # print(event.keyval)
+        if event.keyval == 65307: Gtk.main_quit() # Esc
+        elif event.keyval == 65481: self.reload(LIST_GLOSS[0]) # F12
+        elif event.keyval == 65480: self.reload(LIST_GLOSS[1]) # F11
+        elif event.keyval == 65479: self.reload(LIST_GLOSS[2]) # F10
+
+        word = self.entry.get_text().strip().lower()
+        if Gdk.ModifierType.CONTROL_MASK & event.state:
+            if event.keyval == ord('i'): add_to_gloss(root)
+            elif event.keyval == ord('1'): dict_grep(word)
+            elif event.keyval == ord('2'): web_search(word)
+            elif event.keyval == ord('o'): self.open_dir()
+            elif event.keyval == ord('l'): self._clean_button(gui.viewer)
+            elif event.keyval == ord('r'): self._circular_search(-1)
+            elif event.keyval == ord('s'): self._circular_search(+1)
+            elif event.keyval == 65365: self._circular_tab_switch(-1) # pg-down
+            elif event.keyval == 65366: self._circular_tab_switch(+1) # pg-up
+            elif event.keyval == ord('v'):
+                text = clipboard.wait_for_text()
+                self.entry.set_text(text.strip().lower())
+                self.cb_search.grab_focus()
+                self.searchWord()
+            return
+
+        if Gdk.ModifierType.META_MASK and event.state:
+            # print(event.keyval)
+            if ord('1') <= event.keyval <= ord('9'):
+                t = event.keyval - ord('1')
+                self.notebook.set_current_page(t) # NOTE: range check not needed
+            elif event.keyval == ord('0'):
+                self.notebook.set_current_page(self.MAIN_TAB)
+
+
+class add_window():
+    pass
+
+
 def add_to_gloss(parent):
-    entry = gui.cb_search.get_child()
-    word = entry.get_text().strip().lower()
+    word = gui.entry.get_text().strip().lower()
 
     dialogWindow = Gtk.MessageDialog(parent,
                                      Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
@@ -343,55 +399,6 @@ def add_to_gloss(parent):
     gui.viewer.parser([0, count] + row)
 
 
-def global_key_press(widget, event):
-    # print(event.keyval)
-    if event.keyval == 65307: Gtk.main_quit() # Esc
-    elif event.keyval == 65481: gui.reload(LIST_GLOSS[0]) # F12
-    elif event.keyval == 65480: gui.reload(LIST_GLOSS[1]) # F11
-    elif event.keyval == 65479: gui.reload(LIST_GLOSS[2]) # F10
-
-    global diff
-    if Gdk.ModifierType.CONTROL_MASK & event.state:
-        if event.keyval == ord('i'): add_to_gloss(root)
-        elif event.keyval == ord('1'): dict_grep()
-        elif event.keyval == ord('2'): web_search()
-        elif event.keyval == ord('o'): gui.open_dir()
-        elif event.keyval == ord('l'): gui._clean_button(gui.viewer)
-        elif event.keyval == ord('r'):
-            if gui.CLIP_CYCLE:
-                diff = -1
-                text = next(gui.CLIP_CYCLE)
-                gui.viewer.mark_found(text)
-                if gui.SMART_COPY:  clipboard.set_text(text, -1)
-            else: gui.cb_search.grab_focus()
-        elif event.keyval == ord('s'):
-            if gui.CLIP_CYCLE:
-                diff = 1
-                text = next(gui.CLIP_CYCLE)
-                gui.viewer.mark_found(text)
-                if gui.SMART_COPY:  clipboard.set_text(text, -1)
-            else: gui.cb_search.grab_focus()
-        elif event.keyval == ord('v'):
-            text = clipboard.wait_for_text()
-            entry = gui.cb_search.get_child()
-            entry.set_text(text.strip().lower())
-            gui.cb_search.grab_focus()
-            gui.searchWord()
-        elif event.keyval == ord('u'):
-            t, _id, *etc = gui.FOUND_ITEMS[0] if gui.FOUND_ITEMS else [ gui.CURRENT_TAB, 0 ]
-            gui.TAB_LST[t].open_gloss(_id)
-        return
-
-
-    if Gdk.ModifierType.META_MASK and event.state:
-        if ord('1') <= event.keyval <= ord('9'):
-            t = event.keyval - ord('1')
-            gui.notebook.set_current_page(t) # TODO range check not needed
-        elif event.keyval == ord('0'):
-            gui.notebook.set_current_page(gui.MAIN_TAB)
-
-
-
 diff = 1
 def circle(iterable):
     saved = iterable[:]
@@ -409,7 +416,6 @@ def main():
     global root
     root = Gtk.Window(title="anubad - अनुवाद")
     root.connect('delete-event', Gtk.main_quit)
-    root.connect('key_press_event', global_key_press)
     root.set_default_size(600, 500)
 
     global gui
@@ -430,7 +436,6 @@ if __name__ == '__main__':
             print("plugin:", file_name)
             exec(open(PATH_PLUGINS + file_name).read())
     root.show_all()
-    # NOTE: this is GTK BUG
+    # NOTE: GTK BUG, notebook page switch only after its visible
     gui.notebook.set_current_page(gui.MAIN_TAB)
-    gui.CURRENT_TAB = gui.MAIN_TAB
     Gtk.main()

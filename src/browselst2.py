@@ -1,15 +1,8 @@
 #!/usr/bin/env python
 
-if __name__ == '__main__':
-    exec(open("mysettings.conf").read())
-    exec(open("gsettings.conf").read())
-    import sys
-    sys.path.append(PATH_MYLIB)
-    from debugly import *
-
 import os
-from subprocess import call
-from gi.repository import Gtk, Pango
+from subprocess import Popen
+from gi.repository import Gtk, Gdk, Pango
 
 class BrowseList(Gtk.ScrolledWindow):
     """
@@ -33,6 +26,7 @@ class BrowseList(Gtk.ScrolledWindow):
     def makeWidgets(self):
         self.treeview = Gtk.TreeView(model=self.liststore)
         self.add(self.treeview)
+        self.treeview.connect('key_press_event', self.treeview_key_press)
 
         renderer_text = Gtk.CellRendererText()
         c0 = Gtk.TreeViewColumn("#", renderer_text, text=0)
@@ -48,6 +42,12 @@ class BrowseList(Gtk.ScrolledWindow):
         self.treeview.append_column(c2)
 
         renderer_editabletext.connect("edited", self.text_edited)
+
+
+    def treeview_key_press(self, widget, event):
+        if Gdk.ModifierType.CONTROL_MASK & event.state:
+            if event.keyval == ord('u'):
+                self.open_src()
 
 
     def text_edited(self, widget, path, text):
@@ -85,23 +85,23 @@ class BrowseList(Gtk.ScrolledWindow):
         pass
 
 
-    def open_gloss(self, ID):
+    def open_src(self, ID=None):
         # TODO : smart xdg-open with arguments
         # if not self.CURRENT_FOUND_ITEM:
-        #     open_gloss()
+        #     open_src()
         #     return
-
-        # tab, ID = self.CURRENT_FOUND_ITEM
-        # obj = self.glist[tab]
-        arg = "--jump=%d"%ID
-        call(["leafpad", arg, self.SRC])
+        if ID:
+            arg = "--jump=%d"%ID
+            print(Popen(["leafpad", arg, self.SRC]).pid)
+        else:
+            print(Popen(["leafpad", self.SRC]).pid)
 
 
     def make_popup(self, ID, word):
         # popup = Menu(self, tearoff=0)
         # popup.add_command(label=ID + ' : ' + word, state=DISABLED, font=self.h1)
-        # popup.add_command(label="Edit", command=lambda: open_gloss())
-        # popup.add_command(label="Open Gloss", command=lambda: open_gloss())
+        # popup.add_command(label="Edit", command=lambda: open_src())
+        # popup.add_command(label="Open Gloss", command=lambda: open_src())
         # popup.add_separator()
         # popup.add_command(label="Search online", command=lambda: web_search(word))
         # return popup
