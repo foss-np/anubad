@@ -18,16 +18,17 @@ class Viewer(Gtk.Overlay):
         ## TODO: PUT THE LOCK ICON
         self.toggle_edit = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_EXECUTE)
         self.add_overlay(self.toggle_edit)
-        self.toggle_edit.connect("toggled", lambda w: self.textview.set_editable(w.get_active()))
+        self.toggle_edit.connect("toggled", self._edit_toggle)
         self.toggle_edit.set_valign(Gtk.Align.START)
         self.toggle_edit.set_halign(Gtk.Align.END)
 
         self.textview = Gtk.TextView()
         self.scroll.add(self.textview)
         self.textview.set_editable(False)
+        self.textview.set_cursor_visible(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
         self.textbuffer = self.textview.get_buffer()
-        self.textview.connect("size-allocate", self._autoscroll)
+        # self.textview.connect("size-allocate", self._autoscroll)
 
         self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
         self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
@@ -36,6 +37,12 @@ class Viewer(Gtk.Overlay):
         self.tag_pos = self.textbuffer.create_tag("pos", foreground="red")
         self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
         self.tag_found = self.textbuffer.create_tag("found", background="yellow")
+
+
+    def _edit_toggle(self, widget):
+        state = widget.get_active()
+        self.textview.set_editable(state)
+        self.textview.set_cursor_visible(state)
 
 
     def mark_found(self, text):
@@ -47,6 +54,14 @@ class Viewer(Gtk.Overlay):
         if match != None:
             match_start, match_end = match
             self.textbuffer.apply_tag(self.tag_found, match_start, match_end)
+            m = self.textbuffer.create_mark("found", match_start)
+            self.textview.scroll_mark_onscreen(m)
+
+
+    def jump_to_end(self):
+        end = self.textbuffer.get_end_iter()
+        m = self.textbuffer.create_mark("found", end)
+        self.textview.scroll_mark_onscreen(m)
 
 
     def parser(self, lst):
@@ -97,7 +112,7 @@ class Viewer(Gtk.Overlay):
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, word, self.tag_bold)
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, '\t['+trasliterate+']\n', self.tag_trans)
+        self.textbuffer.insert_with_tags(end, '    ['+trasliterate+']\n', self.tag_trans)
 
         for c, t in enumerate(translations):
             end = self.textbuffer.get_end_iter()

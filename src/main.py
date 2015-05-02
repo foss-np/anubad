@@ -29,8 +29,10 @@ class GUI(Gtk.Grid):
         Gtk.Grid.__init__(self)
         self.parent = parent
 
-        self.CURRENT_FOUND_ITEM = None
-        self.clip_cycle = None
+        self.CLIP_CYCLE = None
+        self.TAB_LST = []
+        self.FOUND_ITEMS = []
+        self.CURRENT_TAB = 0
 
         self.SPELL_CHECK = True
         self.SMART_COPY = True
@@ -45,7 +47,7 @@ class GUI(Gtk.Grid):
         # self.attach(self.makeWidgets_sidebar(), 0, 1, 1, 2)
         self.attach(self.makeWidgets_viewer(), 1, 2, 1, 1)
         # self.attach(self.makeWidgets_settings(), 0, 3, 2, 1)
-        self.attach(self.makeWidgets_browser(), 0, 4, 2, 1)
+        self.attach(self.makeWidgets_browser(LIST_GLOSS[0]), 0, 4, 2, 1)
 
 
     def makeWidgets_toolbar(self):
@@ -232,68 +234,80 @@ class GUI(Gtk.Grid):
         return layout
 
 
-    def makeWidgets_browser(self):
+    def makeWidgets_browser(self, gloss):
+        self.GLOSS = PATH_GLOSS + gloss
         self.notebook = Gtk.Notebook()
         tab = 0
-        for file_name in os.listdir(PATH_GLOSS + LIST_GLOSS[0]):
+        for file_name in os.listdir(self.GLOSS):
             if not file_name[-4:] in FILE_TYPES: continue
-            self.browser = BL.BrowseList(self.parent, PATH_GLOSS + LIST_GLOSS[0] + file_name)
-            self.notebook.append_page(self.browser, Gtk.Label(label=file_name[:-4]))
-            if "main.tra" in file_name:
-                self.MAIN_TAB = tab
-                break
-
-
-        #     obj = BL.BrowseList(root, PATH_GLOSS + file_name)
-        #     obj.tree.bind('<Double-Button-1>', _doubleClick)
-        #     self.tabar.add(obj, text=file_name, padding=3)
-        #     self.glist.append(obj)
-
-        #     if tab < 9:
-        #         root.bind('<Alt-KeyPress-%d>'%(tab+1), self.switch_tab)
-        #     tab += 1
-
+            if "main.tra" in file_name: self.MAIN_TAB = tab
+            obj = BL.BrowseList(self.parent, self.GLOSS + file_name)
+            self.notebook.append_page(obj, Gtk.Label(label=file_name[:-4]))
+            self.TAB_LST.append(obj)
+            tab += 1
         return self.notebook
 
 
     def searchWord(self, *args):
         ## TODO: Reverse search in nepali
         # grep might be useful for quick implementation
-
         entry = self.cb_search.get_child()
-        text = entry.get_text().strip().lower()
-        if not text: return
-        clip_out = []
+        query = entry.get_text().strip().lower()
+        if not query: return
 
-        for word in text.split():
+        clip_out = []
+        self.FOUND_ITEMS.clear()
+        for word in query.split():
             foundFlag = False
-            tab = 0 # NOTE: for notebook not implemented yet
-            for item in self.browser.liststore:
-                if item[1] != word : continue
-                clip_out += self.viewer.parser([tab] + list(item))
-                foundFlag = True
-                self.cb_dropdown.insert(0, [word])
-                break
+            for tab, obj in enumerate(self.TAB_LST):
+                for item in obj.liststore:
+                    if word not in item[1]: continue
+                    row = [tab] + list(item)
+                    clip_out += self.viewer.parser(row)
+                    foundFlag = True
+                    self.FOUND_ITEMS.append(row)
+                    self.cb_dropdown.insert(0, [word])
 
             if foundFlag is False:
                 self.viewer.not_found(word)
 
+        if len(clip_out) == 0:
+            self.viewer.jump_to_end()
+            return
 
-        if len(clip_out) == 0: return
         if len(self.cb_dropdown) > 1:
             self.button_back.set_sensitive(True)
 
         self.viewer.mark_found(clip_out[0])
-        self.clip_cycle = circle(clip_out)
-        self.CURRENT_FOUND_ITEM = item
+        self.CLIP_CYCLE = circle(clip_out)
         self.cb_search.grab_focus()
 
         if not self.SMART_COPY: return
 
         global clipboard, diff
         diff = 1
-        curr = next(self.clip_cycle)
+        curr = next(self.CLIP_CYCLE)
         clipboard.set_text(curr, -1)
+
+
+    def open_dir(self):
+        os.system("nemo %s"%(self.GLOSS))
+
+
+    def reload(self, gloss):
+        if self.GLOSS == PATH_GLOSS + gloss:
+            xcowsay()
+            return
+
+        self.remove(gui.notebook)
+        del gui.notebook
+        for obj in self.TAB_LST:
+            del obj
+        self.TAB_LST.clear()
+
+        gui.attach(gui.makeWidgets_browser(gloss), 0, 4, 2, 1)
+        root.show_all()
+        gui.searchWord()
 
 
 def add_to_gloss(parent):
@@ -332,28 +346,28 @@ def add_to_gloss(parent):
 def global_key_press(widget, event):
     # print(event.keyval)
     if event.keyval == 65307: Gtk.main_quit() # Esc
-    elif event.keyval == 65481: reload(LIST_GLOSS[0]) # F12
-    elif event.keyval == 65480: reload(LIST_GLOSS[1]) # F11
-    elif event.keyval == 65479: reload(LIST_GLOSS[2]) # F10
+    elif event.keyval == 65481: gui.reload(LIST_GLOSS[0]) # F12
+    elif event.keyval == 65480: gui.reload(LIST_GLOSS[1]) # F11
+    elif event.keyval == 65479: gui.reload(LIST_GLOSS[2]) # F10
 
     global diff
     if Gdk.ModifierType.CONTROL_MASK & event.state:
         if event.keyval == ord('i'): add_to_gloss(root)
         elif event.keyval == ord('1'): dict_grep()
         elif event.keyval == ord('2'): web_search()
-        elif event.keyval == ord('o'): gui.browser.open_dir()
+        elif event.keyval == ord('o'): gui.open_dir()
         elif event.keyval == ord('l'): gui._clean_button(gui.viewer)
         elif event.keyval == ord('r'):
-            if gui.clip_cycle:
+            if gui.CLIP_CYCLE:
                 diff = -1
-                text = next(gui.clip_cycle)
+                text = next(gui.CLIP_CYCLE)
                 gui.viewer.mark_found(text)
                 if gui.SMART_COPY:  clipboard.set_text(text, -1)
             else: gui.cb_search.grab_focus()
         elif event.keyval == ord('s'):
-            if gui.clip_cycle:
+            if gui.CLIP_CYCLE:
                 diff = 1
-                text = next(gui.clip_cycle)
+                text = next(gui.CLIP_CYCLE)
                 gui.viewer.mark_found(text)
                 if gui.SMART_COPY:  clipboard.set_text(text, -1)
             else: gui.cb_search.grab_focus()
@@ -364,8 +378,18 @@ def global_key_press(widget, event):
             gui.cb_search.grab_focus()
             gui.searchWord()
         elif event.keyval == ord('u'):
-            ID = gui.CURRENT_FOUND_ITEM[0] if gui.CURRENT_FOUND_ITEM else 0
-            gui.browser.open_gloss(ID)
+            t, _id, *etc = gui.FOUND_ITEMS[0] if gui.FOUND_ITEMS else [ gui.CURRENT_TAB, 0 ]
+            gui.TAB_LST[t].open_gloss(_id)
+        return
+
+
+    if Gdk.ModifierType.META_MASK and event.state:
+        if ord('1') <= event.keyval <= ord('9'):
+            t = event.keyval - ord('1')
+            gui.notebook.set_current_page(t) # TODO range check not needed
+        elif event.keyval == ord('0'):
+            gui.notebook.set_current_page(gui.MAIN_TAB)
+
 
 
 diff = 1
@@ -379,20 +403,6 @@ def circle(iterable):
         if diff == 1 and l <= i: i = 0
         if diff == -1 and i < 0: i = l - 1
         yield saved[i]
-
-
-def reload(gloss):
-    if gui.browser.GLOSS == PATH_GLOSS + gloss:
-        xcowsay()
-        return
-
-    gui.remove(gui.browser)
-    del gui.browser
-    gui.browser = BL.BrowseList(gui.parent, PATH_GLOSS + gloss)
-    gui.attach(gui.browser, 0, 4, 2, 1)
-    root.show_all()
-
-    gui.searchWord()
 
 
 def main():
@@ -420,4 +430,7 @@ if __name__ == '__main__':
             print("plugin:", file_name)
             exec(open(PATH_PLUGINS + file_name).read())
     root.show_all()
+    # NOTE: this is GTK BUG
+    gui.notebook.set_current_page(gui.MAIN_TAB)
+    gui.CURRENT_TAB = gui.MAIN_TAB
     Gtk.main()

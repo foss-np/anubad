@@ -16,18 +16,18 @@ class BrowseList(Gtk.ScrolledWindow):
     >>> obj = BrowseList(parent=root)
     >>> root.add(obj)
     """
-    def __init__(self, parent=None, gloss=None):
+    def __init__(self, parent=None, src=None):
         Gtk.ScrolledWindow.__init__(self)
         self.set_hexpand(True)
         self.set_vexpand(True)
 
-        self.GLOSS = gloss
+        self.SRC = src
         self.liststore = Gtk.ListStore(int, str, str)
         self.makeWidgets()
 
-        if self.GLOSS:
-            print("loading: *" + gloss[-40:])
-            self.fill_tree(gloss)
+        if self.SRC:
+            print("loading: *" + src[-40:])
+            self.fill_tree(src)
 
 
     def makeWidgets(self):
@@ -63,9 +63,9 @@ class BrowseList(Gtk.ScrolledWindow):
             row = line.split('; ')
             if len(row) != 2:
                 # TODO: open leafpad automatically with the current error line
-                print("File Format Error: %s: %d"%(self.GLOSS, self.count))
+                print("File Format Error: %s: %d"%(self.SRC, self.count))
                 arg = "--jump=%d"%self.count
-                os.system("setsid leafpad %s %s"%(arg, self.GLOSS))
+                os.system("setsid leafpad %s %s"%(arg, self.SRC))
                 exit(1)
             row.insert(0, self.count)
             self.liststore.append(row)
@@ -94,11 +94,7 @@ class BrowseList(Gtk.ScrolledWindow):
         # tab, ID = self.CURRENT_FOUND_ITEM
         # obj = self.glist[tab]
         arg = "--jump=%d"%ID
-        call(["leafpad", arg, self.GLOSS])
-
-
-    def open_dir(self):
-        os.system("nemo %s"%(self.GLOSS))
+        call(["leafpad", arg, self.SRC])
 
 
     def make_popup(self, ID, word):
@@ -129,14 +125,6 @@ class BrowseList(Gtk.ScrolledWindow):
         # popup.tk_popup(event.x_root, event.y_root)
         # del popup
         pass
-
-
-def open_gloss():
-    print("dummy %s.open_gloss()"%__name__)
-
-
-def web_search(word):
-    print("dummy %s.web_search()"%__name__)
 
 
 def on_key_press(widget, event):
