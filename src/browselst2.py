@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
-import os
+import os, sys
+
+exec(open("mysettings.conf").read())
+if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
+    sys.path.append(PATH_MYLIB)
+    from debugly import *
+
 from subprocess import Popen
 from gi.repository import Gtk, Gdk, Pango
 

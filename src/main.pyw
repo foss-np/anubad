@@ -13,14 +13,13 @@ try: # py2/3 compatibility
     import tkinter as tk
     from tkinter.ttk import *
     from tkinter.simpledialog import askstring
-    exec(open(fullpath+"mysettings.conf").read())
+    exec(open(fullpath + "mysettings.conf").read())
 except:
     import Tkinter as tk
     from ttk import *
     from tkSimpleDialog import askstring
 
-
-if PATH_MYLIB:
+if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
     sys.path.append(PATH_MYLIB)
     from debugly import *
 

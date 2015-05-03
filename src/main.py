@@ -10,7 +10,7 @@ exec(open(fullpath + "mysettings.conf").read())
 
 PATH_GLOSS = fullpath + PATH_GLOSS
 
-if PATH_MYLIB:
+if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
     sys.path.append(PATH_MYLIB)
     from debugly import *
 
@@ -39,30 +39,32 @@ class GUI(Gtk.Grid):
 
 
     def makeWidgets(self):
-        self.attach(self.makeWidgets_toolbar(), 0, 0, 3, 1)
-        self.attach(self.makeWidgets_searchbar(), 1, 1, 1, 1)
-        # self.attach(self.makeWidgets_sidebar(), 0, 1, 1, 2)
-        self.attach(self.makeWidgets_viewer(), 1, 2, 1, 1)
+        # attach(child, left, top, width, height)
+        self.attach(self.makeWidgets_toolbar(), 0, 0, 5, 1)
+        self.attach(self.makeWidgets_searchbar(), 0, 1, 5, 1)
+        self.attach(self.makeWidgets_sidebar(), 0, 2, 1, 2)
+        self.attach(self.makeWidgets_viewer(), 1, 2, 4, 2)
         # self.attach(self.makeWidgets_settings(), 0, 3, 2, 1)
-        self.attach(self.makeWidgets_browser(LIST_GLOSS[0]), 0, 4, 2, 1)
+        self.attach(self.makeWidgets_browser(LIST_GLOSS[0]), 0, 4, 5, 2)
 
 
     def makeWidgets_toolbar(self):
         toolbar = Gtk.Toolbar()
         #
-        ## About Button
+        ## About
         self.button_about = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ABOUT)
         # button_about.connect("clicked", self.on_clear_clicked)
         toolbar.insert(self.button_about, 0)
         ##
         #
-        ##
-        toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_PREFERENCES), 0)
+        ## # Preference
+        self.button_preference = Gtk.ToolButton.new_from_stock(Gtk.STOCK_PREFERENCES)
+        toolbar.insert(self.button_preference, 0)
         ##
         #
         toolbar.insert(Gtk.SeparatorToolItem(), 0)
         #
-        ## Clean Viewer
+        ## Clean Viewer # overlay to cb_dropdown
         self.button_clear = Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLEAR)
         toolbar.insert(self.button_clear, 0)
         self.button_clear.connect("clicked", self._clean_button)
@@ -71,14 +73,14 @@ class GUI(Gtk.Grid):
         ## Add Button
         self.button_add = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ADD)
         toolbar.insert(self.button_add, 0)
-        self.button_add.connect("clicked", lambda w: add_to_gloss(self.parent))
+        self.button_add.connect("clicked", lambda w: self.add_to_gloss())
         ##
         #
         toolbar.insert(Gtk.SeparatorToolItem(), 0)
         #
         ## Search Toggle Button
         self.toggle_search = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_DIALOG_INFO)
-        self.toggle_search.set_active(True)
+        self.toggle_search.set_active(False)
         toolbar.insert(self.toggle_search, 0)
         ##
         #
@@ -169,7 +171,7 @@ class GUI(Gtk.Grid):
         if Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('c'):
                 self.entry.set_text("")
-            elif event.keyval == ord('u'):
+            elif event.keyval == ord('e'):
                 query = self.entry.get_text()
                 current_tab = self.notebook.get_current_page()
                 if not query.strip():
@@ -182,13 +184,6 @@ class GUI(Gtk.Grid):
     def makeWidgets_sidebar(self):
         layout = Gtk.VBox()
 
-        self.gloss_list = Gtk.ListStore(str)
-        for gloss in LIST_GLOSS:
-            self.gloss_list.append([gloss])
-
-        self.cb_gloss = Gtk.ComboBox(model=self.gloss_list)
-        layout.add(self.cb_gloss)
-
         scroll = Gtk.ScrolledWindow()
         layout.add(scroll)
         scroll.set_vexpand(False)
@@ -199,9 +194,6 @@ class GUI(Gtk.Grid):
         renderer_text = Gtk.CellRendererText()
         c0 = Gtk.TreeViewColumn("Suggestions", renderer_text, text=0)
         self.treeview.append_column(c0)
-        self.liststore.append(["hello"])
-        self.liststore.append(["world"])
-
         return layout
 
 
@@ -250,21 +242,21 @@ class GUI(Gtk.Grid):
         # grep might be useful for quick implementation
         query = self.entry.get_text().strip().lower()
         if not query: return
-
         clip_out = []
         self.FOUND_ITEMS.clear()
+        self.liststore.clear()
         for word in query.split():
             foundFlag = False
             for tab, obj in enumerate(self.TAB_LST):
                 for item in obj.liststore:
                     if word not in item[1]: continue
+                    self.liststore.append(item[1:2])
                     if word != item[1] and not self.toggle_search.get_active(): continue
                     row = [tab] + list(item)
                     clip_out += self.viewer.parser(row)
                     foundFlag = True
                     self.FOUND_ITEMS.append(row)
                     self.cb_dropdown.insert(0, [word])
-
             if foundFlag is False:
                 self.viewer.not_found(word)
 
@@ -293,7 +285,8 @@ class GUI(Gtk.Grid):
 
     def reload(self, gloss):
         if self.GLOSS == PATH_GLOSS + gloss:
-            xcowsay()
+            word = self.entry.get_text().strip().lower()
+            xcowsay(word)
             return
 
         self.remove(gui.notebook)
@@ -302,7 +295,7 @@ class GUI(Gtk.Grid):
             del obj
         self.TAB_LST.clear()
 
-        gui.attach(gui.makeWidgets_browser(gloss), 0, 4, 2, 1)
+        gui.attach(gui.makeWidgets_browser(gloss), 0, 4, 5, 2)
         root.show_all()
         gui.searchWord()
 
@@ -329,6 +322,12 @@ class GUI(Gtk.Grid):
         self.notebook.set_current_page(n)
 
 
+    def add_to_gloss(self, _word=""):
+        _word = self.entry.get_text().strip().lower()
+        win = add_window(self, word=_word)
+        win.show_all()
+
+
     def key_binds(self, widget, event):
         # print(event.keyval)
         if event.keyval == 65307: Gtk.main_quit() # Esc
@@ -338,7 +337,7 @@ class GUI(Gtk.Grid):
 
         word = self.entry.get_text().strip().lower()
         if Gdk.ModifierType.CONTROL_MASK & event.state:
-            if event.keyval == ord('i'): add_to_gloss(root)
+            if event.keyval == ord('i'): self.add_to_gloss(word)
             elif event.keyval == ord('1'): dict_grep(word)
             elif event.keyval == ord('2'): web_search(word)
             elif event.keyval == ord('o'): self.open_dir()
@@ -355,7 +354,6 @@ class GUI(Gtk.Grid):
             return
 
         if Gdk.ModifierType.META_MASK and event.state:
-            # print(event.keyval)
             if ord('1') <= event.keyval <= ord('9'):
                 t = event.keyval - ord('1')
                 self.notebook.set_current_page(t) # NOTE: range check not needed
@@ -363,40 +361,77 @@ class GUI(Gtk.Grid):
                 self.notebook.set_current_page(self.MAIN_TAB)
 
 
-class add_window():
-    pass
+class add_window(Gtk.Window):
+    def __init__(self, parent=None, word=""):
+        Gtk.Window.__init__(self)
+        self.parent = parent
+        self.word = word
+
+        self.makeWidgets()
+        self.connect('key_press_event', self.key_binds)
+
+    def makeWidgets(self):
+        layout = Gtk.Grid()
+        layout.set_row_spacing(5)
+        layout.set_column_spacing(5)
+
+        self.add(layout)
+
+        label = Gtk.Label()
+        layout.attach(label, 0, 0, 1, 1)
+        label.set_markup("<b>lang_1</b>")
+
+        self.lang1 = Gtk.Entry()
+        layout.attach(self.lang1, 1, 0, 1, 1)
+        self.lang1.set_text(self.word)
+        # self.lang1.grab_focus()
+
+        label = Gtk.Label()
+        layout.attach(label, 0, 1, 1, 1)
+        label.set_markup("<b>lang_2</b>")
+
+        self.lang2 = Gtk.Entry()
+        layout.attach(self.lang2, 1, 1, 1, 1)
+
+        label = Gtk.Label()
+        layout.attach(label, 0, 2, 1, 1)
+        label.set_markup("<b>file</b>")
+
+        self.gloss_file = Gtk.ComboBoxText()
+        layout.attach(self.gloss_file, 1, 2, 1, 1)
+        for obj in self.parent.TAB_LST:
+            *a, label = obj.SRC.split('/')
+            self.gloss_file.append_text(label)
+        self.gloss_file.set_active(self.parent.notebook.get_current_page())
+
+        self.button_cancel = Gtk.Button(label="Cancel")
+        layout.attach(self.button_cancel, 0, 3, 1, 1)
+        self.button_cancel.connect("clicked", lambda e: self.destroy())
+
+        self.button_add = Gtk.Button(label="Add")
+        layout.attach(self.button_add, 1, 3, 1, 1)
+        self.button_add.connect("clicked", self._add_button)
 
 
-def add_to_gloss(parent):
-    word = gui.entry.get_text().strip().lower()
+    def _add_button(self, widget):
+        row = [ self.lang1.get_text().strip().lower() ]
+        row.append(self.lang2.get_text().strip())
 
-    dialogWindow = Gtk.MessageDialog(parent,
-                                     Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                                     Gtk.MessageType.QUESTION,
-                                     Gtk.ButtonsType.OK_CANCEL,
-                                     "translate of '%s'"%word)
-    dialogWindow.set_title("Add to gloss")
+        if not (row[0] and row[1]):
+            self.lang1.grab_focus()
+            return
 
-    dialogBox = dialogWindow.get_content_area()
-    userEntry = Gtk.Entry()
-    # userEntry.set_visibility(True)
-    userEntry.set_size_request(250,0)
-    dialogBox.pack_end(userEntry, False, False, 0)
 
-    dialogWindow.show_all()
+        obj = self.parent.TAB_LST[self.gloss_file.get_active()]
+        fp = open(obj.SRC, 'a').write("\n" + '; '.join(row))
+        count = obj.add_to_tree(row)
+        self.parent.viewer.parser([0, count] + row)
+        self.destroy()
 
-    response = dialogWindow.run()
-    text = userEntry.get_text()
-    dialogWindow.destroy()
 
-    if response != Gtk.ResponseType.OK or text == '':
-        return None
-
-    row = [word, text]
-    obj = gui.browser
-    fp = open(obj.GLOSS, 'a').write("\n" + '; '.join(row))
-    count = gui.browser.add_to_tree(row)
-    gui.viewer.parser([0, count] + row)
+    def key_binds(self, widget, event):
+        # print(event.keyval)
+        if event.keyval == 65307: self.destroy() # Esc
 
 
 diff = 1
