@@ -33,6 +33,7 @@ class GUI(Gtk.Grid):
         self.CLIP_CYCLE = None
         self.TAB_LST = []
         self.FOUND_ITEMS = []
+        self.VIEWED_ITEMS = set()
 
         self.makeWidgets()
         self.connect('key_press_event', self.key_binds)
@@ -165,9 +166,6 @@ class GUI(Gtk.Grid):
 
     def searchbar_binds(self, widget, event):
         # print(event.keyval)
-        if event.keyval == 65293: # <enter> return
-            self.searchWord()
-
         if Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('c'):
                 self.entry.set_text("")
@@ -179,6 +177,14 @@ class GUI(Gtk.Grid):
                     return
                 t, _id, *etc = self.FOUND_ITEMS[0] if self.FOUND_ITEMS else [ current_tab, None]
                 self.TAB_LST[t].open_src(_id)
+        elif Gdk.ModifierType.SHIFT_MASK & event.state:
+            if event.keyval == 65293: # <enter> return
+                state = self.toggle_search.get_active()
+                self.toggle_search.set_active(not state)
+                self.searchWord()
+                self.toggle_search.set_active(state)
+        elif event.keyval == 65293: # <enter> return
+            self.searchWord()
 
 
     def makeWidgets_sidebar(self):
@@ -188,13 +194,28 @@ class GUI(Gtk.Grid):
         layout.add(scroll)
         scroll.set_vexpand(False)
 
-        self.liststore = Gtk.ListStore(str)
+        self.liststore = Gtk.ListStore(int, str)
         self.treeview = Gtk.TreeView(model=self.liststore)
         scroll.add(self.treeview)
         renderer_text = Gtk.CellRendererText()
-        c0 = Gtk.TreeViewColumn("Suggestions", renderer_text, text=0)
-        self.treeview.append_column(c0)
+        self.treeview.append_column(Gtk.TreeViewColumn("#", renderer_text, text=0))
+        self.treeview.append_column(Gtk.TreeViewColumn("Suggestions", renderer_text, text=1))
+        select = self.treeview.get_selection()
+        select.connect("changed", self.on_tree_selection_changed)
         return layout
+
+
+    def on_tree_selection_changed(self, selection):
+        model, treeiter = selection.get_selected()
+        if treeiter is None: return
+        i = model[treeiter][0] - 1
+
+        p = i not in self.VIEWED_ITEMS
+        self.VIEWED_ITEMS.add(i)
+        row = self.FOUND_ITEMS[i]
+        clip_out = self.viewer.parser(row, _print=p)
+        self.CLIP_CYCLE = circle(clip_out)
+        self._circular_search(+1)
 
 
     def makeWidgets_viewer(self):
@@ -202,7 +223,16 @@ class GUI(Gtk.Grid):
         # self.viewer.connect('key_press_event', self.viewer_binds)
         # self.viewer.textview.override_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
         self.viewer.textview.modify_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
+        self.viewer.connect('key_press_event', self.viewer_binds)
         return self.viewer
+
+
+    def viewer_binds(self, widget, event):
+        # print(event.keyval)
+        # TODO: TESTING: not working properly
+        if event.keyval and self.viewer.toggle_edit.get_active():
+            self.cb_search.grab_focus()
+            self.searchbar_binds(widget, event)
 
 
     def makeWidgets_settings(self):
@@ -245,18 +275,23 @@ class GUI(Gtk.Grid):
         clip_out = []
         self.FOUND_ITEMS.clear()
         self.liststore.clear()
+        self.VIEWED_ITEMS.clear()
+        found = 0
         for word in query.split():
             foundFlag = False
             for tab, obj in enumerate(self.TAB_LST):
                 for item in obj.liststore:
                     if word not in item[1]: continue
-                    self.liststore.append(item[1:2])
-                    if word != item[1] and not self.toggle_search.get_active(): continue
+                    # self.treeview.row_activated(0, self.liststore)
+                    # NOTE: may be use interator counter
+                    found += 1
                     row = [tab] + list(item)
+                    self.FOUND_ITEMS.append(row)
+                    self.liststore.append([found, item[1]])
+                    if word != item[1] and not self.toggle_search.get_active(): continue
+                    self.cb_dropdown.insert(0, [word])
                     clip_out += self.viewer.parser(row)
                     foundFlag = True
-                    self.FOUND_ITEMS.append(row)
-                    self.cb_dropdown.insert(0, [word])
             if foundFlag is False:
                 self.viewer.not_found(word)
 
@@ -267,20 +302,19 @@ class GUI(Gtk.Grid):
         if len(self.cb_dropdown) > 1:
             self.button_back.set_sensitive(True)
 
-        self.viewer.mark_found(clip_out[0])
         self.CLIP_CYCLE = circle(clip_out)
         self.cb_search.grab_focus()
 
-        if not self.toggle_copy.get_active(): return
-
-        global clipboard, diff
-        diff = 1
-        curr = next(self.CLIP_CYCLE)
-        clipboard.set_text(curr, -1)
+        if self.toggle_copy.get_active():
+            self._circular_search(+1)
 
 
     def open_dir(self):
-        print(Popen(["nemo", self.GLOSS]).pid)
+        print("pid:", Popen(["nemo", self.GLOSS]).pid)
+
+
+    def open_term(self):
+        print("pid:", Popen([TERMINAL, "--working-directory=%s"%self.GLOSS]).pid)
 
 
     def reload(self, gloss):
@@ -305,7 +339,7 @@ class GUI(Gtk.Grid):
             self.cb_search.grab_focus()
             return
 
-        global diff
+        global diff, clipboard
         diff = d
         text = next(self.CLIP_CYCLE)
         self.viewer.mark_found(text)
@@ -341,6 +375,7 @@ class GUI(Gtk.Grid):
             elif event.keyval == ord('1'): dict_grep(word)
             elif event.keyval == ord('2'): web_search(word)
             elif event.keyval == ord('o'): self.open_dir()
+            elif event.keyval == ord('t'): self.open_term()
             elif event.keyval == ord('l'): self._clean_button(gui.viewer)
             elif event.keyval == ord('r'): self._circular_search(-1)
             elif event.keyval == ord('s'): self._circular_search(+1)
@@ -363,7 +398,7 @@ class GUI(Gtk.Grid):
 
 class add_window(Gtk.Window):
     def __init__(self, parent=None, word=""):
-        Gtk.Window.__init__(self)
+        Gtk.Window.__init__(self, title="Add gloss")
         self.parent = parent
         self.word = word
 
@@ -413,7 +448,7 @@ class add_window(Gtk.Window):
         self.button_add.connect("clicked", self._add_button)
 
 
-    def _add_button(self, widget):
+    def _add_button(self, widget=None):
         row = [ self.lang1.get_text().strip().lower() ]
         row.append(self.lang2.get_text().strip())
 
@@ -421,17 +456,23 @@ class add_window(Gtk.Window):
             self.lang1.grab_focus()
             return
 
-
-        obj = self.parent.TAB_LST[self.gloss_file.get_active()]
+        t = self.gloss_file.get_active()
+        obj = self.parent.TAB_LST[t]
         fp = open(obj.SRC, 'a').write("\n" + '; '.join(row))
         count = obj.add_to_tree(row)
-        self.parent.viewer.parser([0, count] + row)
+        row = [t, count] + row
+        self.parent.viewer.parser(row)
+        self.parent.FOUND_ITEMS.clear()
+        self.parent.FOUND_ITEMS.append(row)
         self.destroy()
 
 
     def key_binds(self, widget, event):
         # print(event.keyval)
         if event.keyval == 65307: self.destroy() # Esc
+        elif Gdk.ModifierType.SHIFT_MASK & event.state:
+            if event.keyval == 65293: # <enter> return
+                self._add_button()
 
 
 diff = 1

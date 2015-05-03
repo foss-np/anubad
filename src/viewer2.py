@@ -64,7 +64,7 @@ class Viewer(Gtk.Overlay):
         self.textview.scroll_mark_onscreen(m)
 
 
-    def parser(self, lst):
+    def parser(self, lst, _print=True):
         # """
         # >>> obj = Viewer(parent=root)
         # >>> root.add(obj)
@@ -79,6 +79,7 @@ class Viewer(Gtk.Overlay):
         raw = lst[3]
         trasliterate = ""
         translations = []
+        tags = []
         pos = ""
         level = 0
 
@@ -109,6 +110,12 @@ class Viewer(Gtk.Overlay):
         if i - fbreak > 2 or len(translations) < 1:
             translations.append([pos, raw[fbreak:]])
 
+        r = []
+        for p, t in translations:
+            r += [ u.strip() for u in t.split(',') ]
+
+        if not _print: return r
+
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, word, self.tag_bold)
         end = self.textbuffer.get_end_iter()
@@ -129,10 +136,6 @@ class Viewer(Gtk.Overlay):
             self.textbuffer.insert(end, t[1].strip()+"\n")
 
             # print(self.textview.scroll_to_iter(end, 0, True, 1.0, 0.0 ))
-
-        r = []
-        for p, t in translations:
-            r += [ u.strip() for u in t.split(',') ]
 
         return r
 

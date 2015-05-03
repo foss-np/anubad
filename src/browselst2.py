@@ -98,9 +98,9 @@ class BrowseList(Gtk.ScrolledWindow):
         #     return
         if ID:
             arg = "--jump=%d"%ID
-            print(Popen(["leafpad", arg, self.SRC]).pid)
+            print("pid:", Popen(["leafpad", arg, self.SRC]).pid)
         else:
-            print(Popen(["leafpad", self.SRC]).pid)
+            print("pid:", Popen(["leafpad", self.SRC]).pid)
 
 
     def make_popup(self, ID, word):
