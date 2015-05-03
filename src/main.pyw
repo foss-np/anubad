@@ -26,10 +26,13 @@ if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
 import browselst as BL
 import viewer as Vi
 
-BL.def_font = def_font
-Vi.def_font = def_font
+tmp = def_FONT.split()
+def_FONT = [ ' '.join(tmp[:-1]), tmp[-1], "normal" ]
 
-PATH_GLOSS = fullpath + PATH_GLOSS + '/' + LIST_GLOSS[0].replace("main.tra", "")
+BL.def_font = def_FONT
+Vi.def_font = def_FONT
+
+PATH_GLOSS = fullpath + PATH_GLOSS + LIST_GLOSS[0]
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
@@ -56,7 +59,7 @@ class GUI(Frame):
 
         Label(button_frame, text="Query").pack(side="left", padx=5)
 
-        combo_font = def_font[:]; combo_font[1]=11
+        combo_font = def_FONT[:]; combo_font[1]=11
         self.sbox = Combobox(button_frame, font=combo_font)
         self.sbox.pack(side="left")
         self.sbox.insert(0, "Here")

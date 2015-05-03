@@ -21,7 +21,6 @@ class BrowseList(Gtk.ScrolledWindow):
         self.set_vexpand(True)
 
         self.SRC = src
-        self.liststore = Gtk.ListStore(int, str, str)
         self.makeWidgets()
 
         if self.SRC:
@@ -30,7 +29,8 @@ class BrowseList(Gtk.ScrolledWindow):
 
 
     def makeWidgets(self):
-        self.treeview = Gtk.TreeView(model=self.liststore)
+        self.treebuffer = Gtk.ListStore(int, str, str)
+        self.treeview = Gtk.TreeView(model=self.treebuffer)
         self.add(self.treeview)
         self.treeview.connect('key_press_event', self.treeview_key_press)
 
@@ -57,11 +57,11 @@ class BrowseList(Gtk.ScrolledWindow):
 
 
     def text_edited(self, widget, path, text):
-        self.liststore[path][2] = text
+        self.treebuffer[path][2] = text
 
 
-    def fill_tree(self, _gloss):
-        data = open(_gloss, encoding="UTF-8").read()
+    def fill_tree(self, src):
+        data = open(src, encoding="UTF-8").read()
         self.count = 0
 
         for line in data.splitlines():
@@ -74,21 +74,13 @@ class BrowseList(Gtk.ScrolledWindow):
                 os.system("setsid leafpad %s %s"%(arg, self.SRC))
                 exit(1)
             row.insert(0, self.count)
-            self.liststore.append(row)
+            self.treebuffer.append(row)
 
 
     def add_to_tree(self, row):
         self.count += 1
-        self.liststore.append([self.count] + row)
+        self.treebuffer.append([self.count] + row)
         return self.count
-
-
-    def clear_tree(self):
-        pass
-
-
-    def reload_tree(self):
-        pass
 
 
     def open_src(self, ID=None):
@@ -140,9 +132,6 @@ def on_key_press(widget, event):
 
 
 def main():
-    global def_font
-    def_font = ["DejaVuSansMono", 12, "normal"]
-
     global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)

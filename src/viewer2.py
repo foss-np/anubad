@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 from gi.repository import Gtk, Pango
 
 class Viewer(Gtk.Overlay):
@@ -73,7 +74,9 @@ class Viewer(Gtk.Overlay):
         # >>> obj.parser(data)
         # [1, 'I001', 'hello', 'नमस्कार']
         # """
-        print(lst)
+        if os.name is not 'nt': # MSWIN BUG: can't print unicode
+            print(lst)
+
         word = lst[2]
 
         raw = lst[3]

@@ -34,6 +34,7 @@ class GUI(Gtk.Grid):
         self.TAB_LST = []
         self.FOUND_ITEMS = []
         self.VIEWED_ITEMS = set()
+        self.CURRENT_VIEW = None
 
         self.makeWidgets()
         self.connect('key_press_event', self.key_binds)
@@ -45,8 +46,8 @@ class GUI(Gtk.Grid):
         self.attach(self.makeWidgets_searchbar(), 0, 1, 5, 1)
         self.attach(self.makeWidgets_sidebar(), 0, 2, 1, 2)
         self.attach(self.makeWidgets_viewer(), 1, 2, 4, 2)
-        # self.attach(self.makeWidgets_settings(), 0, 3, 2, 1)
-        self.attach(self.makeWidgets_browser(LIST_GLOSS[0]), 0, 4, 5, 2)
+        self.attach(self.makeWidgets_settings(), 0, 4, 5, 1)
+        self.attach(self.makeWidgets_browser(LIST_GLOSS[0]), 0, 5, 5, 2)
 
 
     def makeWidgets_toolbar(self):
@@ -131,6 +132,7 @@ class GUI(Gtk.Grid):
 
 
     def _clean_button(self, widget):
+        self.VIEWED_ITEMS.clear()
         self.viewer.textbuffer.set_text("")
         self.cb_dropdown.clear()
 
@@ -159,32 +161,27 @@ class GUI(Gtk.Grid):
         ## Button
         self.b_search = Gtk.Button(label="Search", stock=Gtk.STOCK_FIND)
         layout.add(self.b_search)
-        self.b_search.connect('clicked', self.searchWord)
+        self.b_search.connect('clicked', lambda w: self.searchbar_binds(w, None))
 
         return layout
 
 
     def searchbar_binds(self, widget, event):
         # print(event.keyval)
-        if Gdk.ModifierType.CONTROL_MASK & event.state:
+        query = self.entry.get_text().strip().lower()
+        if event is None:
+            self.searchWord(query)
+        elif Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('c'):
                 self.entry.set_text("")
-            elif event.keyval == ord('e'):
-                query = self.entry.get_text()
-                current_tab = self.notebook.get_current_page()
-                if not query.strip():
-                    self.TAB_LST[current_tab].open_src()
-                    return
-                t, _id, *etc = self.FOUND_ITEMS[0] if self.FOUND_ITEMS else [ current_tab, None]
-                self.TAB_LST[t].open_src(_id)
         elif Gdk.ModifierType.SHIFT_MASK & event.state:
             if event.keyval == 65293: # <enter> return
                 state = self.toggle_search.get_active()
                 self.toggle_search.set_active(not state)
-                self.searchWord()
+                self.searchWord(query)
                 self.toggle_search.set_active(state)
         elif event.keyval == 65293: # <enter> return
-            self.searchWord()
+            self.searchWord(query)
 
 
     def makeWidgets_sidebar(self):
@@ -222,7 +219,7 @@ class GUI(Gtk.Grid):
         self.viewer = Vi.Viewer(self)
         # self.viewer.connect('key_press_event', self.viewer_binds)
         # self.viewer.textview.override_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
-        self.viewer.textview.modify_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
+        self.viewer.textview.modify_font(Pango.font_description_from_string(def_FONT))
         self.viewer.connect('key_press_event', self.viewer_binds)
         return self.viewer
 
@@ -240,17 +237,27 @@ class GUI(Gtk.Grid):
 
         self.font_button = Gtk.FontButton()
         layout.add(self.font_button)
-        self.font_button.set_font_name('DejaVu Sans Mono 12')
-        self.font_button.connect('font-set', lambda w: self.viewer.modify_font(w.get_font_desc()))
+        self.font_button.set_font_name(def_FONT)
+        self.font_button.connect('font-set', self._change_font)
 
         # SHOW HIDE GLOSS
         #toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GOTO_TOP), 0)
         # toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GOTO_BOTTOM), 0)
-
-        layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLOSE))
-        layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_APPLY))
-
+        # layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLOSE))
+        # layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_APPLY))
         return layout
+
+
+    def _change_font(self, widget):
+        f_obj = widget.get_font_desc()
+        self.viewer.textview.modify_font(f_obj)
+        ff, fs = f_obj.get_family(), int(f_obj.get_size()/1000)
+        font = ff + ' ' + str(fs)
+        conf = open("mysettings.conf").read()
+        global def_FONT
+        nconf = conf.replace(def_FONT, font)
+        open("mysettings.conf", 'w').write(nconf)
+        def_FONT = font
 
 
     def makeWidgets_browser(self, gloss):
@@ -261,26 +268,32 @@ class GUI(Gtk.Grid):
             if not file_name[-4:] in FILE_TYPES: continue
             if "main.tra" in file_name: self.MAIN_TAB = tab
             obj = BL.BrowseList(self.parent, self.GLOSS + file_name)
+
+            # TODO font change
+            # font = Pango.FontDescription(def_FONT)
+            # obj.renderer_text.cell.set_property('font-desc', font)
+
             self.notebook.append_page(obj, Gtk.Label(label=file_name[:-4]))
             self.TAB_LST.append(obj)
             tab += 1
         return self.notebook
 
 
-    def searchWord(self, *args):
+    def searchWord(self, query):
         ## TODO: Reverse search in nepali
         # grep might be useful for quick implementation
-        query = self.entry.get_text().strip().lower()
         if not query: return
         clip_out = []
         self.FOUND_ITEMS.clear()
         self.liststore.clear()
         self.VIEWED_ITEMS.clear()
+        self.CURRENT_VIEW = None
         found = 0
         for word in query.split():
             foundFlag = False
             for tab, obj in enumerate(self.TAB_LST):
-                for item in obj.liststore:
+                # MAYBE: put the tree search in browserlst itself
+                for item in obj.treebuffer:
                     if word not in item[1]: continue
                     # self.treeview.row_activated(0, self.liststore)
                     # NOTE: may be use interator counter
@@ -291,6 +304,8 @@ class GUI(Gtk.Grid):
                     if word != item[1] and not self.toggle_search.get_active(): continue
                     self.cb_dropdown.insert(0, [word])
                     clip_out += self.viewer.parser(row)
+                    self.VIEWED_ITEMS.add(found)
+                    self.CURRENT_VIEW = found - 1
                     foundFlag = True
             if foundFlag is False:
                 self.viewer.not_found(word)
@@ -318,9 +333,9 @@ class GUI(Gtk.Grid):
 
 
     def reload(self, gloss):
+        query = self.entry.get_text().strip().lower()
         if self.GLOSS == PATH_GLOSS + gloss:
-            word = self.entry.get_text().strip().lower()
-            xcowsay(word)
+            xcowsay(query)
             return
 
         self.remove(gui.notebook)
@@ -331,7 +346,14 @@ class GUI(Gtk.Grid):
 
         gui.attach(gui.makeWidgets_browser(gloss), 0, 4, 5, 2)
         root.show_all()
-        gui.searchWord()
+        gui.searchWord(query)
+
+
+    def reload_gloss(self):
+        current_tab = self.notebook.get_current_page()
+        obj = self.TAB_LST[current_tab]
+        obj.treebuffer.clear()
+        obj.fill_tree(obj.SRC)
 
 
     def _circular_search(self, d):
@@ -368,12 +390,14 @@ class GUI(Gtk.Grid):
         elif event.keyval == 65481: self.reload(LIST_GLOSS[0]) # F12
         elif event.keyval == 65480: self.reload(LIST_GLOSS[1]) # F11
         elif event.keyval == 65479: self.reload(LIST_GLOSS[2]) # F10
+        elif event.keyval == 65474: self.reload_gloss() # F5
 
-        word = self.entry.get_text().strip().lower()
+        global clipboard
+        query = self.entry.get_text().strip().lower()
         if Gdk.ModifierType.CONTROL_MASK & event.state:
-            if event.keyval == ord('i'): self.add_to_gloss(word)
-            elif event.keyval == ord('1'): dict_grep(word)
-            elif event.keyval == ord('2'): web_search(word)
+            if event.keyval == ord('i'): self.add_to_gloss(query)
+            elif event.keyval == ord('1'): dict_grep(query)
+            elif event.keyval == ord('2'): web_search(query)
             elif event.keyval == ord('o'): self.open_dir()
             elif event.keyval == ord('t'): self.open_term()
             elif event.keyval == ord('l'): self._clean_button(gui.viewer)
@@ -381,11 +405,15 @@ class GUI(Gtk.Grid):
             elif event.keyval == ord('s'): self._circular_search(+1)
             elif event.keyval == 65365: self._circular_tab_switch(-1) # pg-down
             elif event.keyval == 65366: self._circular_tab_switch(+1) # pg-up
-            elif event.keyval == ord('v'):
+            elif event.keyval == ord('g'): # grab clipboard
                 text = clipboard.wait_for_text()
                 self.entry.set_text(text.strip().lower())
                 self.cb_search.grab_focus()
-                self.searchWord()
+                self.searchWord(query)
+            elif event.keyval == ord('e'):
+                if self.CURRENT_VIEW is None: return
+                t, _id, *etc = self.FOUND_ITEMS[self.CURRENT_VIEW]
+                self.TAB_LST[t].open_src(_id)
             return
 
         if Gdk.ModifierType.META_MASK and event.state:
@@ -505,9 +533,9 @@ def main():
 
 if __name__ == '__main__':
     main()
-    if PATH_PLUGINS:
+    PATH_PLUGINS = fullpath + PATH_PLUGINS
+    if PATH_PLUGINS and os.path.isdir(PATH_PLUGINS):
         # TODO: trasliterate, espeak
-        PATH_PLUGINS = fullpath + PATH_PLUGINS + '/'
         for file_name in os.listdir(PATH_PLUGINS):
             print("plugin:", file_name)
             exec(open(PATH_PLUGINS + file_name).read())
