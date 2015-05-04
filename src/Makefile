@@ -36,3 +36,6 @@ viewer:
 
 viewer2:
 	./viewer2.py
+
+add:
+	./add.py

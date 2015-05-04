@@ -65,7 +65,7 @@ class Viewer(Gtk.Overlay):
         self.textview.scroll_mark_onscreen(m)
 
 
-    def parser(self, lst, _print=True):
+    def parse(self, lst, _print=True):
         # """
         # >>> obj = Viewer(parent=root)
         # >>> root.add(obj)
@@ -173,14 +173,10 @@ def on_key_press(widget, event):
 
 
 def main():
-    global def_font
-    def_font = ["DejaVuSansMono", 12, "normal"]
-
     global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', on_key_press)
-    root.set_default_size(600, 300)
 
 
 if __name__ == '__main__':

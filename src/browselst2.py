@@ -24,7 +24,6 @@ class BrowseList(Gtk.ScrolledWindow):
         self.makeWidgets()
 
         if self.SRC:
-            print("loading: *" + src[-40:])
             self.fill_tree(src)
 
 
@@ -61,6 +60,7 @@ class BrowseList(Gtk.ScrolledWindow):
 
 
     def fill_tree(self, src):
+        print("loading: *" + src[-40:])
         data = open(src, encoding="UTF-8").read()
         self.count = 0
 
