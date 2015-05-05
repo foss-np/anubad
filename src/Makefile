@@ -5,13 +5,10 @@ default: gtk3
 tk-py: tk-py3
 
 tk-py3: mysettings.conf
-	./main.pyw
+	python3 ./main.pyw
 
 tk-py2: mysettings.conf
 	python2 main.pyw
-
-cli: mysettings.conf
-	./main.pyw hello
 
 gtk3: mysettings.conf
 	./main.py
@@ -26,16 +23,10 @@ dist:
 	7z a "$(NAME)" $(PWD)
 
 browser:
-	./browselst.py
-
-browser2:
-	./browselst2.py
+	./browser.py
 
 viewer:
 	./viewer.py
-
-viewer2:
-	./viewer2.py
 
 add:
 	./add.py

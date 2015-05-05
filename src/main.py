@@ -17,8 +17,8 @@ if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
 
 from gi.repository import Gtk, Gdk, Pango
 from subprocess import Popen
-import browselst2 as BL
-import viewer2 as Vi
+import browser as BL
+import viewer as Vi
 from add import Add
 
 #   ____ _   _ ___
