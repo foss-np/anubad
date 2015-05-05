@@ -1,20 +1,9 @@
 #!/usr/bin/env python
 
-import os, sys
-
-exec(open("mysettings.conf").read())
-if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
-    sys.path.append(PATH_MYLIB)
-    from debugly import *
-
 from subprocess import Popen
 from gi.repository import Gtk, Gdk, Pango
 
 class BrowseList(Gtk.ScrolledWindow):
-    """
-    >>> obj = BrowseList(parent=root)
-    >>> root.add(obj)
-    """
     def __init__(self, parent=None, src=None):
         Gtk.ScrolledWindow.__init__(self)
         self.set_hexpand(True)
@@ -60,6 +49,14 @@ class BrowseList(Gtk.ScrolledWindow):
 
 
     def fill_tree(self, src):
+        """
+        >>> exec(open("mysettings.conf").read())
+        >>> obj = BrowseList(root)
+        >>> root.add(obj)
+        >>> obj.fill_tree(PATH_GLOSS + LIST_GLOSS[0] + "main.tra")
+        loading: *../gloss/foss_gloss/en2np/main.tra
+        """
+
         print("loading: *" + src[-40:])
         data = open(src, encoding="UTF-8").read()
         self.count = 0
@@ -71,7 +68,7 @@ class BrowseList(Gtk.ScrolledWindow):
                 # TODO: open leafpad automatically with the current error line
                 print("File Format Error: %s: %d"%(self.SRC, self.count))
                 arg = "--jump=%d"%self.count
-                os.system("setsid leafpad %s %s"%(arg, self.SRC))
+                print("pid:", Popen(["leafpad", arg, self.SRC]).pid)
                 exit(1)
             row.insert(0, self.count)
             self.treebuffer.append(row)
@@ -95,37 +92,7 @@ class BrowseList(Gtk.ScrolledWindow):
             print("pid:", Popen(["leafpad", self.SRC]).pid)
 
 
-    def make_popup(self, ID, word):
-        # popup = Menu(self, tearoff=0)
-        # popup.add_command(label=ID + ' : ' + word, state=DISABLED, font=self.h1)
-        # popup.add_command(label="Edit", command=lambda: open_src())
-        # popup.add_command(label="Open Gloss", command=lambda: open_src())
-        # popup.add_separator()
-        # popup.add_command(label="Search online", command=lambda: web_search(word))
-        # return popup
-        pass
-
-    def get_ID_below_mouse(self, event):
-        # ID = ttk.Treeview.identify(self.tree, component='item', x=ex, y=ey)
-
-        # self.tree.selection_set(ID)
-        # self.tree.focus(ID)
-        # self.tree.focus_set()
-
-        # return ID
-        pass
-
-
-    def call_popup(self, event):
-        # ID = self.get_ID_below_mouse(event)
-        # word = self.tree.item(ID)['values'][1]
-        # popup = self.make_popup(ID, word)
-        # popup.tk_popup(event.x_root, event.y_root)
-        # del popup
-        pass
-
-
-def on_key_press(widget, event):
+def root_binds(widget, event):
     # print(event.keyval)
     if event.keyval == 65307:
         Gtk.main_quit()
@@ -135,7 +102,7 @@ def main():
     global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
-    root.connect('key_release_event', on_key_press)
+    root.connect('key_release_event', root_binds)
     root.set_default_size(600, 300)
 
 

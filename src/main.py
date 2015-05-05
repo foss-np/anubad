@@ -51,7 +51,6 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets(self):
-        # TODO: after creation of multiple windows
         self.layout = Gtk.Grid()
         self.add(self.layout)
 
@@ -225,9 +224,8 @@ class GUI(Gtk.Window):
         i = model[treeiter][0] - 1
         self.CURRENT_VIEW = i
         p = i not in self.VIEWED_ITEMS
-        self.VIEWED_ITEMS.add(i)
-        row = self.FOUND_ITEMS[i]
-        clip_out = self.viewer.parse(row, _print=p)
+        tab, *row = self.FOUND_ITEMS[i]
+        clip_out = self.viewer.parse(tab, self.TAB_LST[tab], row, _print=p)
         self.CLIP_CYCLE = circle(clip_out)
         self._circular_search(+1)
 
@@ -306,9 +304,10 @@ class GUI(Gtk.Window):
         self.VIEWED_ITEMS.clear()
         self.CURRENT_VIEW = None
         found = 0
-        for word in query.split():
+        for word in set(query.split()):
             foundFlag = False
             for tab, obj in enumerate(self.TAB_LST):
+                # TODO: make it simpler
                 # MAYBE: put the tree search in browserlst itself
                 for item in obj.treebuffer:
                     if word not in item[1]: continue
@@ -316,20 +315,20 @@ class GUI(Gtk.Window):
                     # NOTE: may be use interator counter
                     found += 1
                     row = [tab] + list(item)
-                    self.FOUND_ITEMS.append(row)
-                    self.suggestions.append([found, item[1]])
+                    if row not in self.FOUND_ITEMS: # remove duplicate longest str match
+                        self.FOUND_ITEMS.append(row)
+                        self.suggestions.append([found, item[1]])
                     if word != item[1] and not self.toggle_search.get_active(): continue
                     self.cb_dropdown.insert(0, [word])
-                    clip_out += self.viewer.parse(row)
+                    clip_out += self.viewer.parse(tab, obj, row[1:])
                     self.CURRENT_VIEW = found - 1
                     self.VIEWED_ITEMS.add(self.CURRENT_VIEW)
                     foundFlag = True
             if foundFlag is False:
                 self.viewer.not_found(word)
 
-        if len(clip_out) == 0:
-            self.viewer.jump_to_end()
-            return
+        if len(clip_out) == 0: return
+
 
         if len(self.cb_dropdown) > 1:
             self.button_back.set_sensitive(True)
@@ -356,15 +355,14 @@ class GUI(Gtk.Window):
             xcowsay(query)
             return
 
-        self.remove(self.notebook)
+        self.layout.remove(self.notebook)
         del self.notebook
         for obj in self.TAB_LST:
             del obj
         self.TAB_LST.clear()
 
-        self.attach(self.makeWidgets_browser(gloss), 0, 5, 5, 2)
-        # TODO: fix it class as the windows
-        root.show_all()
+        self.layout.attach(self.makeWidgets_browser(gloss), 0, 5, 5, 2)
+        self.show_all()
         self.notebook.set_current_page(self.MAIN_TAB)
         self.searchWord(query)
 
@@ -415,9 +413,9 @@ class GUI(Gtk.Window):
         query = self.entry.get_text().strip().lower()
         if Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('i'): self.add_to_gloss(query)
-            elif event.keyval == ord('1'): dict_grep(query, False)
-            elif event.keyval == ord('2'): web_search(query)
-            elif event.keyval == ord('3'): dict_grep(query)
+            elif event.keyval == ord('1'): dict_grep(query, self.viewer, False)
+            elif event.keyval == ord('2'): web_search(query, self.viewer)
+            elif event.keyval == ord('3'): dict_grep(query, self.viewer)
             elif event.keyval == ord('o'): self.open_dir()
             elif event.keyval == ord('t'): self.open_term()
             elif event.keyval == ord('l'): self._clean_button(self.viewer)
@@ -471,17 +469,15 @@ def main():
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    global PATH_PLUGINS
-    PATH_PLUGINS = fullpath + PATH_PLUGINS
-    if PATH_PLUGINS and os.path.isdir(PATH_PLUGINS):
-        # TODO: trasliterate, espeak
-        for file_name in os.listdir(PATH_PLUGINS):
-            print("plugin:", file_name)
-            exec(open(PATH_PLUGINS + file_name).read())
-
     return root
 
 
 if __name__ == '__main__':
     main().connect('key_press_event', root_binds)
+    global PATH_PLUGINS
+    PATH_PLUGINS = fullpath + PATH_PLUGINS
+    if PATH_PLUGINS and os.path.isdir(PATH_PLUGINS):
+        for file_name in os.listdir(PATH_PLUGINS):
+            print("plugin:", file_name)
+            exec(open(PATH_PLUGINS + file_name).read())
     Gtk.main()

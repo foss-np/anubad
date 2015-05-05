@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 
+"""* viewer.py
+----------------------------------------------------------------------
+A module for the interactive text interface and Decoration.
+"""
+
 import os
 from gi.repository import Gtk, Pango
 
 class Viewer(Gtk.Overlay):
+
     def __init__(self, parent=None):
         Gtk.Overlay.__init__(self)
         self.makeWidgets()
@@ -61,25 +67,23 @@ class Viewer(Gtk.Overlay):
 
     def jump_to_end(self):
         end = self.textbuffer.get_end_iter()
-        m = self.textbuffer.create_mark("found", end)
+        m = self.textbuffer.create_mark("end", end)
         self.textview.scroll_mark_onscreen(m)
 
 
-    def parse(self, lst, _print=True):
-        # """
-        # >>> obj = Viewer(parent=root)
-        # >>> root.add(obj)
-        # """
-        # >>> data = [1, 'I001', 'hello', 'नमस्कार']
-        # >>> obj.parser(data)
-        # [1, 'I001', 'hello', 'नमस्कार']
-        # """
+    def parse(self, tab, obj, row, _print=True):
+        """
+        >>> obj = Viewer(root)
+        >>> root.add(obj)
+        >>> data = [1, 'hello', 'नमस्कार']
+        >>> obj.parse(0, None, data)
+        0 [1, 'hello', 'नमस्कार']
+        ['नमस्कार']
+        """
         if os.name is not 'nt': # MSWIN BUG: can't print unicode
-            print(lst)
+            print(tab, row)
 
-        word = lst[2]
-
-        raw = lst[3]
+        ID, word, raw  = row
         trasliterate = ""
         translations = []
         tags = []
@@ -153,20 +157,12 @@ class Viewer(Gtk.Overlay):
         self.textbuffer.insert_with_tags(end, "'%s'"%word, self.tag_bold)
 
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert(end, "Not Found\n")
+        self.textbuffer.insert(end, " Not Found\n")
+
+        self.jump_to_end()
 
 
-    def _enter(self, event):
-        # self.config(cursor="hand2")
-        pass
-
-
-    def _leave(self, event):
-        # self.config(cursor="")
-        pass
-
-
-def on_key_press(widget, event):
+def root_binds(widget, event):
     # print(event.keyval)
     if event.keyval == 65307:
         Gtk.main_quit()
@@ -176,16 +172,13 @@ def main():
     global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
-    root.connect('key_release_event', on_key_press)
+    root.connect('key_release_event', root_binds)
+    root.set_default_size(500, 300)
 
 
 if __name__ == '__main__':
     main()
     import doctest
     doctest.testmod()
-    obj = Viewer(parent=root)
-    root.add(obj)
-    data = [1, 'I001', 'hello', 'नमस्कार']
-    obj.parser(data)
     root.show_all()
     Gtk.main()

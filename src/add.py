@@ -10,7 +10,7 @@ class Add(Gtk.Window):
         self.l2 = l2
 
         self.makeWidgets()
-        if parent: self.cb_dropdown()
+        if parent: self.cb_file_add()
 
         self.connect('key_press_event', lambda w, e: self.key_binds(w, e))
         self.show_all()
@@ -75,8 +75,10 @@ class Add(Gtk.Window):
         obj = self.parent.TAB_LST[t]
         fp = open(obj.SRC, 'a').write("\n" + '; '.join(row))
         count = obj.add_to_tree(row)
-        row = [t, count] + row
-        self.parent.viewer.parse(row)
+        row = [count] + row
+
+        # TODO: move this to main.py
+        self.parent.viewer.parse(t, obj, row)
         self.parent.FOUND_ITEMS.clear()
         self.parent.FOUND_ITEMS.append(row)
         self.parent.suggestions.clear()
@@ -85,6 +87,7 @@ class Add(Gtk.Window):
         self.parent.VIEWED_ITEMS.add(0)
         self.parent.CURRENT_VIEW = 0
         self.destroy()
+        # return t, row
 
 
     def key_binds(self, widget, event):
