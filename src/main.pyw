@@ -8,138 +8,275 @@ filepath = os.path.abspath(__file__)
 fullpath = os.path.dirname(filepath) + '/'
 
 exec(open(fullpath+"/gsettings.conf").read())
+exec(open(fullpath + "mysettings.conf").read())
 
 try: # py2/3 compatibility
     import tkinter as tk
     from tkinter.ttk import *
-    from tkinter.simpledialog import askstring
-    exec(open(fullpath + "mysettings.conf").read())
 except:
     import Tkinter as tk
     from ttk import *
-    from tkSimpleDialog import askstring
 
-if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
-    sys.path.append(PATH_MYLIB)
-    from debugly import *
-
-import browselst as BL
-import viewer as Vi
 
 tmp = def_FONT.split()
-def_FONT = [ ' '.join(tmp[:-1]), tmp[-1], "normal" ]
-
-BL.def_font = def_FONT
-Vi.def_font = def_FONT
+def_FONT = [ ' '.join(tmp[:-1]), tmp[-1] ]
 
 PATH_GLOSS = fullpath + PATH_GLOSS + LIST_GLOSS[0]
+
+#  ____
+# | __ ) _ __ _____      _____  ___ _ __
+# |  _ \| '__/ _ \ \ /\ / / __|/ _ \ '__|
+# | |_) | | | (_) \ V  V /\__ \  __/ |
+# |____/|_|  \___/ \_/\_/ |___/\___|_|
+#
+
+class Browser(Frame):
+    cols = ["#", "en", "ne"]
+
+    col_attrib = [
+       #["id", "label", min-width, width, stretch, !show],
+        ["#", "#", 50, 50, 0, False],
+        ["en", "English", 90, 90, 1, False],
+        ["ne", "नेपाली", 250, 170, 1, False]
+    ]
+
+    def __init__(self, parent=None, gloss=None):
+        Frame.__init__(self, parent)
+        self.GLOSS = gloss
+
+        self.makeWidgets()
+
+        if self.GLOSS: # avoid utf-8 print in terminal
+            self.fill_tree(self.GLOSS)
+
+        self.pack(expand=1, side="top", fill="both", anchor="n")
+
+
+    def makeWidgets(self):
+        # a treeview
+        self.tree = Treeview(self, show="headings", columns=Browser.cols)
+        self.tree.grid(column=0, row=0, sticky='news', in_=self)
+        self.tree.config(selectmode="browse")
+        self.tree.tag_configure("npfont", font=def_FONT)
+
+        # adding header
+        for a in Browser.col_attrib:
+            if a[-1]: continue
+            self.tree.heading(a[0], text=a[1])
+            self.tree.column(a[0], minwidth=a[2], width=a[3], stretch=a[4])
+
+        # adding scrollbar
+        vsb = Scrollbar(self, orient="vertical", command=self.tree.yview)
+        vsb.config(takefocus=0)
+        vsb.grid(column=1, row=0, sticky='ns', in_=self)
+
+        hsb = Scrollbar(self, orient="horizontal", command=self.tree.xview)
+        hsb.config(takefocus=0)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        hsb.grid(column=0, row=1, sticky='ew', in_=self)
+
+        # grid config
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+
+    def fill_tree(self, _gloss):
+        try: # py2/3 compatibility
+            data = open(self.GLOSS, encoding="UTF-8").read()
+        except:
+            # for python2
+            data = open(self.GLOSS).read()
+            data = data.decode('utf-8')
+
+        self.count = 0
+        for line in data.splitlines():
+            self.count += 1
+            row = line.split(';')
+            row.insert(0, self.count)
+            try:
+                row[2] = row[2][1:] # remove space
+            except:
+                print("File Format Error: %s: %d"%(self.GLOSS, self.count))
+                exit()
+            self.select = self.tree.insert('', 'end', values=row, tag="npfont")
+
+
+    def treeSetFocus(self):
+        if not self.count: return # if no data
+        if self.tree.focus() == "":
+            #print("%5d"%self.count, self.GLOSS.split('/')[-1])
+            self.tree.selection_set('I001')
+            self.tree.focus('I001')
+
+        self.tree.focus_set()
+
+
+    def get_ID_below_mouse(self, event):
+        HEIGHT = 19
+        offset = HEIGHT * 18
+        ex, ey = event.x_root, event.y_root - offset
+        ID = Treeview.identify(self.tree, component='item', x=ex, y=ey)
+
+        self.tree.selection_set(ID)
+        self.tree.focus(ID)
+        self.tree.focus_set()
+
+        return ID
+
+#        _
+# __   _(_) _____      _____ _ __
+# \ \ / / |/ _ \ \ /\ / / _ \ '__|
+#  \ V /| |  __/\ V  V /  __/ |
+#   \_/ |_|\___| \_/\_/ \___|_|
+#
+
+class Viewer(tk.Text):
+    def __init__(self, parent=None):
+        tk.Text.__init__(self, parent)
+
+        self.makeWidgets()
+
+
+    def makeWidgets(self):
+        self.config(height=12, width=60, takefocus=0)
+        self.config(font=def_FONT)
+        self.tag_config("h1", font=def_FONT + ["bold"])
+        self.tag_config("pos", foreground="red")
+        self.tag_config("li", font=def_FONT + ["bold"], foreground="gray", lmargin1=20)
+        self.tag_config("tsl", foreground="blue")
+
+
+    def clear_viewer(self):
+        self.config(state="normal")
+        self.delete(1.0, "end")
+        self.config(state="disabled")
+
+
+    def parse(self, lst, obj):
+        raw = lst[3]
+        transliterate = ""
+        translation = []
+        pos = "undefined"
+        level = 0
+
+        fbreak = ftsl = 0
+        for i, c in enumerate(raw):
+            if c == '[': ftsl = i; level += 1
+            elif c == ']':
+                transliterate = raw[ftsl+1:i]
+                ftsl = i + 2
+                fbreak = i + 2
+                level -= 1
+            elif c == '(':
+                pos = raw[fbreak:i]
+                fbreak = i + 1
+                level += 1
+            elif c == ',':
+                if raw[i-1] in ')]': continue
+                if level > 0: continue
+                translation.append([pos, raw[fbreak:i]])
+                fbreak = i+2
+            elif c == ')':
+                translation.append([pos, raw[fbreak:i]])
+                pos = ""
+                fbreak = i+3
+                level -= 1
+
+        if i - fbreak > 2 or len(translation) < 1:
+            translation.append([pos, raw[fbreak:]])
+
+        href = lst[0:2]
+        ahref = str(href)
+        self.tag_config(ahref)
+        self.tag_bind(ahref, "<Enter>", lambda e: self.config(cursor="hand2"))
+        self.tag_bind(ahref, "<Leave>", lambda e: self.config(cursor=""))
+        self.tag_bind(ahref, "<Button-1>", lambda e: self._click(e, obj, href))
+
+        self.config(state="normal")
+        self.insert("end", lst[2], ("h1", ahref))
+
+        self.insert("end", '\t['+transliterate+']\n', "tsl")
+        for c, t in enumerate(translation):
+            self.insert("end", "%d. "%(c+1), "li")
+            if t[0] == "": pos_ = "undefined"
+            else: pos_ = t[0]
+            self.insert("end", pos_, "pos")
+            self.insert("end", " » ")
+            self.insert("end", t[1]+"\n")
+
+        self.config(state="disabled")
+
+
+    def not_found(self, word):
+        self.config(state="normal")
+        self.insert("end", word, "h1")
+        self.insert("end", " Not Found\n")
+        self.config(state="disabled")
+
+
+    def _click(self, event, obj, href):
+        obj.tree.selection_set(href[1])
+        obj.tree.focus(href[1])
+        obj.tree.focus_set()
+        obj.tree.yview(int(href[1][1:], 16)-1)
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
 # | |  _| | | || |
 # | |_| | |_| || |
 #  \____|\___/|___|
+#
 
-class GUI(Frame):
+class GUI(tk.Frame):
     def __init__(self, parent=None):
-        Frame.__init__(self, parent)
-        self.CURRENT_FOUND_ITEM = False
+        tk.Frame.__init__(self, parent)
+        self.parent = parent
+
         self.MAIN_TAB = 0
         self.glist = []
         self.history = []
 
         self.makeWidgets()
-        self.bindWidgets()
+
         self.pack(expand=1, fill="both")
+        self.sbox.focus()
 
     def makeWidgets(self):
         # searchbox
-        button_frame = Frame(self)
-        button_frame.pack(expand=1, fill="both")
+        f = tk.Frame(self)
+        f.pack(expand=0, fill="x")
 
-        Label(button_frame, text="Query").pack(side="left", padx=5)
+        Label(f, text="Query").pack(side="left", padx=5)
 
         combo_font = def_FONT[:]; combo_font[1]=11
-        self.sbox = Combobox(button_frame, font=combo_font)
+        self.sbox = Combobox(f, font=combo_font)
         self.sbox.pack(side="left")
-        self.sbox.insert(0, "Here")
+        self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0, "end"))
+        self.sbox.bind('<Return>', self.sbox_next_search)
+        self.parent.bind('<Control-f>', self.sboxSetFocus)
 
         # viewer
-        view_frame = Frame(self)
-        view_frame.pack(expand=1, side="right", fill="both")
+        self.viewer = Viewer(self)
+        self.viewer.pack(expand=1, fill="both")
+        self.viewer.bind('<Control-l>', lambda e: self.viewer.clear_viewer())
 
-        self.viewer = Vi.Viewer(view_frame, root)
-        self.viewer.pack(expand=1, side="top", fill="both")
-
-        self.tabar = Notebook(view_frame, takefocus=0)
-        self.tabar.pack(expand=1, side="top", fill="both")
+        # notebook
+        self.tabar = Notebook(self, takefocus=0)
+        self.tabar.pack(expand=1, fill="both")
         self.tabar.enable_traversal()
 
-
-    def bindWidgets(self):
-        self.sbox.bind('<Control-c>', lambda e: self.sbox.delete(0, "end"))
-        self.sbox.bind('<Control-g>', lambda e: self.sbox.delete(0, "end"))
-
-        self.sbox.bind('<Return>', sbox_next_search)
-
-        self.sbox.bind('<FocusIn>', self.sboxFocusIn)
-        self.sbox.bind('<FocusOut>', self.sboxFocusOut)
-        self.sbox.bind('<Control-i>', add_to_list)
-
-        root.bind('<Control-o>', self.open_dir)
-        root.bind('<Key-F5>', self.reload_gloss)
-
-        root.bind('<Control-f>', self.sboxSetFocus)
-        root.bind('<Control-s>', self.sboxSetFocus)
-        root.bind('<Key>', key_press)
-
-    def sboxFocusIn(self, event):
-        gui.sbox.focus()
-        root.unbind('<Control-s>')
-        root.bind('<Control-s>', self.sbox_emacs_search_next)
-
-    def sboxFocusOut(self, event):
-        root.unbind('<Control-c>')
-        root.bind('<Key>', key_press)
-        root.bind('<Control-s>', self.sboxSetFocus)
 
     def sboxSetFocus(self, event):
         self.sbox.focus()
         self.sbox.select_range(0, "end")
-        root.unbind('<Control-s>')
 
-    def sbox_emacs_search_next(self, event):
-        sbox_text = self.sbox.get()
-        if sbox_text:
-            sbox_next_search();
-        else: # if empty get from clipboard
-            clip_text = root.clipboard_get()
-            if clip_text:
-                self.sbox.insert(0, clip_text)
-
-    def toggle_display(self, *args):
-        if self.visible: self.pack_forget()
-        else: self.pack(expand=NO, fill=X, side=TOP)
-        self.visible = not self.visible
 
     def switch_tab(self, *event):
         tab = int(event[0].char)-1
         obj = self.glist[tab]
-        # BUG: object focus after tabswitch not working properly
-        # print(index, tab, tab_info[tab])
         self.tabar.select(tab)
         obj.treeSetFocus()
 
-    def open_dir(self, *events):
-        tab = self.tabar.index(self.tabar.select())
-        obj = self.glist[tab]
-        os.system("setsid nemo %s"%obj.GLOSS)
-
-    def reload_gloss(self, *events):
-        tab = self.tabar.index(self.tabar.select())
-        obj = self.glist[tab]
-        obj.reload_tree()
-        print("Reload %s"%obj.GLOSS)
 
     def load_files(self):
         tab = 0
@@ -148,117 +285,61 @@ class GUI(Frame):
             if "main" in file_name:
                 self.MAIN_TAB = tab
 
-            obj = BL.BrowseList(root, PATH_GLOSS+file_name)
-            obj.tree.bind('<Double-Button-1>', _doubleClick)
+            obj = Browser(self.parent, PATH_GLOSS+file_name)
+            obj.tree.bind('<Double-Button-1>', self._doubleClick)
             self.tabar.add(obj, text=file_name, padding=3)
             self.glist.append(obj)
 
             if tab < 9:
-                root.bind('<Alt-KeyPress-%d>'%(tab+1), self.switch_tab)
+                self.parent.bind('<Alt-KeyPress-%d>'%(tab+1), self.switch_tab)
             tab += 1
 
+        self.tabar.select(str(self.MAIN_TAB))
         return self.glist
 
-#        _   _                  __                  _   _
-#   ___ | |_| |__   ___ _ __   / _|_   _ _ __   ___| |_(_) ___  _ __
-#  / _ \| __| '_ \ / _ \ '__| | |_| | | | '_ \ / __| __| |/ _ \| '_ \
-# | (_) | |_| | | |  __/ |    |  _| |_| | | | | (__| |_| | (_) | | | |
-#  \___/ \__|_| |_|\___|_|    |_|  \__,_|_| |_|\___|\__|_|\___/|_| |_|
+    def sbox_next_search(self, *args):
+        word = self.sbox.get().lower().strip()
+        id_lst = []
+        for tab, obj in enumerate(self.glist):
+            FOUND = False
+            for item_ID in obj.tree.get_children():
+                item = obj.tree.item(item_ID)
+                if item['values'][1] != word: continue
+                self.viewer.parse([tab, item_ID] + item['values'][1:], obj)
+                FOUND = item_ID
+            if FOUND: id_lst.append((tab, FOUND))
 
-def key_press(event):
-    typed = event.char
-    if not typed.isalpha(): return
-    gui.sbox.delete(0, "end")
-    gui.sbox.insert(0, typed)
-    gui.sbox.focus()
-    root.unbind('<Key>')
+        if not id_lst:
+            self.viewer.not_found(word)
+            return
 
-
-def sbox_next_search(*args):
-    word = gui.sbox.get().lower().strip()
-    id_lst = []
-    for tab, obj in enumerate(gui.glist):
-        ID = search_tree(tab, obj, word)
-        if ID: id_lst.append((tab, ID))
-
-    if not id_lst:
-        print("\"%s\" not found"%word)
-        gui.viewer.not_found(word)
-        return
-
-    gui.CURRENT_FOUND_ITEM = id_lst[0]
-    gui.sbox.select_range(0, "end")
-    gui.history.append(word)
-    gui.sbox.config(values=gui.history)
+        self.sbox.select_range(0, "end")
+        self.history.append(word)
+        self.sbox.config(values=self.history)
 
 
-def search_tree(tab, obj, word):
-    for item_ID in obj.tree.get_children():
-        item = obj.tree.item(item_ID)
-        if item['values'][1] != word: continue
-        gui.viewer.parser([tab, item_ID] + item['values'][1:])
-        return item_ID
-    return False
-
-# NOTE: this is not the decorator pattern
-def _click(event, href):
-    gui.tabar.select(href[0])
-    obj = gui.glist[href[0]]
-    obj.tree.selection_set(href[1])
-    obj.tree.focus(href[1])
-    obj.tree.focus_set()
-    root.update()
-    obj.tree.yview(int(href[1][1:], 16)-1)
-Vi._click = _click
-
-
-def _doubleClick(event):
-    tab = gui.tabar.index(gui.tabar.select())
-    obj = gui.glist[tab]
-    ID = obj.get_ID_below_mouse(event)
-    item = obj.tree.item(ID)
-    gui.viewer.parser([tab, ID] + item['values'][1:])
-
-
-def add_to_list(*args):
-    word = gui.sbox.get().lower().strip()
-    anubad = askstring("Entry", "anubad: %s"%word)
-    if not anubad: return
-
-    i = gui.tabar.index(gui.tabar.select())
-    obj = gui.glist[i]
-
-    obj.count += 1
-    row = [obj.count, word, anubad]
-    select = obj.tree.insert('', 'end', values=row)
-
-    obj.tree.selection_set(select)
-    obj.tree.focus(select)
-    obj.tree.focus_set()
-    obj.tree.yview(int(select[1:], 16)-1)
-    fp = open(obj.GLOSS, 'a').write("\n" + word + "; " + anubad)
-    print(fp)
+    def _doubleClick(self, event):
+        tab = self.tabar.index(self.tabar.select())
+        obj = self.glist[tab]
+        ID = obj.get_ID_below_mouse(event)
+        item = obj.tree.item(ID)
+        self.viewer.parse([tab, ID] + item['values'][1:], obj)
 
 
 def main():
-    global root
     root = tk.Tk()
     root.title("anubad - अनुवाद")
 
-    global gui
-    gui = GUI()
+    gui = GUI(root)
     gui.load_files()
     root.update()
 
-    gui.tabar.select(str(gui.MAIN_TAB))
-
     root.bind('<Key-Escape>', lambda event: quit())
-    root.bind('<Control-d>', lambda event: quit())
 
     style = Style(root)
     style.theme_use("clam")
+    return root
 
 
 if __name__ == '__main__':
-    main()
-    root.mainloop()
+    main().mainloop()
