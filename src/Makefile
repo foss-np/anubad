@@ -30,3 +30,6 @@ viewer:
 
 add:
 	./add.py
+
+settings:
+	./settings.py

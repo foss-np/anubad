@@ -17,10 +17,14 @@ class Add(Gtk.Window):
 
     def makeWidgets(self):
         layout = Gtk.Grid()
+        self.add(layout)
         layout.set_row_spacing(5)
         layout.set_column_spacing(5)
 
-        self.add(layout)
+        # self.font_button = Gtk.FontButton()
+        # layout.add(self.font_button)
+        # self.font_button.set_font_name(def_FONT)
+        # self.font_button.connect('font-set', self._change_font)
 
         label = Gtk.Label()
         layout.attach(label, 0, 0, 1, 1)
@@ -28,8 +32,8 @@ class Add(Gtk.Window):
 
         self.lang1 = Gtk.Entry()
         layout.attach(self.lang1, 1, 0, 1, 1)
+        self.lang1.modify_font(Add.def_FONT_obj)
         self.lang1.set_text(self.l1)
-        # self.lang1.grab_focus()
 
         label = Gtk.Label()
         layout.attach(label, 0, 1, 1, 1)
@@ -37,6 +41,7 @@ class Add(Gtk.Window):
 
         self.lang2 = Gtk.Entry()
         layout.attach(self.lang2, 1, 1, 1, 1)
+        self.lang2.modify_font(Add.def_FONT_obj)
         self.lang2.set_text(self.l2)
 
         label = Gtk.Label()
@@ -46,13 +51,21 @@ class Add(Gtk.Window):
         self.gloss_file = Gtk.ComboBoxText()
         layout.attach(self.gloss_file, 1, 2, 1, 1)
 
-        self.button_cancel = Gtk.Button(label="Cancel")
-        layout.attach(self.button_cancel, 0, 3, 1, 1)
+        layout.attach(self.makeWidgets_buttons(), 0, 3, 2, 1)
+
+
+    def makeWidgets_buttons(self):
+        layout = Gtk.HBox()
+
+        self.button_cancel = Gtk.Button.new_from_stock(Gtk.STOCK_CANCEL)
+        layout.add(self.button_cancel)
         self.button_cancel.connect("clicked", lambda e: self.destroy())
 
-        self.button_add = Gtk.Button(label="Add")
-        layout.attach(self.button_add, 1, 3, 1, 1)
+        self.button_add = Gtk.Button.new_from_stock(Gtk.STOCK_ADD)
+        layout.add(self.button_add)
         self.button_add.connect("clicked", self._add_button)
+
+        return layout
 
 
     def cb_file_add(self):
@@ -82,7 +95,7 @@ class Add(Gtk.Window):
         self.parent.FOUND_ITEMS.clear()
         self.parent.FOUND_ITEMS.append(row)
         self.parent.suggestions.clear()
-        self.parent.suggestions.append([1, row[2]])
+        self.parent.suggestions.append([1, row[1]])
         self.parent.VIEWED_ITEMS.clear()
         self.parent.VIEWED_ITEMS.add(0)
         self.parent.CURRENT_VIEW = 0
@@ -105,5 +118,7 @@ def main():
 
 
 if __name__ == '__main__':
+    exec(open("gsettings.conf").read())
+    Add.def_FONT_obj = Pango.font_description_from_string(def_FONT)
     main().destroy = Gtk.main_quit
     Gtk.main()

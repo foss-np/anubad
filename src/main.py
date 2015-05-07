@@ -10,22 +10,26 @@ exec(open(fullpath + "mysettings.conf").read())
 
 PATH_GLOSS = fullpath + PATH_GLOSS
 
+fp_dev_null = open(os.devnull, 'w')
 if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
     sys.path.append(PATH_MYLIB)
     from debugly import *
     from pprint import pprint
+else:
+    sys.stdout = fp_dev_null
 
 from gi.repository import Gtk, Gdk, Pango
 from subprocess import Popen
 import browser as BL
 import viewer as Vi
-from add import Add
+import add as Ad
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
 # | |  _| | | || |
 # | |_| | |_| || |
 #  \____|\___/|___|
+#
 
 class GUI(Gtk.Window):
     def __init__(self, parent=None):
@@ -44,7 +48,7 @@ class GUI(Gtk.Window):
 
         self.makeWidgets()
         self.connect('key_press_event', self.key_binds)
-        self.cb_search.grab_focus()
+        self.search_entry.grab_focus()
         self.show_all()
         # NOTE: GTK BUG, notebook page switch only after its visible
         self.notebook.set_current_page(self.MAIN_TAB)
@@ -54,146 +58,140 @@ class GUI(Gtk.Window):
         self.layout = Gtk.Grid()
         self.add(self.layout)
 
-        # attach(child, left, top, width, height)
-        self.layout.attach(self.makeWidgets_toolbar(), 0, 0, 5, 1)
-        self.layout.attach(self.makeWidgets_searchbar(), 0, 1, 5, 1)
-        self.layout.attach(self.makeWidgets_sidebar(), 0, 2, 1, 2)
+        self.layout.attach(self.makeWidgets_toolbar(), left=0, top=0, width=5, height=1)
+        self.layout.attach(self.makeWidgets_searchbar(), 1, 1, 5, 1)
+        self.layout.attach(self.makeWidgets_sidebar(), 0, 1, 1, 3)
         self.layout.attach(self.makeWidgets_viewer(), 1, 2, 4, 2)
-        self.layout.attach(self.makeWidgets_settings(), 0, 4, 5, 1)
+        # self.layout.attach(self.makeWidgets_settings(), 0, 4, 5, 1)
         self.layout.attach(self.makeWidgets_browser(LIST_GLOSS[0]), 0, 5, 5, 2)
 
 
     def makeWidgets_toolbar(self):
         toolbar = Gtk.Toolbar()
         #
-        ## About
-        self.button_about = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ABOUT)
-        # button_about.connect("clicked", self.on_clear_clicked)
-        toolbar.insert(self.button_about, 0)
+        ## Button Back Button
+        self.backward_history = Gtk.Menu()
+        self.backward_history.append(Gtk.MenuItem(label="MenuItem 1"))
+        self.backward_history.append(Gtk.MenuItem(label="MenuItem 2"))
+
+        self.bm_backward = Gtk.MenuToolButton.new_from_stock(Gtk.STOCK_GO_BACK)
+        self.bm_backward.set_menu(self.backward_history)
+        toolbar.add(self.bm_backward)
+        self.bm_backward.connect("clicked", lambda e: self._back_click())
+        self.bm_backward.set_tooltip_markup("Previous Search Word, Secondary Click for History Popup, <u>Alt+←</u>")
+        self.bm_backward.set_sensitive(False)
+        ##
+        ## Button Forward Button
+        self.b_forward = Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_FORWARD)
+        toolbar.add(self.b_forward)
+        self.b_forward.connect("clicked", lambda e: self._forward_click())
+        self.b_forward.set_tooltip_markup("Next Search Word, Secondary Click for History Popup, <u>Alt+→</u>")
+        self.b_forward.set_sensitive(False)
         ##
         #
-        ## # Preference
-        self.button_preference = Gtk.ToolButton.new_from_stock(Gtk.STOCK_PREFERENCES)
-        toolbar.insert(self.button_preference, 0)
+        toolbar.add(Gtk.SeparatorToolItem())
+        #
+        ## Open Gloss
+        self.b_open = Gtk.ToolButton.new_from_stock(Gtk.STOCK_OPEN)
+        toolbar.add(self.b_open)
+        self.b_open.set_tooltip_markup("Clean the Viewer and history, <u>Ctrl+l</u>")
         ##
-        #
-        toolbar.insert(Gtk.SeparatorToolItem(), 0)
-        #
-        ## Clean Viewer # overlay to cb_dropdown
-        self.button_clear = Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLEAR)
-        toolbar.insert(self.button_clear, 0)
-        self.button_clear.connect("clicked", self._clean_button)
-        ##
-        #
         ## Add Button
-        self.button_add = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ADD)
-        toolbar.insert(self.button_add, 0)
-        self.button_add.connect("clicked", lambda w: self.add_to_gloss())
+        self.b_add = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ADD)
+        toolbar.add(self.b_add)
+        self.b_add.connect("clicked", lambda w: self.add_to_gloss())
+        self.b_add.set_tooltip_markup("Add new word to glossary, <u>Ctrl+i</u>")
         ##
         #
-        toolbar.insert(Gtk.SeparatorToolItem(), 0)
-        #
-        ## Search Toggle Button
-        self.toggle_search = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_DIALOG_INFO)
-        self.toggle_search.set_active(False)
-        toolbar.insert(self.toggle_search, 0)
-        ##
-        #
-        ## Smart Copy Toggle Button
-        self.toggle_copy = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_COPY)
-        toolbar.insert(self.toggle_copy, 0)
-        self.toggle_copy.set_active(True)
-        ##
-        #
-        ## Spell-check Toggle Button
-        self.toggle_spell = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_SPELL_CHECK)
-        toolbar.insert(self.toggle_spell, 0)
-        self.toggle_spell.set_active(True)
-        ##
+        toolbar.add(Gtk.SeparatorToolItem())
         #
         ## Auto Transliterate Button
-        self.toggle_trans = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_CONVERT)
-        toolbar.insert(self.toggle_trans, 0)
-        self.toggle_trans.set_active(True)
+        self.t_trans = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_CONVERT)
+        toolbar.add(self.t_trans)
+        self.t_trans.set_active(True)
+        ##
+        ## Spell-check Toggle Button
+        self.t_spell = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_SPELL_CHECK)
+        toolbar.add(self.t_spell)
+        self.t_spell.set_active(True)
+        ##
+        ## Smart Copy Toggle Button
+        self.t_copy = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_COPY)
+        toolbar.add(self.t_copy)
+        self.t_copy.set_active(True)
+        ##
+        ## Search Toggle Button
+        self.t_search = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_DIALOG_INFO)
+        self.t_search.set_active(False)
+        toolbar.add(self.t_search)
         ##
         #
-        toolbar.insert(Gtk.SeparatorToolItem(), 0)
+        toolbar.add(Gtk.SeparatorToolItem())
         #
-        ## Button Forward Button
-        self.button_forward = Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_FORWARD)
-        toolbar.insert(self.button_forward, 0)
-        self.button_forward.connect("clicked", lambda e: self._forward_click())
-        self.button_forward.set_sensitive(False)
+        ##  Preference
+        self.b_preference = Gtk.ToolButton.new_from_stock(Gtk.STOCK_PREFERENCES)
+        toolbar.add(self.b_preference)
+        self.b_preference.set_tooltip_markup("Change Stuffs, Fonts, default gloss")
         ##
-        #
-        ## Button Back Button
-        self.button_back = Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_BACK)
-        toolbar.insert(self.button_back, 0)
-        self.button_forward.connect("clicked", lambda e: self._back_click())
-        self.button_back.set_sensitive(False)
+        ## About
+        self.b_about = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ABOUT)
+        # b_about.connect("clicked", self.on_clear_clicked)
+        toolbar.add(self.b_about)
+        self.b_about.set_tooltip_markup("More About Anubad")
 
         return toolbar
 
 
     def _back_click(self):
         print("back clicked")
-        self.button_forward.set_sensitive(True)
+        self.b_forward.set_sensitive(True)
 
 
     def _forward_click(self):
         print("forward clicked")
 
 
-    def _clean_button(self, widget):
-        self.VIEWED_ITEMS.clear()
-        self.viewer.textbuffer.set_text("")
-        self.cb_dropdown.clear()
-        self.cb_search.grab_focus()
-
-
     def makeWidgets_searchbar(self):
         layout = Gtk.HBox()
 
-        label = Gtk.Label()
-        label.set_markup("<b>Query</b>")
-        layout.add(label)
+        tool_tip = "<b>Search:</b>\n\t- Normal,\t⌨ [<i>Enter</i>]\n\t- Show All,\t⌨ [<i>Shift + Enter</i>]\nUse Toolbar Toggler to Switch"
 
         self.search_history = []
-        self.cb_dropdown = Gtk.ListStore(str)
-        self.cb_search = Gtk.ComboBox.new_with_model_and_entry(self.cb_dropdown)
-        layout.add(self.cb_search)
-        self.entry = self.cb_search.get_child()
-        self.cb_search.set_entry_text_column(0)
 
+        self.search_entry = Gtk.SearchEntry()
+        layout.pack_start(self.search_entry, expand=True, fill=True, padding=2)
+        self.search_entry.connect('key_release_event', self.search_entry_binds)
+        self.search_entry.set_tooltip_markup(tool_tip)
 
-        ### binding
-        self.cb_search.connect('key_release_event', self.searchbar_binds)
+        # accelerators
         accel_search = Gtk.AccelGroup()
         self.add_accel_group(accel_search)
-        self.cb_search.add_accelerator("grab_focus", accel_search, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
+        self.search_entry.add_accelerator("grab_focus", accel_search, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
+
 
         ## Button
-        self.b_search = Gtk.Button(label="Search", stock=Gtk.STOCK_FIND)
-        layout.add(self.b_search)
+        self.b_search = Gtk.Button(label="Search")
+        layout.pack_start(self.b_search, expand=False, fill=False, padding=1)
         self.b_search.connect('clicked', lambda w: self.searchbar_binds(w, None))
+        self.b_search.set_tooltip_markup(tool_tip)
 
         return layout
 
 
-    def searchbar_binds(self, widget, event):
+    def search_entry_binds(self, widget, event):
         # print(event.keyval)
-        query = self.entry.get_text().strip().lower()
+        query = self.search_entry.get_text().strip().lower()
         if event is None:
             self.searchWord(query)
         elif Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('c'):
-                self.entry.set_text("")
+                self.search_entry.set_text("")
         elif Gdk.ModifierType.SHIFT_MASK & event.state:
             if event.keyval == 65293: # <enter> return
-                state = self.toggle_search.get_active()
-                self.toggle_search.set_active(not state)
+                state = self.t_search.get_active()
+                self.t_search.set_active(not state)
                 self.searchWord(query)
-                self.toggle_search.set_active(state)
+                self.t_search.set_active(state)
         elif event.keyval == 65293: # <enter> return
             self.searchWord(query)
 
@@ -202,9 +200,10 @@ class GUI(Gtk.Window):
         layout = Gtk.VBox()
 
         scroll = Gtk.ScrolledWindow()
-        layout.add(scroll)
+        layout.pack_start(scroll, True, True, 0)
         scroll.set_vexpand(False)
 
+        ## TreeView
         self.suggestions = Gtk.ListStore(int, str)
         self.treeview = Gtk.TreeView(model=self.suggestions)
         scroll.add(self.treeview)
@@ -213,6 +212,12 @@ class GUI(Gtk.Window):
         self.treeview.append_column(Gtk.TreeViewColumn("Suggestions", renderer_text, text=1))
         select = self.treeview.get_selection()
         select.connect("changed", self.on_sidebar_selection)
+
+        ## Filter
+        self.cb_filter = Gtk.ComboBoxText()
+        layout.pack_start(self.cb_filter, False, False, 0)
+        self.cb_filter.set_active(0)
+        # self.cb_filter.connect("changed", category_changed)
         return layout
 
 
@@ -231,48 +236,21 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets_viewer(self):
+        global clipboard
+        Vi.clipboard = clipboard
         self.viewer = Vi.Viewer(self)
         # self.viewer.connect('key_press_event', self.viewer_binds)
         # self.viewer.textview.override_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
         self.viewer.textview.modify_font(Pango.font_description_from_string(def_FONT))
-        self.viewer.connect('key_press_event', self.viewer_binds)
+        self.viewer.textview.connect('key_press_event', self.viewer_binds)
         return self.viewer
 
 
     def viewer_binds(self, widget, event):
         # print(event.keyval)
         # TODO: TESTING: not working properly
-        if event.keyval and self.viewer.toggle_edit.get_active():
-            self.cb_search.grab_focus()
-            self.searchbar_binds(widget, event)
-
-
-    def makeWidgets_settings(self):
-        layout = Gtk.HBox()
-
-        self.font_button = Gtk.FontButton()
-        layout.add(self.font_button)
-        self.font_button.set_font_name(def_FONT)
-        self.font_button.connect('font-set', self._change_font)
-
-        # SHOW HIDE GLOSS
-        # toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GOTO_TOP), 0)
-        # toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GOTO_BOTTOM), 0)
-        # layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLOSE))
-        # layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_APPLY))
-        return layout
-
-
-    def _change_font(self, widget):
-        f_obj = widget.get_font_desc()
-        self.viewer.textview.modify_font(f_obj)
-        ff, fs = f_obj.get_family(), int(f_obj.get_size()/1000)
-        font = ff + ' ' + str(fs)
-        conf = open("mysettings.conf").read()
-        global def_FONT
-        nconf = conf.replace(def_FONT, font)
-        open("mysettings.conf", 'w').write(nconf)
-        def_FONT = font
+        self.search_entry.grab_focus()
+        self.search_entry_binds(widget, event)
 
 
     def makeWidgets_browser(self, gloss):
@@ -318,8 +296,8 @@ class GUI(Gtk.Window):
                     if row not in self.FOUND_ITEMS: # remove duplicate longest str match
                         self.FOUND_ITEMS.append(row)
                         self.suggestions.append([found, item[1]])
-                    if word != item[1] and not self.toggle_search.get_active(): continue
-                    self.cb_dropdown.insert(0, [word])
+                    if word != item[1] and not self.t_search.get_active(): continue
+                    self.search_history.append(word)
                     clip_out += self.viewer.parse(tab, obj, row[1:])
                     self.CURRENT_VIEW = found - 1
                     self.VIEWED_ITEMS.add(self.CURRENT_VIEW)
@@ -327,17 +305,19 @@ class GUI(Gtk.Window):
             if foundFlag is False:
                 self.viewer.not_found(word)
 
-        if len(clip_out) == 0: return
+        if len(clip_out) == 0:
+            self.viewer.jump_to_end()
+            return
 
 
-        if len(self.cb_dropdown) > 1:
-            self.button_back.set_sensitive(True)
+        if len(self.search_history) > 1:
+            self.bm_backward.set_sensitive(True)
 
-        self.cb_search.grab_focus()
+        self.search_entry.grab_focus()
         self.CLIP_CYCLE = circle(clip_out)
 
 
-        if self.toggle_copy.get_active():
+        if self.t_copy.get_active():
             self._circular_search(+1)
 
 
@@ -350,7 +330,7 @@ class GUI(Gtk.Window):
 
 
     def reload(self, gloss):
-        query = self.entry.get_text().strip().lower()
+        query = self.search_entry.get_text().strip().lower()
         if self.GLOSS == PATH_GLOSS + gloss:
             xcowsay(query)
             return
@@ -376,14 +356,14 @@ class GUI(Gtk.Window):
 
     def _circular_search(self, d):
         if not self.CLIP_CYCLE:
-            self.cb_search.grab_focus()
+            self.search_entry.grab_focus()
             return
 
         global diff, clipboard
         diff = d
         text = next(self.CLIP_CYCLE)
         self.viewer.mark_found(text)
-        if self.toggle_copy.get_active():
+        if self.t_copy.get_active():
             clipboard.set_text(text, -1)
 
 
@@ -396,9 +376,19 @@ class GUI(Gtk.Window):
         self.notebook.set_current_page(n)
 
 
-    def add_to_gloss(self, query):
+    def add_to_gloss(self, query=""):
         _l2 = self.lets_add.strip() if self.lets_add else ""
-        add = Add(self, l1=query, l2=_l2)
+        global clipboard
+        Ad.clipboard = clipboard
+        Ad.Add.def_FONT_obj = Pango.font_description_from_string(def_FONT)
+        add = Ad.Add(self, l1=query, l2=_l2)
+
+        # TODO: connection
+        add.connect('delete-event', self._add_to_gloss_reflect)
+
+
+    def _add_to_gloss_reflect(self, widget, event):
+        print("hello i'm back")
 
 
     def key_binds(self, widget, event):
@@ -410,7 +400,7 @@ class GUI(Gtk.Window):
         elif event.keyval == 65474: self.reload_gloss() # F5
 
         global clipboard
-        query = self.entry.get_text().strip().lower()
+        query = self.search_entry.get_text().strip().lower()
         if Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('i'): self.add_to_gloss(query)
             elif event.keyval == ord('1'): dict_grep(query, self.viewer, False)
@@ -418,15 +408,17 @@ class GUI(Gtk.Window):
             elif event.keyval == ord('3'): dict_grep(query, self.viewer)
             elif event.keyval == ord('o'): self.open_dir()
             elif event.keyval == ord('t'): self.open_term()
-            elif event.keyval == ord('l'): self._clean_button(self.viewer)
+            elif event.keyval == ord('l'): self.viewer.textbuffer.set_text("")
             elif event.keyval == ord('r'): self._circular_search(-1)
             elif event.keyval == ord('s'): self._circular_search(+1)
             elif event.keyval == 65365: self._circular_tab_switch(-1) # pg-down
             elif event.keyval == 65366: self._circular_tab_switch(+1) # pg-up
             elif event.keyval == ord('g'): # grab clipboard
-                text = clipboard.wait_for_text()
-                self.entry.set_text(text.strip().lower())
-                self.cb_search.grab_focus()
+                global clipboard
+                clip = clipboard.wait_for_text()
+                if clip is None: return
+                query = clip.strip().lower()
+                self.search_entry.set_text(clip)
                 self.searchWord(query)
             elif event.keyval == ord('e'):
                 if self.CURRENT_VIEW is None: return
@@ -462,13 +454,12 @@ def root_binds(widget, event):
 
 
 def main():
-    global root
-    root = GUI()
-    root.connect('delete-event', Gtk.main_quit)
-
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
+    global root
+    root = GUI()
+    root.connect('delete-event', Gtk.main_quit)
     return root
 
 

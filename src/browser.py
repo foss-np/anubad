@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 from subprocess import Popen
 from gi.repository import Gtk, Gdk, Pango
 
@@ -17,6 +18,10 @@ class BrowseList(Gtk.ScrolledWindow):
 
 
     def makeWidgets(self):
+        #
+        ## Setting
+        ## TODO: PUT THE LOCK ICON
+
         self.treebuffer = Gtk.ListStore(int, str, str)
         self.treeview = Gtk.TreeView(model=self.treebuffer)
         self.add(self.treeview)
@@ -68,7 +73,10 @@ class BrowseList(Gtk.ScrolledWindow):
                 # TODO: open leafpad automatically with the current error line
                 print("File Format Error: %s: %d"%(self.SRC, self.count))
                 arg = "--jump=%d"%self.count
-                print("pid:", Popen(["leafpad", arg, self.SRC]).pid)
+                # NOTE: we need something to hang on till we edit
+                ## print("pid:", Popen(["leafpad", arg, self.SRC]).pid)
+                ## DONT USES Popen ^^^^
+                os.system("setsid leafpad %s %s"%(arg, self.SRC))
                 exit(1)
             row.insert(0, self.count)
             self.treebuffer.append(row)

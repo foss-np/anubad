@@ -20,22 +20,23 @@ class Viewer(Gtk.Overlay):
         self.scroll.set_hexpand(True)
         self.scroll.set_vexpand(True)
 
-        #
-        ## Setting
-        ## TODO: PUT THE LOCK ICON
-        self.toggle_edit = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_EXECUTE)
-        self.add_overlay(self.toggle_edit)
-        self.toggle_edit.connect("toggled", self._edit_toggle)
-        self.toggle_edit.set_valign(Gtk.Align.START)
-        self.toggle_edit.set_halign(Gtk.Align.END)
+        self.t_clean = Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLEAR)
+        self.add_overlay(self.t_clean)
+        self.t_clean.connect("clicked", lambda *a: self.textbuffer.set_text(""))
+        self.t_clean.set_valign(Gtk.Align.START)
+        self.t_clean.set_halign(Gtk.Align.END)
 
         self.textview = Gtk.TextView()
         self.scroll.add(self.textview)
         self.textview.set_editable(False)
         self.textview.set_cursor_visible(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
-        self.textbuffer = self.textview.get_buffer()
+        # self.textview.connect("select-all", lambda *a: print("signal: select-all"))
         # self.textview.connect("size-allocate", self._autoscroll)
+
+        self.textbuffer = self.textview.get_buffer()
+        # self.textbuffer.connect("mark-set", lambda *a: print("signal: mark-set"))
+        # self.textbuffer.connect("clicked", lambda *a: print("signal: clicked"))
 
         self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
         self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
@@ -45,11 +46,32 @@ class Viewer(Gtk.Overlay):
         self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
         self.tag_found = self.textbuffer.create_tag("found", background="yellow")
 
+        self.tag_click = self.textbuffer.create_tag("click", background="green")
 
-    def _edit_toggle(self, widget):
-        state = widget.get_active()
-        self.textview.set_editable(state)
-        self.textview.set_cursor_visible(state)
+        self.tag_h1 = self.textbuffer.create_tag("h1", weight=Pango.Weight.BOLD)
+        # self.tag_h1.connect("event", lambda *e: print("signal: event"))
+        self.tag_h1.connect("event", self._event_on_tag_h1)
+
+        # print(type(self.tag_bold))
+
+
+    def _event_on_tag_h1(self, *event):
+        pass
+        # if event.keyval == 65307:
+        #     Gtk.main_quit()
+
+
+    def _auto_copy_select(self, *args):
+        print("yehhol")
+        # select_mark = self.textbuffer.get_selection_bound()
+        # self.textbuffer.add_selection_clipboard(clipboard)
+        pass
+        # print(type(select_mark))
+        # if select_mark != None:
+        #     start, end = select_mark
+        #     self.textbuffer.apply_tag(self.tag_found, start, end)
+        #     m = self.textbuffer.create_mark("click", match_start)
+        #     self.textview.scroll_mark_onscreen(m)
 
 
     def mark_found(self, text):
@@ -124,7 +146,7 @@ class Viewer(Gtk.Overlay):
         if not _print: return r
 
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, word, self.tag_bold)
+        self.textbuffer.insert_with_tags(end, word, self.tag_h1)
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, '    ['+trasliterate+']\n', self.tag_trans)
 
@@ -159,8 +181,6 @@ class Viewer(Gtk.Overlay):
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert(end, " Not Found\n")
 
-        self.jump_to_end()
-
 
 def root_binds(widget, event):
     # print(event.keyval)
@@ -169,11 +189,16 @@ def root_binds(widget, event):
 
 
 def main():
+    global clipboard
+    clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+
     global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
     root.set_default_size(500, 300)
+
+    return root
 
 
 if __name__ == '__main__':
