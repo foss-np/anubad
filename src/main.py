@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+PKG_NAME = "anubad - अनुवाद"
+
 import os, sys
 
 filepath = os.path.abspath(__file__)
@@ -11,6 +13,7 @@ exec(open(fullpath + "mysettings.conf").read())
 PATH_GLOSS = fullpath + PATH_GLOSS
 
 fp_dev_null = open(os.devnull, 'w')
+
 if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
     sys.path.append(PATH_MYLIB)
     from debugly import *
@@ -20,6 +23,7 @@ else:
 
 from gi.repository import Gtk, Gdk, Pango
 from subprocess import Popen
+import utils
 import browser as BL
 import viewer as Vi
 import add as Ad
@@ -32,8 +36,9 @@ import add as Ad
 #
 
 class GUI(Gtk.Window):
+    NOTEBOOK_OBJ = []
     def __init__(self, parent=None):
-        Gtk.Window.__init__(self, title="anubad - अनुवाद")
+        Gtk.Window.__init__(self, title=PKG_NAME)
         self.set_default_size(600, 500)
 
         self.parent = parent
@@ -45,6 +50,7 @@ class GUI(Gtk.Window):
         self.CURRENT_VIEW = None
 
         self.lets_add = None
+        self.search_history = []
 
         self.makeWidgets()
         self.connect('key_press_event', self.key_binds)
@@ -59,9 +65,14 @@ class GUI(Gtk.Window):
         self.add(self.layout)
 
         self.layout.attach(self.makeWidgets_toolbar(), left=0, top=0, width=5, height=1)
-        self.layout.attach(self.makeWidgets_searchbar(), 1, 1, 5, 1)
-        self.layout.attach(self.makeWidgets_sidebar(), 0, 1, 1, 3)
-        self.layout.attach(self.makeWidgets_viewer(), 1, 2, 4, 2)
+        self.layout.attach(self.makeWidgets_searchbar(), 0, 1, 5, 1)
+
+        hpaned = Gtk.Paned()
+        self.layout.attach(hpaned, 0, 2, 5, 2)
+        hpaned.add1(self.makeWidgets_sidebar())
+        hpaned.add2(self.makeWidgets_viewer())
+        hpaned.set_position(165)
+
         # self.layout.attach(self.makeWidgets_settings(), 0, 4, 5, 1)
         self.layout.attach(self.makeWidgets_browser(LIST_GLOSS[0]), 0, 5, 5, 2)
 
@@ -70,12 +81,9 @@ class GUI(Gtk.Window):
         toolbar = Gtk.Toolbar()
         #
         ## Button Back Button
-        self.backward_history = Gtk.Menu()
-        self.backward_history.append(Gtk.MenuItem(label="MenuItem 1"))
-        self.backward_history.append(Gtk.MenuItem(label="MenuItem 2"))
-
+        self.history = Gtk.Menu()
         self.bm_backward = Gtk.MenuToolButton.new_from_stock(Gtk.STOCK_GO_BACK)
-        self.bm_backward.set_menu(self.backward_history)
+        self.bm_backward.set_menu(self.history)
         toolbar.add(self.bm_backward)
         self.bm_backward.connect("clicked", lambda e: self._back_click())
         self.bm_backward.set_tooltip_markup("Previous Search Word, Secondary Click for History Popup, <u>Alt+←</u>")
@@ -95,6 +103,10 @@ class GUI(Gtk.Window):
         self.b_open = Gtk.ToolButton.new_from_stock(Gtk.STOCK_OPEN)
         toolbar.add(self.b_open)
         self.b_open.set_tooltip_markup("Clean the Viewer and history, <u>Ctrl+l</u>")
+        ##
+        ## Properties
+        self.b_properties = Gtk.ToolButton.new_from_stock(Gtk.STOCK_PROPERTIES)
+        toolbar.add(self.b_properties)
         ##
         ## Add Button
         self.b_add = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ADD)
@@ -135,7 +147,7 @@ class GUI(Gtk.Window):
         ##
         ## About
         self.b_about = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ABOUT)
-        # b_about.connect("clicked", self.on_clear_clicked)
+        self.b_about.connect("clicked", self._about_dialog)
         toolbar.add(self.b_about)
         self.b_about.set_tooltip_markup("More About Anubad")
 
@@ -151,12 +163,28 @@ class GUI(Gtk.Window):
         print("forward clicked")
 
 
+    def _about_dialog(self, widget):
+        aboutdialog = Gtk.AboutDialog(parent=self)
+        aboutdialog.set_default_size(200, 300)
+        aboutdialog.set_logo_icon_name(Gtk.STOCK_ABOUT)
+        aboutdialog.set_program_name(PKG_NAME)
+        aboutdialog.set_comments("\nTranslation Glossary\n")
+        aboutdialog.set_website("http://github.com/foss-np/anubad/")
+        aboutdialog.set_website_label("Some Label")
+        aboutdialog.set_authors(open(fullpath + '../AUTHORS').read().splitlines())
+        aboutdialog.set_license(open(fullpath + '../LICENSE').read())
+        aboutdialog.run()
+        aboutdialog.destroy()
+
+
     def makeWidgets_searchbar(self):
         layout = Gtk.HBox()
 
-        tool_tip = "<b>Search:</b>\n\t- Normal,\t⌨ [<i>Enter</i>]\n\t- Show All,\t⌨ [<i>Shift + Enter</i>]\nUse Toolbar Toggler to Switch"
+        label = Gtk.Label()
+        label.set_markup("<b>Query</b>")
+        layout.pack_start(label, expand=False, fill=False, padding=60)
 
-        self.search_history = []
+        tool_tip = "<b>Search:</b>\n\t- Normal,\t⌨ [<i>Enter</i>]\n\t- Show All,\t⌨ [<i>Shift + Enter</i>]\nUse Toolbar Toggler to Switch"
 
         self.search_entry = Gtk.SearchEntry()
         layout.pack_start(self.search_entry, expand=True, fill=True, padding=2)
@@ -167,7 +195,6 @@ class GUI(Gtk.Window):
         accel_search = Gtk.AccelGroup()
         self.add_accel_group(accel_search)
         self.search_entry.add_accelerator("grab_focus", accel_search, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
-
 
         ## Button
         self.b_search = Gtk.Button(label="Search")
@@ -216,6 +243,7 @@ class GUI(Gtk.Window):
         ## Filter
         self.cb_filter = Gtk.ComboBoxText()
         layout.pack_start(self.cb_filter, False, False, 0)
+        self.cb_filter.append_text("All")
         self.cb_filter.set_active(0)
         # self.cb_filter.connect("changed", category_changed)
         return layout
@@ -231,7 +259,7 @@ class GUI(Gtk.Window):
         p = i not in self.VIEWED_ITEMS
         tab, *row = self.FOUND_ITEMS[i]
         clip_out = self.viewer.parse(tab, self.TAB_LST[tab], row, _print=p)
-        self.CLIP_CYCLE = circle(clip_out)
+        self.CLIP_CYCLE = utils.circle(clip_out)
         self._circular_search(+1)
 
 
@@ -248,8 +276,23 @@ class GUI(Gtk.Window):
 
     def viewer_binds(self, widget, event):
         # print(event.keyval)
-        # TODO: TESTING: not working properly
+        # TODO: move it to main
+
+        if event.state & Gdk.ModifierType.CONTROL_MASK or \
+           event.state & Gdk.ModifierType.MOD1_MASK or \
+           event.state & Gdk.ModifierType.SHIFT_MASK:
+            return
+
+        if event.keyval in utils.key_code.values():
+            return
+
+        pos = self.search_entry.get_position()
+        # print(type(pos), pos)
+        self.search_entry.insert_text(chr(event.keyval), pos)
         self.search_entry.grab_focus()
+        self.search_entry.select_region(0, 0)
+        self.search_entry.set_position(pos + 1)
+        # print(dir(self.search_entry))
         self.search_entry_binds(widget, event)
 
 
@@ -298,6 +341,7 @@ class GUI(Gtk.Window):
                         self.suggestions.append([found, item[1]])
                     if word != item[1] and not self.t_search.get_active(): continue
                     self.search_history.append(word)
+                    self.history.append(Gtk.MenuItem(label=word))
                     clip_out += self.viewer.parse(tab, obj, row[1:])
                     self.CURRENT_VIEW = found - 1
                     self.VIEWED_ITEMS.add(self.CURRENT_VIEW)
@@ -314,7 +358,7 @@ class GUI(Gtk.Window):
             self.bm_backward.set_sensitive(True)
 
         self.search_entry.grab_focus()
-        self.CLIP_CYCLE = circle(clip_out)
+        self.CLIP_CYCLE = utils.circle(clip_out)
 
 
         if self.t_copy.get_active():
@@ -359,8 +403,8 @@ class GUI(Gtk.Window):
             self.search_entry.grab_focus()
             return
 
-        global diff, clipboard
-        diff = d
+        global clipboard
+        utils.diff = d
         text = next(self.CLIP_CYCLE)
         self.viewer.mark_found(text)
         if self.t_copy.get_active():
@@ -434,19 +478,6 @@ class GUI(Gtk.Window):
                 self.notebook.set_current_page(self.MAIN_TAB)
 
 
-diff = 1
-def circle(iterable):
-    saved = iterable[:]
-    i = -1
-    global diff
-    while saved:
-        l = len(saved)
-        i += diff
-        if diff == 1 and l <= i: i = 0
-        if diff == -1 and i < 0: i = l - 1
-        yield saved[i]
-
-
 def root_binds(widget, event):
     # print(event.keyval)
     if event.keyval == 65307:
@@ -460,6 +491,11 @@ def main():
     global root
     root = GUI()
     root.connect('delete-event', Gtk.main_quit)
+
+    # gloss trick
+    # for obj in self.TAB_LST:
+    #     self.TAB_LST.clear()
+
     return root
 
 

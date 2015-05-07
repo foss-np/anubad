@@ -31,6 +31,10 @@ class Viewer(Gtk.Overlay):
         self.textview.set_editable(False)
         self.textview.set_cursor_visible(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
+        self.textview.set_left_margin(10)
+        self.textview.set_right_margin(20)
+
+
         # self.textview.connect("select-all", lambda *a: print("signal: select-all"))
         # self.textview.connect("size-allocate", self._autoscroll)
 
@@ -42,6 +46,7 @@ class Viewer(Gtk.Overlay):
         self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
         self.tag_underline = self.textbuffer.create_tag("underline", underline=Pango.Underline.SINGLE)
 
+        self.tag_li = self.textbuffer.create_tag("li", foreground="gray", weight=Pango.Weight.BOLD)
         self.tag_pos = self.textbuffer.create_tag("pos", foreground="red")
         self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
         self.tag_found = self.textbuffer.create_tag("found", background="yellow")
@@ -152,7 +157,7 @@ class Viewer(Gtk.Overlay):
 
         for c, t in enumerate(translations):
             end = self.textbuffer.get_end_iter()
-            self.textbuffer.insert(end, "%4d. "%(c+1))
+            self.textbuffer.insert_with_tags(end, "%4d. "%(c+1), self.tag_li)
 
             pos_ = t[0].strip() if t[0] else "undefined"
             end = self.textbuffer.get_end_iter()
