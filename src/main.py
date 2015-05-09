@@ -82,7 +82,8 @@ class GUI(Gtk.Window):
         #
         ## Button Back Button
         self.history = Gtk.Menu()
-        self.bm_backward = Gtk.MenuToolButton.new_from_stock(Gtk.STOCK_GO_BACK)
+        self.bm_backward = Gtk.MenuToolButton()
+        self.bm_backward.set_icon_name(Gtk.STOCK_GO_BACK)
         self.bm_backward.set_menu(self.history)
         toolbar.add(self.bm_backward)
         self.bm_backward.connect("clicked", lambda e: self._back_click())
@@ -90,7 +91,8 @@ class GUI(Gtk.Window):
         self.bm_backward.set_sensitive(False)
         ##
         ## Button Forward Button
-        self.b_forward = Gtk.ToolButton.new_from_stock(Gtk.STOCK_GO_FORWARD)
+        self.b_forward = Gtk.ToolButton()
+        self.b_forward.set_icon_name(Gtk.STOCK_GO_FORWARD)
         toolbar.add(self.b_forward)
         self.b_forward.connect("clicked", lambda e: self._forward_click())
         self.b_forward.set_tooltip_markup("Next Search Word, Secondary Click for History Popup, <u>Alt+→</u>")
@@ -100,16 +102,19 @@ class GUI(Gtk.Window):
         toolbar.add(Gtk.SeparatorToolItem())
         #
         ## Open Gloss
-        self.b_open = Gtk.ToolButton.new_from_stock(Gtk.STOCK_OPEN)
+        self.b_open = Gtk.ToolButton()
+        self.b_open.set_icon_name(Gtk.STOCK_OPEN)
         toolbar.add(self.b_open)
         self.b_open.set_tooltip_markup("Clean the Viewer and history, <u>Ctrl+l</u>")
         ##
         ## Properties
-        self.b_properties = Gtk.ToolButton.new_from_stock(Gtk.STOCK_PROPERTIES)
+        self.b_properties = Gtk.ToolButton()
+        self.b_properties.set_icon_name(Gtk.STOCK_PROPERTIES)
         toolbar.add(self.b_properties)
         ##
         ## Add Button
-        self.b_add = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ADD)
+        self.b_add = Gtk.ToolButton()
+        self.b_add.set_icon_name(Gtk.STOCK_ADD)
         toolbar.add(self.b_add)
         self.b_add.connect("clicked", lambda w: self.add_to_gloss())
         self.b_add.set_tooltip_markup("Add new word to glossary, <u>Ctrl+i</u>")
@@ -118,22 +123,27 @@ class GUI(Gtk.Window):
         toolbar.add(Gtk.SeparatorToolItem())
         #
         ## Auto Transliterate Button
-        self.t_trans = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_CONVERT)
+        self.t_trans = Gtk.ToggleToolButton()
+        self.t_trans.set_icon_name(Gtk.STOCK_CONVERT)
         toolbar.add(self.t_trans)
         self.t_trans.set_active(True)
         ##
         ## Spell-check Toggle Button
-        self.t_spell = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_SPELL_CHECK)
+        self.t_spell = Gtk.ToggleToolButton()
+        self.t_spell.set_icon_name(Gtk.STOCK_SPELL_CHECK)
         toolbar.add(self.t_spell)
         self.t_spell.set_active(True)
         ##
         ## Smart Copy Toggle Button
-        self.t_copy = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_COPY)
+        self.t_copy = Gtk.ToggleToolButton()
+        self.t_copy.set_icon_name(Gtk.STOCK_COPY)
+
         toolbar.add(self.t_copy)
         self.t_copy.set_active(True)
         ##
         ## Search Toggle Button
-        self.t_search = Gtk.ToggleToolButton.new_from_stock(Gtk.STOCK_DIALOG_INFO)
+        self.t_search = Gtk.ToggleToolButton()
+        self.t_search.set_icon_name(Gtk.STOCK_DIALOG_INFO)
         self.t_search.set_active(False)
         toolbar.add(self.t_search)
         ##
@@ -141,12 +151,14 @@ class GUI(Gtk.Window):
         toolbar.add(Gtk.SeparatorToolItem())
         #
         ##  Preference
-        self.b_preference = Gtk.ToolButton.new_from_stock(Gtk.STOCK_PREFERENCES)
+        self.b_preference = Gtk.ToolButton()
+        self.b_preference.set_icon_name(Gtk.STOCK_PREFERENCES)
         toolbar.add(self.b_preference)
         self.b_preference.set_tooltip_markup("Change Stuffs, Fonts, default gloss")
         ##
         ## About
-        self.b_about = Gtk.ToolButton.new_from_stock(Gtk.STOCK_ABOUT)
+        self.b_about = Gtk.ToolButton()
+        self.b_about.set_icon_name(Gtk.STOCK_ABOUT)
         self.b_about.connect("clicked", self._about_dialog)
         toolbar.add(self.b_about)
         self.b_about.set_tooltip_markup("More About Anubad")
@@ -283,7 +295,7 @@ class GUI(Gtk.Window):
            event.state & Gdk.ModifierType.SHIFT_MASK:
             return
 
-        if event.keyval in utils.key_code.values():
+        if event.keyval in utils.key_codes.values():
             return
 
         pos = self.search_entry.get_position()

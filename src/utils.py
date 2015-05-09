@@ -6,24 +6,20 @@ utility fuction variable declaration and common function for anubad
 GUI.
 """
 
-key_code = {
+key_codes = {
     "BACKSPACE"     : 65288,
     "RETURN"        : 65293,
-    "SHIFT_LEFT"    : 65505,
-    "SHIFT_RIGHT"   : 65506,
-    "CONTROL_LEFT"  : 65507,
-    "CONTROL_RIGHT" : 65508,
-    "ALT_LEFT"      : 65513,
-    "ALT_RIGHT"     : 65514,
-    "DELETE"        : 65535,
+    "ESCAPE"        : 65307,
+
     "LEFT_ARROW"    : 65361,
     "UP_ARROW"      : 65362,
     "RIGHT_ARROW"   : 65363,
     "DOWN_ARROW"    : 65364,
+
     "MENU"          : 65383,
-    "META"          : 65515,
     "PAGE_UP"       : 65365,
     "PAGE_UP"       : 65366,
+
     "F1"            : 65470,
     "F2"            : 65471,
     "F3"            : 65472,
@@ -36,6 +32,15 @@ key_code = {
     "F10"           : 65479,
     "F11"           : 65480,
     "F12"           : 65481,
+
+    "SHIFT_LEFT"    : 65505,
+    "SHIFT_RIGHT"   : 65506,
+    "CONTROL_LEFT"  : 65507,
+    "CONTROL_RIGHT" : 65508,
+    "ALT_LEFT"      : 65513,
+    "ALT_RIGHT"     : 65514,
+    "META"          : 65515,
+    "DELETE"        : 65535,
 }
 
 

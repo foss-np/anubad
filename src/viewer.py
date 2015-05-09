@@ -20,7 +20,8 @@ class Viewer(Gtk.Overlay):
         self.scroll.set_hexpand(True)
         self.scroll.set_vexpand(True)
 
-        self.t_clean = Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLEAR)
+        self.t_clean = Gtk.ToolButton()
+        self.t_clean.set_icon_name(Gtk.STOCK_CLEAR)
         self.add_overlay(self.t_clean)
         self.t_clean.connect("clicked", lambda *a: self.textbuffer.set_text(""))
         self.t_clean.set_valign(Gtk.Align.START)
