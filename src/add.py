@@ -57,13 +57,19 @@ class Add(Gtk.Window):
     def makeWidgets_buttons(self):
         layout = Gtk.HBox()
 
-        self.button_cancel = Gtk.Button.new_from_stock(Gtk.STOCK_CANCEL)
-        layout.add(self.button_cancel)
-        self.button_cancel.connect("clicked", lambda e: self.destroy())
+        self.b_cancel = Gtk.Button.new_from_stock(Gtk.STOCK_CANCEL)
+        # self.b_cancel = Gtk.Button()
+        # self.b_cancel.set_icon_name(Gtk.STOCK_CANCEL)
+        # self.b_cancel.set_image(Gtk.STOCK_CANCEL)
+        # self.b_cancel.
+        # self.b_cancel.new_with_label("CANCEL")
 
-        self.button_add = Gtk.Button.new_from_stock(Gtk.STOCK_ADD)
-        layout.add(self.button_add)
-        self.button_add.connect("clicked", self._add_button)
+        layout.add(self.b_cancel)
+        self.b_cancel.connect("clicked", lambda e: self.destroy())
+
+        self.b_add = Gtk.Button.new_from_stock(Gtk.STOCK_ADD)
+        layout.add(self.b_add)
+        self.b_add.connect("clicked", self._add_button)
 
         return layout
 

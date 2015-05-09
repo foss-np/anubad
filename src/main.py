@@ -211,7 +211,7 @@ class GUI(Gtk.Window):
         ## Button
         self.b_search = Gtk.Button(label="Search")
         layout.pack_start(self.b_search, expand=False, fill=False, padding=1)
-        self.b_search.connect('clicked', lambda w: self.searchbar_binds(w, None))
+        self.b_search.connect('clicked', lambda w: self.search_entry_binds(w, None))
         self.b_search.set_tooltip_markup(tool_tip)
 
         return layout
@@ -219,7 +219,12 @@ class GUI(Gtk.Window):
 
     def search_entry_binds(self, widget, event):
         # print(event.keyval)
-        query = self.search_entry.get_text().strip().lower()
+        # TODO: make the wrapper around .get_text()
+        raw_query = self.search_entry.get_text()
+        if 'r:' == raw_query[:2]: query = raw_query[2:]
+        else: query = raw_query.strip().lower()
+
+
         if event is None:
             self.searchWord(query)
         elif Gdk.ModifierType.CONTROL_MASK & event.state:
@@ -246,11 +251,14 @@ class GUI(Gtk.Window):
         self.suggestions = Gtk.ListStore(int, str)
         self.treeview = Gtk.TreeView(model=self.suggestions)
         scroll.add(self.treeview)
+        self.treeview.connect("row-activated", self.sidebar_row_double_click)
+
+        select = self.treeview.get_selection()
+        self.select_signal = select.connect("changed", self.sidebar_on_row_select)
+
         renderer_text = Gtk.CellRendererText()
         self.treeview.append_column(Gtk.TreeViewColumn("#", renderer_text, text=0))
         self.treeview.append_column(Gtk.TreeViewColumn("Suggestions", renderer_text, text=1))
-        select = self.treeview.get_selection()
-        select.connect("changed", self.on_sidebar_selection)
 
         ## Filter
         self.cb_filter = Gtk.ComboBoxText()
@@ -261,7 +269,14 @@ class GUI(Gtk.Window):
         return layout
 
 
-    def on_sidebar_selection(self, selection):
+    def sidebar_row_double_click(self, widget, treepath, treeviewcol):
+        tab, n, *row = self.FOUND_ITEMS[self.CURRENT_VIEW]
+        self.notebook.set_current_page(tab)
+        obj = self.TAB_LST[tab]
+        obj.treeview.set_cursor(n)
+
+
+    def sidebar_on_row_select(self, selection):
         if not self.FOUND_ITEMS: return
 
         model, treeiter = selection.get_selected()
@@ -269,6 +284,7 @@ class GUI(Gtk.Window):
         i = model[treeiter][0] - 1
         self.CURRENT_VIEW = i
         p = i not in self.VIEWED_ITEMS
+        self.VIEWED_ITEMS.add(i)
         tab, *row = self.FOUND_ITEMS[i]
         clip_out = self.viewer.parse(tab, self.TAB_LST[tab], row, _print=p)
         self.CLIP_CYCLE = utils.circle(clip_out)
@@ -279,7 +295,6 @@ class GUI(Gtk.Window):
         global clipboard
         Vi.clipboard = clipboard
         self.viewer = Vi.Viewer(self)
-        # self.viewer.connect('key_press_event', self.viewer_binds)
         # self.viewer.textview.override_font(Pango.font_description_from_string('DejaVu Sans Mono 12'))
         self.viewer.textview.modify_font(Pango.font_description_from_string(def_FONT))
         self.viewer.textview.connect('key_press_event', self.viewer_binds)
@@ -289,7 +304,6 @@ class GUI(Gtk.Window):
     def viewer_binds(self, widget, event):
         # print(event.keyval)
         # TODO: move it to main
-
         if event.state & Gdk.ModifierType.CONTROL_MASK or \
            event.state & Gdk.ModifierType.MOD1_MASK or \
            event.state & Gdk.ModifierType.SHIFT_MASK:
@@ -316,7 +330,7 @@ class GUI(Gtk.Window):
             if not file_name[-4:] in FILE_TYPES: continue
             if "main.tra" in file_name: self.MAIN_TAB = tab
             obj = BL.BrowseList(self.parent, self.GLOSS + file_name)
-
+            obj.treeview.connect("row-activated", self.browser_row_double_click)
             # TODO font change
             # font = Pango.FontDescription(def_FONT)
             # obj.renderer_text.cell.set_property('font-desc', font)
@@ -325,6 +339,19 @@ class GUI(Gtk.Window):
             self.TAB_LST.append(obj)
             tab += 1
         return self.notebook
+
+
+    def browser_row_double_click(self, widget, treepath, treeviewcol):
+        selection = widget.get_selection()
+        model, treeiter = selection.get_selected()
+
+        if treeiter is None: return
+        tab = self.notebook.get_current_page()
+        obj = self.TAB_LST[tab]
+        row = list(model[treeiter])
+        self.viewer.parse(tab, obj, row)
+        self.viewer.jump_to_end()
+        return
 
 
     def searchWord(self, query):
@@ -355,23 +382,30 @@ class GUI(Gtk.Window):
                     self.search_history.append(word)
                     self.history.append(Gtk.MenuItem(label=word))
                     clip_out += self.viewer.parse(tab, obj, row[1:])
+
                     self.CURRENT_VIEW = found - 1
                     self.VIEWED_ITEMS.add(self.CURRENT_VIEW)
+
                     foundFlag = True
             if foundFlag is False:
                 self.viewer.not_found(word)
+
 
         if len(clip_out) == 0:
             self.viewer.jump_to_end()
             return
 
+        select = self.treeview.get_selection()
+        if self.select_signal: select.disconnect(self.select_signal)
+        if self.CURRENT_VIEW:
+            self.treeview.set_cursor(self.CURRENT_VIEW)
+        self.select_signal = select.connect("changed", self.sidebar_on_row_select)
 
         if len(self.search_history) > 1:
             self.bm_backward.set_sensitive(True)
 
         self.search_entry.grab_focus()
         self.CLIP_CYCLE = utils.circle(clip_out)
-
 
         if self.t_copy.get_active():
             self._circular_search(+1)
@@ -457,6 +491,7 @@ class GUI(Gtk.Window):
 
         global clipboard
         query = self.search_entry.get_text().strip().lower()
+
         if Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('i'): self.add_to_gloss(query)
             elif event.keyval == ord('1'): dict_grep(query, self.viewer, False)
@@ -507,7 +542,8 @@ def main():
     # gloss trick
     # for obj in self.TAB_LST:
     #     self.TAB_LST.clear()
-
+    # obj = root.TAB_LST[root.MAIN_TAB]
+    # obj.treeview.scroll_to_point(2, 100)
     return root
 
 

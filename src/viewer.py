@@ -50,7 +50,9 @@ class Viewer(Gtk.Overlay):
         self.tag_li = self.textbuffer.create_tag("li", foreground="gray", weight=Pango.Weight.BOLD)
         self.tag_pos = self.textbuffer.create_tag("pos", foreground="red")
         self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
+        self.tag_source = self.textbuffer.create_tag("source", foreground="gray", scale=.8)
         self.tag_found = self.textbuffer.create_tag("found", background="yellow")
+
 
         self.tag_click = self.textbuffer.create_tag("click", background="green")
 
@@ -154,7 +156,11 @@ class Viewer(Gtk.Overlay):
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, word, self.tag_h1)
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, '    ['+trasliterate+']\n', self.tag_trans)
+        self.textbuffer.insert_with_tags(end, '    ['+trasliterate+']', self.tag_trans)
+        end = self.textbuffer.get_end_iter()
+        *a, gloss, lang, label = obj.SRC.split('/')
+        src = " source: %s/%s/%s\n"%(gloss, lang, label)
+        self.textbuffer.insert_with_tags(end, src, self.tag_source)
 
         for c, t in enumerate(translations):
             end = self.textbuffer.get_end_iter()
