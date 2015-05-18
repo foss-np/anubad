@@ -3,7 +3,8 @@
 *.pyc
 TAGS
 _*
-doc
-gloss
+dicts/
+doc/
+gloss/
 mysettings.conf
-plug_ins
+plug_ins/

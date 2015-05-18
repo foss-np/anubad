@@ -157,9 +157,14 @@ class Viewer(Gtk.Overlay):
         self.textbuffer.insert_with_tags(end, word, self.tag_h1)
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, '    ['+trasliterate+']', self.tag_trans)
+
+        if obj is not None:
+            *a, gloss, lang, label = obj.SRC.split('/')
+            src = " source: %s/%s/%s\n"%(gloss, lang, label)
+        else:
+            src = '\n'
+
         end = self.textbuffer.get_end_iter()
-        *a, gloss, lang, label = obj.SRC.split('/')
-        src = " source: %s/%s/%s\n"%(gloss, lang, label)
         self.textbuffer.insert_with_tags(end, src, self.tag_source)
 
         for c, t in enumerate(translations):

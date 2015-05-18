@@ -62,7 +62,7 @@ class BrowseList(Gtk.ScrolledWindow):
         loading: *../gloss/foss_gloss/en2np/main.tra
         """
 
-        print("loading: *" + src[-40:])
+        print("loading: *" + src[-40:], file=fp3)
         data = open(src, encoding="UTF-8").read()
         self.count = 0
 
@@ -116,6 +116,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+    fp3 = open(os.devnull, 'w')
+
     import doctest
     doctest.testmod()
     root.show_all()

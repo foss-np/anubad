@@ -43,7 +43,6 @@ key_codes = {
     "DELETE"        : 65535,
 }
 
-
 diff = 1
 def circle(iterable):
     saved = iterable[:]

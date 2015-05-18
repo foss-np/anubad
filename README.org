@@ -46,4 +46,4 @@ Copyright © 2013 to the Anubad Authors.
    - git
    - python 3
    - pygtk
-http://sourceforge.net/projects/pygobjectwin32/files/pygi-aio-3.10.2-win32_rev10-setup.exe/download
+     http://sourceforge.net/projects/pygobjectwin32/files/

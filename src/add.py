@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-from gi.repository import Gtk, Gdk, Pango
+from gi.repository import Gtk
 
 class Add(Gtk.Window):
     def __init__(self, parent=None, l1="", l2=""):
         Gtk.Window.__init__(self, title="Add gloss")
         self.parent = parent
+        self.track_FONT = set()
         self.l1 = l1
         self.l2 = l2
 
@@ -32,7 +33,7 @@ class Add(Gtk.Window):
 
         self.lang1 = Gtk.Entry()
         layout.attach(self.lang1, 1, 0, 1, 1)
-        self.lang1.modify_font(Add.def_FONT_obj)
+        self.track_FONT.add(self.lang1)
         self.lang1.set_text(self.l1)
 
         label = Gtk.Label()
@@ -41,7 +42,7 @@ class Add(Gtk.Window):
 
         self.lang2 = Gtk.Entry()
         layout.attach(self.lang2, 1, 1, 1, 1)
-        self.lang2.modify_font(Add.def_FONT_obj)
+        self.track_FONT.add(self.lang2)
         self.lang2.set_text(self.l2)
 
         label = Gtk.Label()
@@ -112,9 +113,6 @@ class Add(Gtk.Window):
     def key_binds(self, widget, event):
         # print(event.keyval)
         if event.keyval == 65307: self.destroy() # Esc
-        elif Gdk.ModifierType.SHIFT_MASK & event.state:
-            if event.keyval == 65293: # <enter> return
-                self._add_button()
 
 
 def main():
@@ -125,6 +123,5 @@ def main():
 
 if __name__ == '__main__':
     exec(open("gsettings.conf").read())
-    Add.def_FONT_obj = Pango.font_description_from_string(def_FONT)
     main().destroy = Gtk.main_quit
     Gtk.main()

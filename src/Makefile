@@ -31,5 +31,5 @@ viewer:
 add:
 	./add.py
 
-settings:
-	./settings.py
+preference:
+	./preferences.py
