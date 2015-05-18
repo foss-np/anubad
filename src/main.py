@@ -52,9 +52,9 @@ class GUI(Gtk.Window):
         self.CLIP_CYCLE = None
         self.FOUND_ITEMS = []
         self.VIEWED_ITEMS = set()
-        self.CURRENT_VIEW = None
-
-        self.search_history = []
+        self.CURRENT_VIEWS = []
+        self.HISTORY = []
+        self.HIST_CURSOR = 0
 
         self.ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
 
@@ -87,20 +87,22 @@ class GUI(Gtk.Window):
         toolbar = Gtk.Toolbar()
         #
         ## Button Back Button
-        self.history = Gtk.Menu()
-        self.bm_backward = Gtk.MenuToolButton()
-        self.bm_backward.set_icon_name(Gtk.STOCK_GO_BACK)
-        self.bm_backward.set_menu(self.history)
+        self.bm_backward = Gtk.MenuToolButton(icon_name=Gtk.STOCK_GO_BACK)
         toolbar.add(self.bm_backward)
-        self.bm_backward.connect("clicked", lambda e: self._back_click())
+        self.bm_backward.connect("clicked", lambda e: self._jump_history(-1))
         self.bm_backward.set_tooltip_markup("Previous Search Word, Secondary Click for History Popup, <u>Alt+←</u>")
         self.bm_backward.set_sensitive(False)
+        ### History
+        # TODO: find the widget flag
+        self.hist_menu_toggle_state = False
+        self.history_menu = Gtk.Menu() # NOTE: DUMMY MENU For Menu activation
+        self.bm_backward.set_menu(self.history_menu)
+        self.bm_backward.connect("show-menu", lambda e: self._show_history(e))
         ##
         ## Button Forward Button
-        self.b_forward = Gtk.ToolButton()
-        self.b_forward.set_icon_name(Gtk.STOCK_GO_FORWARD)
+        self.b_forward = Gtk.ToolButton(icon_name=Gtk.STOCK_GO_FORWARD)
         toolbar.add(self.b_forward)
-        self.b_forward.connect("clicked", lambda e: self._forward_click())
+        self.b_forward.connect("clicked", lambda e: self._jump_history(+1))
         self.b_forward.set_tooltip_markup("Next Search Word, Secondary Click for History Popup, <u>Alt+→</u>")
         self.b_forward.set_sensitive(False)
         ##
@@ -108,19 +110,16 @@ class GUI(Gtk.Window):
         toolbar.add(Gtk.SeparatorToolItem())
         #
         ## Open Gloss
-        self.b_open = Gtk.ToolButton()
-        self.b_open.set_icon_name(Gtk.STOCK_OPEN)
+        self.b_open = Gtk.ToolButton(icon_name=Gtk.STOCK_OPEN)
         toolbar.add(self.b_open)
         self.b_open.set_tooltip_markup("Clean the Viewer and history, <u>Ctrl+l</u>")
         ##
         ## Properties
-        self.b_properties = Gtk.ToolButton()
-        self.b_properties.set_icon_name(Gtk.STOCK_PROPERTIES)
+        self.b_properties = Gtk.ToolButton(icon_name=Gtk.STOCK_PROPERTIES)
         toolbar.add(self.b_properties)
         ##
         ## Add Button
-        self.b_add = Gtk.ToolButton()
-        self.b_add.set_icon_name(Gtk.STOCK_ADD)
+        self.b_add = Gtk.ToolButton(icon_name=Gtk.STOCK_ADD)
         toolbar.add(self.b_add)
         self.b_add.connect("clicked", lambda w: self.add_to_gloss())
         self.b_add.set_tooltip_markup("Add new word to glossary, <u>Ctrl+i</u>")
@@ -129,27 +128,23 @@ class GUI(Gtk.Window):
         toolbar.add(Gtk.SeparatorToolItem())
         #
         ## Auto Transliterate Button
-        self.t_trans = Gtk.ToggleToolButton()
-        self.t_trans.set_icon_name(Gtk.STOCK_CONVERT)
+        self.t_trans = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_CONVERT)
         toolbar.add(self.t_trans)
         self.t_trans.set_active(True)
         ##
         ## Spell-check Toggle Button
-        self.t_spell = Gtk.ToggleToolButton()
-        self.t_spell.set_icon_name(Gtk.STOCK_SPELL_CHECK)
+        self.t_spell = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_SPELL_CHECK)
         toolbar.add(self.t_spell)
         self.t_spell.set_active(True)
         ##
         ## Smart Copy Toggle Button
-        self.t_copy = Gtk.ToggleToolButton()
-        self.t_copy.set_icon_name(Gtk.STOCK_COPY)
+        self.t_copy = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_COPY)
 
         toolbar.add(self.t_copy)
         self.t_copy.set_active(True)
         ##
         ## Search Toggle Button
-        self.t_search = Gtk.ToggleToolButton()
-        self.t_search.set_icon_name(Gtk.STOCK_DIALOG_INFO)
+        self.t_search = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_DIALOG_INFO)
         self.t_search.set_active(False)
         toolbar.add(self.t_search)
         ##
@@ -157,16 +152,14 @@ class GUI(Gtk.Window):
         toolbar.add(Gtk.SeparatorToolItem())
         #
         ##  Preference
-        self.b_preference = Gtk.ToolButton()
-        self.b_preference.set_icon_name(Gtk.STOCK_PREFERENCES)
+        self.b_preference = Gtk.ToolButton(icon_name=Gtk.STOCK_PREFERENCES)
         toolbar.add(self.b_preference)
         self.b_preference.connect("clicked", lambda w: self.preference())
         self.b_preference.set_tooltip_markup("Change Stuffs, Fonts, default gloss")
 
         ##
         ## About
-        self.b_about = Gtk.ToolButton()
-        self.b_about.set_icon_name(Gtk.STOCK_ABOUT)
+        self.b_about = Gtk.ToolButton(icon_name=Gtk.STOCK_ABOUT)
         self.b_about.connect("clicked", self._about_dialog)
         toolbar.add(self.b_about)
         self.b_about.set_tooltip_markup("More About Anubad")
@@ -174,13 +167,46 @@ class GUI(Gtk.Window):
         return toolbar
 
 
-    def _back_click(self):
-        print("back clicked")
-        self.b_forward.set_sensitive(True)
+    def _jump_history(self, diff):
+        pos = self.HIST_CURSOR + diff
+
+        if 0 > pos:
+            self.bm_backward.set_sensitive(False)
+            return
+        elif len(self.HISTORY) <= pos:
+            self.b_forward.set_sensitive(False)
+            return
+
+        if diff == -1: self.b_forward.set_sensitive(True)
+
+        self.HIST_CURSOR = pos
+
+        self.FOUND_ITEMS.clear()
+        self.CURRENT_VIEWS.clear()
+        query, self.FOUND_ITEMS, views = self.HISTORY[pos]
+        self._view_items(views)
+        self.search_entry.set_text(query)
 
 
-    def _forward_click(self):
-        print("forward clicked")
+    def _show_history(self, widget):
+        # print(widget.get_state_flags())
+        # TODO: fix state with widget attrib
+        state = self.hist_menu_toggle_state
+        self.hist_menu_toggle_state = not state
+        if state: return
+
+        del self.history_menu
+        self.history_menu = Gtk.Menu()
+        widget.set_menu(self.history_menu)
+
+        for i, (query, items, views) in enumerate(reversed(self.HISTORY), 1):
+            rmi = Gtk.RadioMenuItem(label=query)
+            rmi.show()
+            if len(self.HISTORY) - i == self.HIST_CURSOR:
+                rmi.set_active(True)
+            self.history_menu.append(rmi)
+
+        self.history_menu.show_all()
 
 
     def _about_dialog(self, widget):
@@ -256,9 +282,12 @@ class GUI(Gtk.Window):
         self.suggestions = Gtk.ListStore(int, str)
         self.treeview = Gtk.TreeView(model=self.suggestions)
         scroll.add(self.treeview)
+        self.treeview.set_rubber_banding(True)
         self.treeview.connect("row-activated", self.sidebar_row_double_click)
 
         select = self.treeview.get_selection()
+        # TODO: multiple selection
+        # select.set_mode(Gtk.SelectionMode.MULTIPLE)
         self.select_signal = select.connect("changed", self.sidebar_on_row_select)
 
         renderer_text = Gtk.CellRendererText()
@@ -280,19 +309,22 @@ class GUI(Gtk.Window):
         model, treeiter = selection.get_selected()
         if treeiter is None: return
         i = model[treeiter][0] - 1
-        self.CURRENT_VIEW = i
+        self.CURRENT_VIEWS.clear()
+        self.CURRENT_VIEWS.append(i)
+
         p = i not in self.VIEWED_ITEMS
         self.VIEWED_ITEMS.add(i)
-        tab, *row = self.FOUND_ITEMS[i]
-        clip_out = self.viewer.parse(tab, self.notebook.get_nth_page(tab), row, _print=p)
+
+        tab, obj, *row = self.FOUND_ITEMS[i]
+        clip_out = self.viewer.parse(tab, obj, row, _print=p)
         self.CLIP_CYCLE = utils.circle(clip_out)
         self._circular_search(+1)
 
 
     def sidebar_row_double_click(self, widget, treepath, treeviewcol):
-        tab, n, *row = self.FOUND_ITEMS[self.CURRENT_VIEW]
+        # TODO: fix it with the widget using CURRENT_VIEW IS NOT GOOD
+        tab, obj, n, *row = self.FOUND_ITEMS[self.CURRENT_VIEWS[0]]
         self.notebook.set_current_page(tab)
-        obj = self.notebook.get_nth_page(tab)
         obj.treeview.set_cursor(n-1)
 
 
@@ -330,7 +362,7 @@ class GUI(Gtk.Window):
 
         if treeiter is None: return
         tab = self.notebook.get_current_page()
-        obj = self.TAB_LST[tab]
+        obj = self.notebook.get_nth_page(tab)
         row = list(model[treeiter])
         self.viewer.parse(tab, obj, row)
         self.viewer.jump_to_end()
@@ -349,57 +381,77 @@ class GUI(Gtk.Window):
                 search_space.append((i, widget))
 
         if not query: return
-        clip_out = []
-        self.FOUND_ITEMS.clear()
-        self.suggestions.clear()
-        self.VIEWED_ITEMS.clear()
-        self.CURRENT_VIEW = None
+
+        FOUND_ITEMS = []
+        CURRENT_VIEWS = []
         found = 0
 
         for word in set(query.split()):
             foundFlag = False
+            # TODO: make it simpler
+            # MAYBE: put the tree search in browserlst itself
             for tab, obj in search_space:
-                # TODO: make it simpler
-                # MAYBE: put the tree search in browserlst itself
                 for item in obj.treebuffer:
                     if word not in item[1]: continue
-                    # self.treeview.row_activated(0, self.suggestions)
-                    # NOTE: may be use interator counter
                     found += 1
-                    row = [tab] + list(item)
-                    if row not in self.FOUND_ITEMS: # remove duplicate longest str match
-                        self.FOUND_ITEMS.append(row)
-                        self.suggestions.append([found, item[1]])
+                    row = [tab, obj] + list(item)
+                    ## remove duplicate longest str match
+                    if row not in FOUND_ITEMS: FOUND_ITEMS.append(row)
+                    ## exact match filter
                     if word != item[1] and not self.t_search.get_active(): continue
-                    self.search_history.append(word)
-                    self.history.append(Gtk.MenuItem(label=word))
-                    clip_out += self.viewer.parse(tab, obj, row[1:])
-
-                    self.CURRENT_VIEW = found - 1
-                    self.VIEWED_ITEMS.add(self.CURRENT_VIEW)
-
+                    CURRENT_VIEWS.append(found - 1)
                     foundFlag = True
             if foundFlag is False:
                 self.viewer.not_found(word)
+                dict_grep2(query.lower(), self.viewer, False)
 
-        if len(clip_out) == 0:
+        if len(FOUND_ITEMS) == 0:
             self.viewer.jump_to_end()
             return
 
-        select = self.treeview.get_selection()
-        if self.select_signal: select.disconnect(self.select_signal)
-        if self.CURRENT_VIEW:
-            self.treeview.set_cursor(self.CURRENT_VIEW)
-        self.select_signal = select.connect("changed", self.sidebar_on_row_select)
+        self.FOUND_ITEMS.clear()
+        self.FOUND_ITEMS = FOUND_ITEMS
+        self._view_items(CURRENT_VIEWS)
 
-        if len(self.search_history) > 1:
-            self.bm_backward.set_sensitive(True)
+        self.HISTORY.append((query, FOUND_ITEMS[:], CURRENT_VIEWS[:]))
+        self.HIST_CURSOR = len(self.HISTORY) - 1
+        self.bm_backward.set_sensitive(True)
+        self.b_forward.set_sensitive(False)
+
+
+    def _view_items(self, CURRENT_VIEWS):
+        self.suggestions.clear()
+        for i, item in enumerate(self.FOUND_ITEMS, 1):
+            self.suggestions.append([i, item[3]])
+
+        if len(CURRENT_VIEWS) == 0:
+            return
+
+        ## DISABLE CHANGE SIGNALS FOR ENTERING VALUE
+        select = self.treeview.get_selection()
+        if self.select_signal:
+            select.disconnect(self.select_signal)
+
+        self.VIEWED_ITEMS.clear()
+
+        clip_out = []
+        for view in CURRENT_VIEWS:
+            self.treeview.set_cursor(view)
+            tab, obj, *row = self.FOUND_ITEMS[view]
+            clip_out += self.viewer.parse(tab, obj, row)
+            self.VIEWED_ITEMS.add(view)
+
+        self.CURRENT_VIEWS.clear()
+        self.CURRENT_VIEWS = CURRENT_VIEWS
+
+        self.CLIP_CYCLE = utils.circle(clip_out)
+        if self.t_copy.get_active(): # checking where to copy or not
+            self._circular_search(+1)
 
         self.search_entry.grab_focus()
-        self.CLIP_CYCLE = utils.circle(clip_out)
 
-        if self.t_copy.get_active():
-            self._circular_search(+1)
+        ## ENABLE SIGNAL
+        self.select_signal = select.connect("changed", self.sidebar_on_row_select)
 
 
     def _open_dir(self):
@@ -411,9 +463,9 @@ class GUI(Gtk.Window):
 
 
     def _open_src(self):
-        if self.CURRENT_VIEW is None: return
-        t, _id, *etc = self.FOUND_ITEMS[self.CURRENT_VIEW]
-        self.TAB_LST[t].open_src(_id)
+        if self.CURRENT_VIEWS is None: return
+        t, obj, _id, *etc = self.FOUND_ITEMS[self.CURRENT_VIEWS[0]]
+        self.notebook.get_nth_page(t).open_src(_id)
         # TODO: connection
         # process.connect('delete-event', self.open_src)
 
@@ -520,8 +572,8 @@ class GUI(Gtk.Window):
                 # NOTE: range check not needed
                 self.notebook.set_current_page(t)
             elif keyval == ord('0'): self.notebook.set_current_page(self.MAIN_TAB)
-            elif keyval == 65361: self._back_click() # LEFT_ARROW
-            elif keyval == 65363: self._forward_click() # RIGHT_ARROW
+            elif keyval == 65361: self._jump_history(-1) # LEFT_ARROW
+            elif keyval == 65363: self._jump_history(+1) # RIGHT_ARROW
             return
         elif Gdk.ModifierType.SHIFT_MASK & event.state:
             if   keyval == 65365: pass # pg-down
@@ -569,6 +621,7 @@ if __name__ == '__main__':
     PATH_PLUGINS = fullpath + PATH_PLUGINS
     if PATH_PLUGINS and os.path.isdir(PATH_PLUGINS):
         for file_name in os.listdir(PATH_PLUGINS):
+            if file_name[-3] not in ".py": continue
             print("plugin:", file_name, file=sys.stderr)
             exec(open(PATH_PLUGINS + file_name).read())
     Gtk.main()
