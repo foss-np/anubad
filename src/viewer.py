@@ -186,12 +186,12 @@ class Viewer(Gtk.Overlay):
         adj.set_value(adj.get_upper() - adj.get_page_size())
 
 
-    def not_found(self, word):
+    def not_found(self, word, msg=""):
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, "'%s'"%word, self.tag_bold)
 
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert(end, " Not Found\n")
+        self.textbuffer.insert(end, " Not Found %s\n"%msg)
 
 
 def root_binds(widget, event):

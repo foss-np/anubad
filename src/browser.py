@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 
-import os
+import os, sys
 from subprocess import Popen
 from gi.repository import Gtk, Gdk, Pango
 
-class BrowseList(Gtk.ScrolledWindow):
+class BrowseList(Gtk.Overlay):
     def __init__(self, parent=None, src=None):
-        Gtk.ScrolledWindow.__init__(self)
-        self.set_hexpand(True)
-        self.set_vexpand(True)
-
+        Gtk.Overlay.__init__(self)
         self.SRC = src
         self.makeWidgets()
 
@@ -18,13 +15,20 @@ class BrowseList(Gtk.ScrolledWindow):
 
 
     def makeWidgets(self):
-        #
-        ## Setting
-        ## TODO: PUT THE LOCK ICON
+        self.scroll = Gtk.ScrolledWindow()
+        self.add(self.scroll)
+        self.scroll.set_hexpand(True)
+        self.scroll.set_vexpand(True)
+
+        self.tool_b_Refresh = Gtk.ToolButton(icon_name=Gtk.STOCK_REFRESH)
+        self.add_overlay(self.tool_b_Refresh)
+        self.tool_b_Refresh.connect("clicked", lambda *a: self.reload())
+        self.tool_b_Refresh.set_valign(Gtk.Align.START)
+        self.tool_b_Refresh.set_halign(Gtk.Align.END)
 
         self.treebuffer = Gtk.ListStore(int, str, str)
         self.treeview = Gtk.TreeView(model=self.treebuffer)
-        self.add(self.treeview)
+        self.scroll.add(self.treeview)
         self.treeview.connect('key_press_event', self.treeview_key_press)
 
         renderer_text = Gtk.CellRendererText()
@@ -80,6 +84,12 @@ class BrowseList(Gtk.ScrolledWindow):
                 exit(1)
             row.insert(0, self.count)
             self.treebuffer.append(row)
+
+
+    def reload(self):
+        print("reload:", self.SRC[-30:], file=sys.stderr)
+        self.treebuffer.clear()
+        self.fill_tree(self.SRC)
 
 
     def add_to_tree(self, row):

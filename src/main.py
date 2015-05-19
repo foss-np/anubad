@@ -7,8 +7,8 @@ import os, sys
 filepath = os.path.abspath(__file__)
 fullpath = os.path.dirname(filepath) + '/'
 
-exec(open(fullpath + "gsettings.conf").read())
-exec(open(fullpath + "mysettings.conf").read())
+exec(open(fullpath + "gsettings.conf", encoding="UTF-8").read())
+exec(open(fullpath + "mysettings.conf", encoding="UTF-8").read())
 
 PATH_GLOSS = fullpath + PATH_GLOSS
 
@@ -52,7 +52,7 @@ class GUI(Gtk.Window):
         self.track_FONT = set()
 
         self.items_FOUND = []
-        self.items_VIEWED = set() # TODO: Fix it
+        self.items_VIEWED = set()
         self.views_CURRENT = []
 
         self.hist_LIST = []
@@ -124,12 +124,6 @@ class GUI(Gtk.Window):
         bar.add(bar.b_Add)
         bar.b_Add.connect("clicked", lambda w: self.add_to_gloss())
         bar.b_Add.set_tooltip_markup("Add new word to Glossary, <u>Ctrl+i</u>")
-        ##
-        ## Refresh
-        bar.b_Refresh = Gtk.ToolButton(icon_name=Gtk.STOCK_REFRESH)
-        bar.add(bar.b_Refresh)
-        bar.b_Refresh.connect("clicked", lambda w: self._reload_gloss())
-        bar.b_Refresh.set_tooltip_markup("Refresh Reload Current Glossary, <u>Ctrl+F5</u>")
         ##
         #
         bar.add(Gtk.SeparatorToolItem())
@@ -311,11 +305,13 @@ class GUI(Gtk.Window):
         if not self.items_FOUND: return
 
         model, treeiter = selection.get_selected()
+        # FIX-ME use get_cursor()
         if treeiter is None: return
         i = model[treeiter][0] - 1
         self.views_CURRENT.clear()
         self.views_CURRENT.append(i)
 
+        # TODO: make set of (tab: ID) as uniq
         p = i not in self.items_VIEWED
         self.items_VIEWED.add(i)
 
@@ -326,12 +322,9 @@ class GUI(Gtk.Window):
 
 
     def sidebar_row_double_click(self, widget, treepath, treeviewcol):
-        # TODO: fix it with the widget using CURRENT_VIEW IS NOT GOOD
-        if len(self.views_CURRENT) == 0:
-            print("Need to fix")
-            return
-
-        tab, obj, n, *row = self.items_FOUND[self.views_CURRENT[0]]
+        path, column = widget.get_cursor()
+        pprint([ p for p in path])
+        tab, obj, n, *row = self.items_FOUND[path[0]]
         self.notebook.set_current_page(tab)
         obj.treeview.set_cursor(n-1)
 
@@ -421,10 +414,10 @@ class GUI(Gtk.Window):
                     foundFlag = True
             if foundFlag is False:
                 self.viewer.not_found(word)
-                dict_grep2(query.lower(), self.viewer, False)
 
         if len(items_FOUND) == 0:
             self.viewer.jump_to_end()
+            dict_grep2(word, self.viewer, False)
             return
 
         del self.items_FOUND
@@ -501,9 +494,7 @@ class GUI(Gtk.Window):
     def _reload_gloss(self):
         current_tab = self.notebook.get_current_page()
         obj = self.notebook.get_nth_page(current_tab)
-        print("reload:", obj.SRC[-30:], file=sys.stderr)
-        obj.treebuffer.clear()
-        obj.fill_tree(obj.SRC)
+        obj.reload()
 
 
     def _circular_search(self, d):
@@ -637,5 +628,5 @@ if __name__ == '__main__':
         for file_name in os.listdir(PATH_PLUGINS):
             if file_name[-3] not in ".py": continue
             print("plugin:", file_name, file=sys.stderr)
-            exec(open(PATH_PLUGINS + file_name).read())
+            exec(open(PATH_PLUGINS + file_name, encoding="UTF-8").read())
     Gtk.main()
