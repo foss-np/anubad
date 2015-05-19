@@ -54,3 +54,17 @@ def circle(iterable):
         if diff == 1 and l <= i: i = 0
         if diff == -1 and i < 0: i = l - 1
         yield saved[i]
+
+
+def treeview_signal_safe_toggler(func):
+    '''Gtk.TreeView() :changed: signal should be disable before new
+    selection is added, if connect it will trigger the change.
+
+    '''
+    def wrapper(self, *args, **kwargs):
+        select = self.treeview.get_selection()
+        select.disconnect(self.select_signal)
+        func_return = func(self, *args, **kwargs)
+        self.select_signal = select.connect("changed", self.sidebar_on_row_select)
+        return func_return
+    return wrapper

@@ -28,7 +28,7 @@ class Settings(Gtk.Window):
         self.font_button.set_font_name(def_FONT)
         self.font_button.connect('font-set', self._change_font)
 
-        # self.lang2.set_text()
+        layout.attach(self.makeWidgets_behavious(), 0, 2, 2, 1)
         layout.attach(self.makeWidgets_buttons(), 0, 3, 2, 1)
 
         return layout
@@ -40,6 +40,19 @@ class Settings(Gtk.Window):
             obj.modify_font(f_obj)
             # obj.override_font(f_obj)
 
+    def makeWidgets_behavious(self):
+        bar = Gtk.Toolbar()
+        ## Auto Transliterate Button
+        bar.t_Trans = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_CONVERT)
+        bar.add(bar.t_Trans)
+        bar.t_Trans.set_active(True)
+        ##
+        ## Spell-check Toggle Button
+        bar.t_Spell = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_SPELL_CHECK)
+        bar.add(bar.t_Spell)
+        bar.t_Spell.set_active(True)
+        ##
+        return bar
 
     def makeWidgets_buttons(self):
         layout = Gtk.HBox()

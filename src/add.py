@@ -36,6 +36,9 @@ class Add(Gtk.Window):
         self.track_FONT.add(self.lang1)
         self.lang1.set_text(self.l1)
 
+        # TODO: don't process option
+        # raw = method
+
         label = Gtk.Label()
         layout.attach(label, 0, 1, 1, 1)
         label.set_markup("<b>lang_2</b>")
@@ -76,7 +79,8 @@ class Add(Gtk.Window):
 
 
     def cb_file_add(self):
-        for obj in self.parent.TAB_LST:
+        for i in range(self.parent.notebook.get_n_pages()):
+            obj = self.parent.notebook.get_nth_page(i)
             *a, label = obj.SRC.split('/')
             self.gloss_file.append_text(label)
 
@@ -92,20 +96,15 @@ class Add(Gtk.Window):
             return
 
         t = self.gloss_file.get_active()
-        obj = self.parent.TAB_LST[t]
+        obj = self.parent.notebook.get_nth_page(t)
         fp = open(obj.SRC, 'a').write("\n" + '; '.join(row))
         count = obj.add_to_tree(row)
-        row = [count] + row
+        row = [t, obj, count] + row
 
-        # TODO: move this to main.py
-        self.parent.viewer.parse(t, obj, row)
-        self.parent.FOUND_ITEMS.clear()
-        self.parent.FOUND_ITEMS.append(row)
-        self.parent.suggestions.clear()
-        self.parent.suggestions.append([1, row[1]])
-        self.parent.VIEWED_ITEMS.clear()
-        self.parent.VIEWED_ITEMS.add(0)
-        self.parent.CURRENT_VIEW = 0
+        # TODO: move this to main.py return destroy signal
+        self.parent.items_FOUND.clear()
+        self.parent.items_FOUND.append(row)
+        self.parent._view_items([0])
         self.destroy()
         # return t, row
 

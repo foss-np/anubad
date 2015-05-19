@@ -20,11 +20,11 @@ class Viewer(Gtk.Overlay):
         self.scroll.set_hexpand(True)
         self.scroll.set_vexpand(True)
 
-        self.t_clean = Gtk.ToolButton(icon_name=Gtk.STOCK_CLEAR)
-        self.add_overlay(self.t_clean)
-        self.t_clean.connect("clicked", lambda *a: self.textbuffer.set_text(""))
-        self.t_clean.set_valign(Gtk.Align.START)
-        self.t_clean.set_halign(Gtk.Align.END)
+        self.tb_clean = Gtk.ToolButton(icon_name=Gtk.STOCK_CLEAR)
+        self.add_overlay(self.tb_clean)
+        self.tb_clean.connect("clicked", lambda *a: self.clean())
+        self.tb_clean.set_valign(Gtk.Align.START)
+        self.tb_clean.set_halign(Gtk.Align.END)
 
         self.textview = Gtk.TextView()
         self.scroll.add(self.textview)
@@ -57,22 +57,18 @@ class Viewer(Gtk.Overlay):
 
         self.tag_h1 = self.textbuffer.create_tag("h1", weight=Pango.Weight.BOLD)
         # self.tag_h1.connect("event", lambda *e: print("signal: event"))
-        self.tag_h1.connect("event", self._event_on_tag_h1)
-
         # print(type(self.tag_bold))
 
 
-    def _event_on_tag_h1(self, *event):
-        pass
-        # if event.keyval == 65307:
-        #     Gtk.main_quit()
+    def clean(self):
+        # NOTE: kept outside because it needs wrapping
+        self.textbuffer.set_text("")
 
 
     def _auto_copy_select(self, *args):
-        print("yehhol")
+        return
         # select_mark = self.textbuffer.get_selection_bound()
         # self.textbuffer.add_selection_clipboard(clipboard)
-        pass
         # print(type(select_mark))
         # if select_mark != None:
         #     start, end = select_mark
@@ -136,11 +132,11 @@ class Viewer(Gtk.Overlay):
                 if raw[i-1] in ')]': continue
                 if level > 0: continue
                 translations.append([pos, raw[fbreak:i]])
-                fbreak = i+2
+                fbreak = i + 2
             elif c == ')':
                 translations.append([pos, raw[fbreak:i]])
                 pos = ""
-                fbreak = i+3
+                fbreak = i + 3
                 level -= 1
 
         if i - fbreak > 2 or len(translations) < 1:
