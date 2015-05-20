@@ -9,7 +9,10 @@ import os
 from gi.repository import Gtk, Pango
 
 class Viewer(Gtk.Overlay):
-
+    """
+    Viewer is the modified TextView
+    """
+    # TODO make Viewer as TextView()
     def __init__(self, parent=None):
         Gtk.Overlay.__init__(self)
         self.makeWidgets()
@@ -77,17 +80,19 @@ class Viewer(Gtk.Overlay):
         #     self.textview.scroll_mark_onscreen(m)
 
 
-    def mark_found(self, text):
-        begin = self.textbuffer.get_start_iter()
+    def mark_found(self, text, begin, n=1):
+        """
+        n - state the number of match to repeat
+        """
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.remove_tag(self.tag_found, begin, end)
-
         match = begin.forward_search(text, 0, end)
         if match != None:
             match_start, match_end = match
             self.textbuffer.apply_tag(self.tag_found, match_start, match_end)
-            m = self.textbuffer.create_mark("found", match_start)
-            self.textview.scroll_mark_onscreen(m)
+            if n > 1:
+                self.mark_found(text, match_end, n - 1)
+            return match_start
+        return None
 
 
     def jump_to_end(self):

@@ -15,16 +15,8 @@ PATH_GLOSS = fullpath + PATH_GLOSS
 fp_dev_null = open(os.devnull, 'w')
 fp3 = fp_dev_null
 
-if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
-    sys.path.append(PATH_MYLIB)
-    from debugly import *
-    from pprint import pprint
-else:
-    sys.stdout = fp_dev_null
-
-# func = lambda f, *arg, *karg: f(arg, karg)
-
 from gi.repository import Gtk, Gdk, Pango
+from gi.repository import GtkSpell
 from subprocess import Popen
 from itertools import count
 
@@ -34,6 +26,16 @@ import browser as BL
 import viewer as Vi
 import add as Ad
 import utils
+
+if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
+    sys.path.append(PATH_MYLIB)
+    from debugly import *
+    from pprint import pprint
+else:
+    sys.stdout = fp_dev_null
+
+# func = lambda f, *arg, *karg: f(arg, karg)
+
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
@@ -54,6 +56,7 @@ class GUI(Gtk.Window):
         self.items_FOUND = []
         self.items_VIEWED = set()
         self.views_CURRENT = []
+        self.view_LAST = None #TODO
 
         self.hist_LIST = []
         self.hist_CURSOR = 0
@@ -63,6 +66,9 @@ class GUI(Gtk.Window):
 
         self.makeWidgets()
         self.connect('key_press_event', self.key_binds)
+        self.connect('delete-event', Gtk.main_quit)
+        self.connect('focus-in-event', lambda *e: self.search_entry.grab_focus())
+
         self.search_entry.grab_focus()
         self.show_all()
         # NOTE: GTK BUG, notebook page switch only after its visible
@@ -94,7 +100,7 @@ class GUI(Gtk.Window):
         bar.bm_Backward = Gtk.MenuToolButton(icon_name=Gtk.STOCK_GO_BACK)
         bar.add(bar.bm_Backward)
         bar.bm_Backward.connect("clicked", lambda e: self._jump_history(-1))
-        bar.bm_Backward.set_tooltip_markup("Previous Search Word, Secondary Click for History Popup, <u>Alt+←</u>")
+        bar.bm_Backward.set_tooltip_markup("Previous, <u>Alt+←</u>")
         bar.bm_Backward.set_sensitive(False)
         ### History
         # TODO: find the widget flag
@@ -107,7 +113,7 @@ class GUI(Gtk.Window):
         bar.b_Forward = Gtk.ToolButton(icon_name=Gtk.STOCK_GO_FORWARD)
         bar.add(bar.b_Forward)
         bar.b_Forward.connect("clicked", lambda e: self._jump_history(+1))
-        bar.b_Forward.set_tooltip_markup("Next Search Word, Secondary Click for History Popup, <u>Alt+→</u>")
+        bar.b_Forward.set_tooltip_markup("Next, <u>Alt+→</u>")
         bar.b_Forward.set_sensitive(False)
         ##
         #
@@ -223,6 +229,7 @@ class GUI(Gtk.Window):
         layout.pack_start(self.search_entry, expand=True, fill=True, padding=2)
         self.search_entry.connect('key_release_event', self.search_entry_binds)
         self.search_entry.set_tooltip_markup(tool_tip)
+        self.search_entry.set_max_length(80)
         ### Font stuff
         self.search_entry.modify_font(FONT_obj)
         self.track_FONT.add(self.search_entry)
@@ -243,7 +250,6 @@ class GUI(Gtk.Window):
 
     def search_entry_binds(self, widget, event):
         # print(event.keyval)
-        # TODO: make the wrapper around .get_text()
         raw_query = self.search_entry.get_text()
         if 'r:' == raw_query[:2]: query = raw_query[2:]
         else: query = raw_query.strip().lower()
@@ -297,25 +303,18 @@ class GUI(Gtk.Window):
 
 
     def sidebar_bind(self, widget, event):
-        print("TODO: pass the signal")
+        print("TODO: pass the action as well")
         pass
 
 
     def sidebar_on_row_select(self, selection):
-        if not self.items_FOUND: return
-
-        model, treeiter = selection.get_selected()
-        # FIX-ME use get_cursor()
-        if treeiter is None: return
-        i = model[treeiter][0] - 1
-        self.views_CURRENT.clear()
-        self.views_CURRENT.append(i)
+        path, column = self.treeview.get_cursor()
 
         # TODO: make set of (tab: ID) as uniq
-        p = i not in self.items_VIEWED
-        self.items_VIEWED.add(i)
+        p = path[0] not in self.items_VIEWED
+        self.items_VIEWED.add(path[0])
 
-        tab, obj, *row = self.items_FOUND[i]
+        tab, obj, *row = self.items_FOUND[path[0]]
         clip_out = self.viewer.parse(tab, obj, row, _print=p)
         GUI.clip_CYCLE = utils.circle(clip_out)
         self._circular_search(+1)
@@ -323,7 +322,6 @@ class GUI(Gtk.Window):
 
     def sidebar_row_double_click(self, widget, treepath, treeviewcol):
         path, column = widget.get_cursor()
-        pprint([ p for p in path])
         tab, obj, n, *row = self.items_FOUND[path[0]]
         self.notebook.set_current_page(tab)
         obj.treeview.set_cursor(n-1)
@@ -336,17 +334,22 @@ class GUI(Gtk.Window):
         self.viewer.textview.modify_font(FONT_obj)
         self.track_FONT.add(self.viewer.textview)
 
-        # new_clean = lambda: self.viewer.clean()
-        # FIX-ME: make it in lambda function, decorator
         old_clean = self.viewer.clean
-        def new_clean():
+        # FIX-ME: make it real smart
+        def smart_clean():
             old_clean()
+            # TODO last clean job after view is fixed
+            # if len(self.items_VIEWED) > 1:
+            #     self.view_last
             self.views_CURRENT.clear()
             self.items_VIEWED.clear()
             # NOTE: vvv is for sugession
             selection = self.treeview.get_selection()
             selection.unselect_all()
-        self.viewer.clean = new_clean
+            # model, treeiter = selection.get_selected()
+            # if treeiter is None:
+            #     print("It clean")
+        self.viewer.clean = smart_clean
 
         return self.viewer
 
@@ -467,11 +470,15 @@ class GUI(Gtk.Window):
 
 
     def _open_src(self):
-        if self.views_CURRENT is None: return
-        t, obj, _id, *etc = self.items_FOUND[self.views_CURRENT[0]]
+        if self.items_FOUND:
+            t, obj, _id, *etc = self.items_FOUND[self.views_CURRENT[0]]
+        else:
+            t = self.notebook.get_current_page()
+            _id = None
+
         self.notebook.get_nth_page(t).open_src(_id)
         # TODO: connection
-        # process.connect('delete-event', self.open_src)
+        # process.connect('delete-event', lambda e: print("i'm back"))
 
 
     def reload(self, gloss):
@@ -505,7 +512,16 @@ class GUI(Gtk.Window):
         global clipboard
         utils.diff = d
         text = next(GUI.clip_CYCLE)
-        self.viewer.mark_found(text)
+
+        begin = self.viewer.textbuffer.get_start_iter()
+        end = self.viewer.textbuffer.get_end_iter()
+
+        self.viewer.textbuffer.remove_tag(self.viewer.tag_found, begin, end)
+        position = self.viewer.mark_found(text, begin)
+        m = self.viewer.textbuffer.create_mark("tmp", position)
+        self.viewer.textview.scroll_mark_onscreen(m)
+        self.viewer.textbuffer.delete_mark(m)
+
         if self.toolbar.t_Copy.get_active():
             clipboard.set_text(text, -1)
 
@@ -551,7 +567,7 @@ class GUI(Gtk.Window):
         elif keyval == 65362: self.sidebar_bind(widget, event)# UP-Arrow
         elif keyval == 65364: self.sidebar_bind(widget, event)# DOWN-Arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
-            if   keyval == ord('1'): dict_grep2(query, self.viewer, False)
+            if   keyval == ord('1'): print(dict_grep2(query, self.viewer, False))
             elif keyval == ord('2'): dict_grep(query, self.viewer, False)
             elif keyval == ord('3'): web_search(query, self.viewer)
             elif keyval == ord('4'): dict_grep(query, self.viewer)
@@ -615,18 +631,19 @@ def main():
 
     global root
     root = GUI()
-    root.connect('delete-event', Gtk.main_quit)
 
     return root
 
 
 if __name__ == '__main__':
     main().connect('key_press_event', root_binds)
-    global PATH_PLUGINS
     PATH_PLUGINS = fullpath + PATH_PLUGINS
     if PATH_PLUGINS and os.path.isdir(PATH_PLUGINS):
+        # TODO: load plugins as modules
+        sys.path.append(PATH_PLUGINS)
         for file_name in os.listdir(PATH_PLUGINS):
-            if file_name[-3] not in ".py": continue
+            if file_name[-3:] not in ".py": continue
             print("plugin:", file_name, file=sys.stderr)
+            # import file_name[:-3]
             exec(open(PATH_PLUGINS + file_name, encoding="UTF-8").read())
     Gtk.main()
