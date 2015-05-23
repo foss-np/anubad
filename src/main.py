@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+PKG_NAME = "anubad - अनुवाद"
+
 import os, sys
 
 filepath = os.path.abspath(__file__)
@@ -44,7 +46,7 @@ class GUI(Gtk.Window):
     notebook_OBJS = []
 
     def __init__(self, parent=None):
-        Gtk.Window.__init__(self, title="anubad - अनुवाद")
+        Gtk.Window.__init__(self, title=PKG_NAME)
         self.set_default_size(600, 500)
         self.parent = parent
         self.track_FONT = set()
@@ -307,16 +309,14 @@ class GUI(Gtk.Window):
         model, pathlist = treeselection.get_selected_rows()
         clip_out = []
         for path in pathlist:
-            treeiter = model.get_iter(path)
-            note = model.get_value(treeiter, 1)
-            tab  = model.get_value(treeiter, 2)
-            id_  = model.get_value(treeiter, 3)
-            meta = (note, tab, id_)
+            c, note, tab, ID, w = self.suggestions[path]
+            note_obj = GUI.notebook_OBJS[note]
+            browser_obj = note_obj.get_nth_page(tab)
+            treerow = browser_obj.treebuffer[ID-1]
+            meta = (note, tab, ID)
             view = meta not in self.view_CURRENT
+            clip_out += self.viewer.parse(treerow, browser_obj.SRC, print_=view)
             self.view_CURRENT.add(meta)
-            obj = GUI.notebook_OBJS[note].get_nth_page(tab)
-            data = obj.treebuffer[id_-1]
-            clip_out += self.viewer.parse(tab, obj, data, print_=view)
 
         if len(clip_out) > 0:
             GUI.clip_CYCLE = utils.circle(clip_out)
@@ -424,7 +424,7 @@ class GUI(Gtk.Window):
             for item in obj.treebuffer:
                 if word not in item[1]: continue
                 c += 1
-                row = (note, tab) + tuple(item)
+                row = (note, tab, item)
                 if word == item[1]: FULL.append(row)
                 else: FUZZ.add(row)
         return c, FULL, FUZZ
@@ -443,24 +443,37 @@ class GUI(Gtk.Window):
                 self.viewer.not_found(word)
                 dict_grep2(word, self.viewer, False)
                 continue
-            for row in results:
-                note, tab, *data = row
-                meta = (note, tab, data[0])
+            for item in results:
+                note, tab, treerow = item
+                ID, w, raw = treerow
+
+                note_obj = GUI.notebook_OBJS[note]
+                browser_obj = note_obj.get_nth_page(tab)
+
+                meta = (note, tab, ID)
                 view = meta not in self.view_CURRENT
-                clip_out += self.viewer.parse(note, tab, data, print_=view)
-                self.view_CURRENT.add((note, tab, data[0]))
+                clip_out += self.viewer.parse(treerow, browser_obj.SRC, print_=view)
+
+                self.view_CURRENT.add(meta)
                 c += 1
-                self.suggestions.append([c, note, tab, data[0], data[1]])
+                self.suggestions.append([c, note, tab, ID, w])
                 treeselection.select_path(c - 1)
 
-        for row in all_FUZZ:
-            note, tab, *data = row
-            self.suggestions.append([c, note, tab, data[0], data[1]])
+        for item in all_FUZZ:
+            note, tab, treerow = item
+            ID, w, raw = treerow
             c += 1
-            if self.toolbar.t_ShowAll.get_active():
-                clip_out += self.viewer.parse(note, tab, data)
-                self.view_CURRENT.append((note, tab, data[0]))
-                treeselection.select_path(c-1)
+            self.suggestions.append([c, note, tab, ID, w])
+            if not self.toolbar.t_ShowAll.get_active(): continue
+
+            note_obj = GUI.notebook_OBJS[note]
+            browser_obj = note_obj.get_nth_page(tab)
+
+            meta = (note, tab, ID)
+            view = meta not in self.view_CURRENT
+            clip_out += self.viewer.parse(treerow, browser_obj.SRC, print_=view)
+            self.view_CURRENT.append((note, tab, ID))
+            treeselection.select_path(c-1)
 
         if len(self.view_CURRENT) == 0: return
         GUI.clip_CYCLE = utils.circle(clip_out)
