@@ -101,7 +101,7 @@ class Viewer(Gtk.Overlay):
         self.textview.scroll_mark_onscreen(m)
 
 
-    def parse(self, tab, obj, row, _print=True):
+    def parse(self, note, tab, data, print_=True):
         """
         >>> obj = Viewer(root)
         >>> root.add(obj)
@@ -111,9 +111,9 @@ class Viewer(Gtk.Overlay):
         ['नमस्कार']
         """
         if os.name is not 'nt': # MSWIN BUG: can't print unicode
-            print(tab, row)
+            print(note, tab, data)
 
-        ID, word, raw  = row
+        ID, word, raw  = data
         trasliterate = ""
         translations = []
         tags = []
@@ -151,18 +151,19 @@ class Viewer(Gtk.Overlay):
         for p, t in translations:
             r += [ u.strip() for u in t.split(',') ]
 
-        if not _print: return r
+        if not print_: return r
 
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, word, self.tag_h1)
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, '    ['+trasliterate+']', self.tag_trans)
 
-        if obj is not None:
-            *a, gloss, lang, label = obj.SRC.split('/')
-            src = " source: %s/%s/%s\n"%(gloss, lang, label)
-        else:
-            src = '\n'
+        src = '\n'
+        # note_obj = self.parent.notebook_OBJS[note]
+        # browser_obj = note_obj
+        # if obj is not None:
+        #     *a, gloss, lang, label = obj.SRC.split('/')
+        #     src = " source: %s/%s/%s\n"%(gloss, lang, label)
 
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, src, self.tag_source)

@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-PKG_NAME = "anubad - अनुवाद"
-
 import os, sys
 
 filepath = os.path.abspath(__file__)
@@ -16,7 +14,7 @@ fp_dev_null = open(os.devnull, 'w')
 fp3 = fp_dev_null
 
 from gi.repository import Gtk, Gdk, Pango
-from gi.repository import GtkSpell
+from collections import OrderedDict
 from subprocess import Popen
 from itertools import count
 
@@ -33,9 +31,7 @@ if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
     from pprint import pprint
 else:
     sys.stdout = fp_dev_null
-
-# func = lambda f, *arg, *karg: f(arg, karg)
-
+    debug = lambda f, *arg, **karg: f(arg, karg)
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
@@ -48,15 +44,13 @@ class GUI(Gtk.Window):
     notebook_OBJS = []
 
     def __init__(self, parent=None):
-        Gtk.Window.__init__(self, title=PKG_NAME)
+        Gtk.Window.__init__(self, title="anubad - अनुवाद")
         self.set_default_size(600, 500)
         self.parent = parent
         self.track_FONT = set()
 
-        self.items_FOUND = []
-        self.items_VIEWED = set()
-        self.views_CURRENT = []
-        self.view_LAST = None #TODO
+        self.view_CURRENT = set()
+        self.view_LAST = None
 
         self.hist_LIST = []
         self.hist_CURSOR = 0
@@ -139,10 +133,10 @@ class GUI(Gtk.Window):
         bar.add(bar.t_Copy)
         bar.t_Copy.set_active(True)
         ##
-        ## Search Toggle Button
-        bar.t_Search = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_DIALOG_INFO)
-        bar.t_Search.set_active(False)
-        bar.add(bar.t_Search)
+        ## Search Show Toggle Button
+        bar.t_ShowAll = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_DIALOG_INFO)
+        bar.t_ShowAll.set_active(False)
+        bar.add(bar.t_ShowAll)
         ##
         #
         bar.add(Gtk.SeparatorToolItem())
@@ -249,22 +243,18 @@ class GUI(Gtk.Window):
 
 
     def search_entry_binds(self, widget, event):
-        # print(event.keyval)
-        raw_query = self.search_entry.get_text()
-        if 'r:' == raw_query[:2]: query = raw_query[2:]
-        else: query = raw_query.strip().lower()
-
-        if event is None: self.searchWord(query)
+        # FIXME this cheat signal not forwarded
+        if   event is None: self.search_and_reflect()
         elif Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('c'): self.search_entry.set_text("")
         elif Gdk.ModifierType.SHIFT_MASK & event.state:
             if event.keyval == 65293: # <enter> return
-                state = self.t_search.get_active()
-                self.t_search.set_active(not state)
-                self.searchWord(query)
-                self.t_search.set_active(state)
-        elif event.keyval == 65293: # <enter> return
-            self.searchWord(query)
+                print("shift enter")
+                state = self.toolbar.t_ShowAll.get_active()
+                self.toolbar.t_ShowAll.set_active(not state)
+                self.search_and_reflect()
+                self.toolbar.t_ShowAll.set_active(not state)
+        elif event.keyval == 65293: self.search_and_reflect() # <enter> return
 
 
     def makeWidgets_sidebar(self):
@@ -275,7 +265,7 @@ class GUI(Gtk.Window):
         scroll.set_vexpand(False)
 
         ## TreeView #TODO put sensible name and hierarchy
-        self.suggestions = Gtk.ListStore(int, str)
+        self.suggestions = Gtk.ListStore(int, int, int, int, str)
         self.treeview = Gtk.TreeView(model=self.suggestions)
         scroll.add(self.treeview)
         # self.treeview.set_rubber_banding(True)
@@ -286,12 +276,18 @@ class GUI(Gtk.Window):
 
         select = self.treeview.get_selection()
         # TODO: multiple selection FIXME
-        # select.set_mode(Gtk.SelectionMode.MULTIPLE)
+        select.set_mode(Gtk.SelectionMode.MULTIPLE)
         self.select_signal = select.connect("changed", self.sidebar_on_row_select)
 
         renderer_text = Gtk.CellRendererText()
-        self.treeview.append_column(Gtk.TreeViewColumn("#", renderer_text, text=0))
-        self.treeview.append_column(Gtk.TreeViewColumn("Suggestions", renderer_text, text=1))
+        # for i, (label, vis) in enumerate(zip("#ntiw", "10001")):
+        #     col = Gtk.TreeViewColumn(label, renderer_text, text=i)
+        #     col.set_visible(True)#True if vis is '1' else False)
+        #     self.treeview.append_column(col)
+
+        self.treeview.set_headers_visible(False)
+        self.treeview.append_column(Gtk.TreeViewColumn('#', renderer_text, text=0))
+        self.treeview.append_column(Gtk.TreeViewColumn('w', renderer_text, text=4))
 
         ## Filter
         self.cb_filter = Gtk.ComboBoxText()
@@ -307,24 +303,31 @@ class GUI(Gtk.Window):
         pass
 
 
-    def sidebar_on_row_select(self, selection):
-        path, column = self.treeview.get_cursor()
+    def sidebar_on_row_select(self, treeselection):
+        model, pathlist = treeselection.get_selected_rows()
+        clip_out = []
+        for path in pathlist:
+            treeiter = model.get_iter(path)
+            note = model.get_value(treeiter, 1)
+            tab  = model.get_value(treeiter, 2)
+            id_  = model.get_value(treeiter, 3)
+            meta = (note, tab, id_)
+            view = meta not in self.view_CURRENT
+            self.view_CURRENT.add(meta)
+            obj = GUI.notebook_OBJS[note].get_nth_page(tab)
+            data = obj.treebuffer[id_-1]
+            clip_out += self.viewer.parse(tab, obj, data, print_=view)
 
-        # TODO: make set of (tab: ID) as uniq
-        p = path[0] not in self.items_VIEWED
-        self.items_VIEWED.add(path[0])
-
-        tab, obj, *row = self.items_FOUND[path[0]]
-        clip_out = self.viewer.parse(tab, obj, row, _print=p)
-        GUI.clip_CYCLE = utils.circle(clip_out)
-        self._circular_search(+1)
+        if len(clip_out) > 0:
+            GUI.clip_CYCLE = utils.circle(clip_out)
+            self._circular_search(+1)
 
 
     def sidebar_row_double_click(self, widget, treepath, treeviewcol):
         path, column = widget.get_cursor()
-        tab, obj, n, *row = self.items_FOUND[path[0]]
-        self.notebook.set_current_page(tab)
-        obj.treeview.set_cursor(n-1)
+        # tab, obj, n, *row = self.items_FOUND[path[0]]
+        # self.notebook.set_current_page(tab)
+        # obj.treeview.set_cursor(n-1)
 
 
     def makeWidgets_viewer(self):
@@ -341,8 +344,7 @@ class GUI(Gtk.Window):
             # TODO last clean job after view is fixed
             # if len(self.items_VIEWED) > 1:
             #     self.view_last
-            self.views_CURRENT.clear()
-            self.items_VIEWED.clear()
+            self.view_CURRENT.clear()
             # NOTE: vvv is for sugession
             selection = self.treeview.get_selection()
             selection.unselect_all()
@@ -386,78 +388,83 @@ class GUI(Gtk.Window):
         return
 
 
-    def searchWord(self, query):
-        search_space = []
-        for obj in self.notebook_OBJS:
-            for i in count():
-                widget = obj.get_nth_page(i)
+    def search_and_reflect(self):
+        raw_query = self.search_entry.get_text()
+        if not raw_query: return
+        if 'r:' == raw_query[:2]: query = raw_query[2:]
+        else: query = raw_query.strip().lower()
+
+        search_SPACE = []
+        for i, obj in enumerate(self.notebook_OBJS):
+            for c in count():
+                widget = obj.get_nth_page(c)
                 if widget is None: break
-                search_space.append((i, widget))
+                search_SPACE.append((i, c, widget))
 
-        if not query: return
-
-        items_FOUND = []
-        views_CURRENT = []
-        found = 0
-
+        ## Ordered Dict use for undo/redo history
+        query_RESULTS = OrderedDict()
+        all_FUZZ = set()
         for word in set(query.split()):
-            foundFlag = False
-            # TODO: make it simpler
-            # MAYBE: put the tree search in browserlst itself
-            for tab, obj in search_space:
-                for item in obj.treebuffer:
-                    if word not in item[1]: continue
-                    found += 1
-                    row = [tab, obj] + list(item)
-                    ## remove duplicate longest str match
-                    if row not in items_FOUND: items_FOUND.append(row)
-                    ## exact match filter
-                    if word != item[1] and not self.toolbar.t_Search.get_active(): continue
-                    views_CURRENT.append(found - 1)
-                    foundFlag = True
-            if foundFlag is False:
-                self.viewer.not_found(word)
+            n, FULL, FUZZ = self.searchWord(word, search_SPACE)
+            query_RESULTS[word] = (FULL, n is not 0)
+            all_FUZZ = all_FUZZ | FUZZ
 
-        if len(items_FOUND) == 0:
-            self.viewer.jump_to_end()
-            dict_grep2(word, self.viewer, False)
-            return
+        self._view_items(query_RESULTS, all_FUZZ)
 
-        del self.items_FOUND
-        self.items_FOUND = items_FOUND
-        self._view_items(views_CURRENT)
-
-        self.hist_LIST.append((query, items_FOUND[:], views_CURRENT[:]))
+        self.hist_LIST.append((query_RESULTS, all_FUZZ))
         self.hist_CURSOR = len(self.hist_LIST) - 1
         self.toolbar.bm_Backward.set_sensitive(True)
         self.toolbar.b_Forward.set_sensitive(False)
 
 
+    def searchWord(self, word, search_space):
+        FULL, FUZZ = [], set()
+        c = 0
+        for note, tab, obj in search_space:
+            for item in obj.treebuffer:
+                if word not in item[1]: continue
+                c += 1
+                row = (note, tab) + tuple(item)
+                if word == item[1]: FULL.append(row)
+                else: FUZZ.add(row)
+        return c, FULL, FUZZ
+
+
     @treeview_signal_safe_toggler
-    def _view_items(self, views_CURRENT):
+    def _view_items(self, query_RESULTS, all_FUZZ=set()):
         self.suggestions.clear()
-        self.items_VIEWED.clear()
+        treeselection = self.treeview.get_selection()
 
-        for i, item in enumerate(self.items_FOUND, 1):
-            self.suggestions.append([i, item[3]])
-
-        if len(views_CURRENT) == 0:
-            return
-
+        # pprint(query_RESULTS)
         clip_out = []
-        for view in views_CURRENT:
-            # TODO fix view here
-            self.treeview.set_cursor(view)
-            tab, obj, *row = self.items_FOUND[view]
-            clip_out += self.viewer.parse(tab, obj, row)
-            self.items_VIEWED.add(view)
+        c = 0
+        for word, (results, found) in query_RESULTS.items():
+            if not found:
+                self.viewer.not_found(word)
+                dict_grep2(word, self.viewer, False)
+                continue
+            for row in results:
+                note, tab, *data = row
+                meta = (note, tab, data[0])
+                view = meta not in self.view_CURRENT
+                clip_out += self.viewer.parse(note, tab, data, print_=view)
+                self.view_CURRENT.add((note, tab, data[0]))
+                c += 1
+                self.suggestions.append([c, note, tab, data[0], data[1]])
+                treeselection.select_path(c - 1)
 
-        del self.views_CURRENT
-        self.views_CURRENT = views_CURRENT
+        for row in all_FUZZ:
+            note, tab, *data = row
+            self.suggestions.append([c, note, tab, data[0], data[1]])
+            c += 1
+            if self.toolbar.t_ShowAll.get_active():
+                clip_out += self.viewer.parse(note, tab, data)
+                self.view_CURRENT.append((note, tab, data[0]))
+                treeselection.select_path(c-1)
 
+        if len(self.view_CURRENT) == 0: return
         GUI.clip_CYCLE = utils.circle(clip_out)
         self._circular_search(+1)
-
         self.search_entry.grab_focus()
 
 
@@ -533,6 +540,8 @@ class GUI(Gtk.Window):
         if n >= t: n = 0
         elif n < 0: n = t - 1
         self.notebook.set_current_page(n)
+        # obj = self.notebook.get_nth_page(n)
+        # obj.grab_focus()
 
 
     def add_to_gloss(self, query=""):
@@ -590,20 +599,22 @@ class GUI(Gtk.Window):
         elif Gdk.ModifierType.MOD1_MASK & state:
             if ord('1') <= keyval <= ord('9'):
                 t = keyval - ord('1')
-                # NOTE: range check not needed
-                self.notebook.set_current_page(t)
+                # obj = self.notebook.get_nth_page(t)
+                # if obj == None: return
+                self.notebook.set_current_page(t) # NOTE: range check not needed
+                # obj.grab_focus()
             elif keyval == ord('0'): self.notebook.set_current_page(self.MAIN_TAB)
             elif keyval == 65361: self._jump_history(-1) # LEFT_ARROW
             elif keyval == 65363: self._jump_history(+1) # RIGHT_ARROW
             return
         elif Gdk.ModifierType.SHIFT_MASK & event.state:
+            # TODO Scroll viewer
             if   keyval == 65365: pass # pg-down
             elif keyval == 65366: pass # pg-up
             return
 
-        if self.search_entry.is_focus(): return
-
         if event.keyval in self.ignore_keys: return
+        if self.search_entry.is_focus(): return
 
         self.search_entry.grab_focus()
         pos = self.search_entry.get_position()

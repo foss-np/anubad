@@ -2,13 +2,13 @@ NAME=`basename $(PWD)`
 
 default: gtk3
 
-tk-py: tk-py3
+demo: tk-py3
 
 tk-py3: mysettings.conf
-	python3 ./main.pyw
+	python3 ./demo.pyw
 
 tk-py2: mysettings.conf
-	python2 main.pyw
+	python2 demo.pyw
 
 gtk3: mysettings.conf
 	./main.py
@@ -16,7 +16,7 @@ gtk3: mysettings.conf
 wine: mysettings.conf
 	# note should load from same directory
 	# and please set the python path in wine
-	wine python main.pyw
+	wine python demo.pyw
 
 dist:
 	rm -f "$(NAME).7z"

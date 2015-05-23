@@ -62,9 +62,9 @@ def treeview_signal_safe_toggler(func):
 
     '''
     def wrapper(self, *args, **kwargs):
-        select = self.treeview.get_selection()
-        select.disconnect(self.select_signal)
+        treeselection = self.treeview.get_selection()
+        treeselection.disconnect(self.select_signal)
         func_return = func(self, *args, **kwargs)
-        self.select_signal = select.connect("changed", self.sidebar_on_row_select)
+        self.select_signal = treeselection.connect("changed", self.sidebar_on_row_select)
         return func_return
     return wrapper
