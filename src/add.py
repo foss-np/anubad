@@ -16,6 +16,7 @@ class Add(Gtk.Window):
         self.connect('key_press_event', lambda w, e: self.key_binds(w, e))
         self.show_all()
 
+
     def makeWidgets(self):
         layout = Gtk.Grid()
         self.add(layout)

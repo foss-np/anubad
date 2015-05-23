@@ -28,6 +28,9 @@ browser:
 viewer:
 	./viewer.py
 
+sidebar:
+	./sidebar.py
+
 add:
 	./add.py
 

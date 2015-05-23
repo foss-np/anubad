@@ -219,8 +219,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main().show_all()
     import doctest
     doctest.testmod()
-    root.show_all()
-    Gtk.main()
