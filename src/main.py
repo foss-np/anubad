@@ -20,8 +20,9 @@ from collections import OrderedDict
 from subprocess import Popen
 from itertools import count
 
-from utils import treeview_signal_safe_toggler
+from sidebar import treeview_signal_safe_toggler
 import preferences as Pre
+import sidebar as Side
 import browser as BL
 import viewer as Vi
 import add as Ad
@@ -260,74 +261,11 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets_sidebar(self):
-        layout = Gtk.VBox()
-
-        scroll = Gtk.ScrolledWindow()
-        layout.pack_start(scroll, True, True, 0)
-        scroll.set_vexpand(False)
-
-        ## TreeView #TODO put sensible name and hierarchy
-        self.suggestions = Gtk.ListStore(int, int, int, int, str)
-        self.treeview = Gtk.TreeView(model=self.suggestions)
-        scroll.add(self.treeview)
-        # self.treeview.set_rubber_banding(True)
-        self.treeview.connect("row-activated", self.sidebar_row_double_click)
-        ### Font stuff
-        self.treeview.modify_font(FONT_obj)
-        self.track_FONT.add(self.treeview)
-
-        select = self.treeview.get_selection()
-        # TODO: multiple selection FIXME
-        select.set_mode(Gtk.SelectionMode.MULTIPLE)
-        self.select_signal = select.connect("changed", self.sidebar_on_row_select)
-
-        renderer_text = Gtk.CellRendererText()
-        # for i, (label, vis) in enumerate(zip("#ntiw", "10001")):
-        #     col = Gtk.TreeViewColumn(label, renderer_text, text=i)
-        #     col.set_visible(True)#True if vis is '1' else False)
-        #     self.treeview.append_column(col)
-
-        self.treeview.set_headers_visible(False)
-        self.treeview.append_column(Gtk.TreeViewColumn('#', renderer_text, text=0))
-        self.treeview.append_column(Gtk.TreeViewColumn('w', renderer_text, text=4))
-
-        ## Filter
-        self.cb_filter = Gtk.ComboBoxText()
-        layout.pack_start(self.cb_filter, False, False, 0)
-        self.cb_filter.append_text("All")
-        self.cb_filter.set_active(0)
-        # self.cb_filter.connect("changed", category_changed)
-        return layout
-
-
-    def sidebar_bind(self, widget, event):
-        print("TODO: pass the action as well")
-        pass
-
-
-    def sidebar_on_row_select(self, treeselection):
-        model, pathlist = treeselection.get_selected_rows()
-        clip_out = []
-        for path in pathlist:
-            c, note, tab, ID, w = self.suggestions[path]
-            note_obj = GUI.notebook_OBJS[note]
-            browser_obj = note_obj.get_nth_page(tab)
-            treerow = browser_obj.treebuffer[ID-1]
-            meta = (note, tab, ID)
-            view = meta not in self.view_CURRENT
-            clip_out += self.viewer.parse(treerow, browser_obj.SRC, print_=view)
-            self.view_CURRENT.add(meta)
-
-        if len(clip_out) > 0:
-            GUI.clip_CYCLE = utils.circle(clip_out)
-            self._circular_search(+1)
-
-
-    def sidebar_row_double_click(self, widget, treepath, treeviewcol):
-        path, column = widget.get_cursor()
-        # tab, obj, n, *row = self.items_FOUND[path[0]]
-        # self.notebook.set_current_page(tab)
-        # obj.treeview.set_cursor(n-1)
+        self.sidebar = Side.Sidebar(self)
+        Side.GUI = GUI
+        for obj in self.sidebar.track_FONT:
+            obj.modify_font(FONT_obj)
+        return self.sidebar
 
 
     def makeWidgets_viewer(self):
@@ -346,7 +284,7 @@ class GUI(Gtk.Window):
             #     self.view_last
             self.view_CURRENT.clear()
             # NOTE: vvv is for sugession
-            selection = self.treeview.get_selection()
+            selection = self.sidebar.treeview.get_selection()
             selection.unselect_all()
             # model, treeiter = selection.get_selected()
             # if treeiter is None:
@@ -424,7 +362,7 @@ class GUI(Gtk.Window):
             for item in obj.treebuffer:
                 if word not in item[1]: continue
                 c += 1
-                row = (note, tab, item)
+                row = (note, tab, item, obj)
                 if word == item[1]: FULL.append(row)
                 else: FUZZ.add(row)
         return c, FULL, FUZZ
@@ -432,8 +370,8 @@ class GUI(Gtk.Window):
 
     @treeview_signal_safe_toggler
     def _view_items(self, query_RESULTS, all_FUZZ=set()):
-        self.suggestions.clear()
-        treeselection = self.treeview.get_selection()
+        self.sidebar.treemodel.clear()
+        treeselection = self.sidebar.treeview.get_selection()
 
         # pprint(query_RESULTS)
         clip_out = []
@@ -444,35 +382,28 @@ class GUI(Gtk.Window):
                 dict_grep2(word, self.viewer, False)
                 continue
             for item in results:
-                note, tab, treerow = item
+                note, tab, treerow, obj = item
                 ID, w, raw = treerow
-
-                note_obj = GUI.notebook_OBJS[note]
-                browser_obj = note_obj.get_nth_page(tab)
+                c += 1
+                self.sidebar.treemodel.append([c, note, tab, ID, w, obj.SRC])
 
                 meta = (note, tab, ID)
                 view = meta not in self.view_CURRENT
-                clip_out += self.viewer.parse(treerow, browser_obj.SRC, print_=view)
-
+                clip_out += self.viewer.parse(treerow, obj.SRC, print_=view)
                 self.view_CURRENT.add(meta)
-                c += 1
-                self.suggestions.append([c, note, tab, ID, w])
                 treeselection.select_path(c - 1)
 
         for item in all_FUZZ:
-            note, tab, treerow = item
+            note, tab, treerow, obj = item
             ID, w, raw = treerow
             c += 1
-            self.suggestions.append([c, note, tab, ID, w])
+            self.sidebar.treemodel.append([c, note, tab, ID, w, obj.SRC])
             if not self.toolbar.t_ShowAll.get_active(): continue
-
-            note_obj = GUI.notebook_OBJS[note]
-            browser_obj = note_obj.get_nth_page(tab)
 
             meta = (note, tab, ID)
             view = meta not in self.view_CURRENT
             clip_out += self.viewer.parse(treerow, browser_obj.SRC, print_=view)
-            self.view_CURRENT.append((note, tab, ID))
+            self.view_CURRENT.append(meta)
             treeselection.select_path(c-1)
 
         if len(self.view_CURRENT) == 0: return

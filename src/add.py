@@ -122,6 +122,5 @@ def main():
 
 
 if __name__ == '__main__':
-    exec(open("gsettings.conf").read())
     main().destroy = Gtk.main_quit
     Gtk.main()
