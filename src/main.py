@@ -16,6 +16,8 @@ fp_dev_null = open(os.devnull, 'w')
 fp3 = fp_dev_null
 
 from gi.repository import Gtk, Gdk, Pango
+from gi.repository import IBus
+
 from collections import OrderedDict
 from subprocess import Popen
 from itertools import count
@@ -64,12 +66,21 @@ class GUI(Gtk.Window):
         self.makeWidgets()
         self.connect('key_press_event', self.key_binds)
         self.connect('delete-event', Gtk.main_quit)
-        self.connect('focus-in-event', lambda *e: self.search_entry.grab_focus())
+        self.connect('focus-in-event', lambda *e: self._on_focus_in_event())
 
         self.search_entry.grab_focus()
         self.show_all()
         # NOTE: GTK BUG, notebook page switch only after its visible
         self.notebook.set_current_page(self.notebook.MAIN_TAB)
+
+
+    def _on_focus_in_event(self):
+        # NOTE this is TEMP fixes for me
+        print("focus: in")
+        if ibus.is_global_engine_enabled():
+            ibus.exit(True)
+            print("sorry: killing ibus there is no way to disable")
+        self.search_entry.grab_focus()
 
 
     def makeWidgets(self):
@@ -583,6 +594,17 @@ def main():
 
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+
+    global ibus
+    ibus = IBus.Bus()
+    print("ibus.isconnected:", ibus.is_connected())
+    # print("ibus.global.settings:", ibus.get_use_global_engine())
+
+    # ibus_engine = ibus.get_global_engine()
+    # print("ibus.engine.languge:", ibus_engine.get_language())
+    # print("ibus.isactive:", ibus.is_global_engine_enabled())
+    # print()
+
 
     global root
     root = GUI()
