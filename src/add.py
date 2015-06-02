@@ -103,9 +103,9 @@ class Add(Gtk.Window):
         row = [t, obj, count] + row
 
         # TODO: move this to main.py return destroy signal
-        self.parent.items_FOUND.clear()
-        self.parent.items_FOUND.append(row)
-        self.parent._view_items([0])
+        # self.parent.items_FOUND.clear()
+        # self.parent.items_FOUND.append(row)
+        # self.parent._view_items([0])
         self.destroy()
         # return t, row
 

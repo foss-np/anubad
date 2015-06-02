@@ -16,7 +16,8 @@ fp_dev_null = open(os.devnull, 'w')
 fp3 = fp_dev_null
 
 from gi.repository import Gtk, Gdk, Pango
-from gi.repository import IBus
+if os.name is not 'nt':
+    from gi.repository import IBus
 
 from collections import OrderedDict
 from subprocess import Popen
@@ -56,10 +57,10 @@ class GUI(Gtk.Window):
 
         self.view_CURRENT = set()
         self.view_LAST = None
+        self.search_SPACE = None
 
         self.hist_LIST = []
         self.hist_CURSOR = 0
-
 
         self.ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
 
@@ -77,10 +78,12 @@ class GUI(Gtk.Window):
     def _on_focus_in_event(self):
         # NOTE this is TEMP fixes for me
         print("focus: in")
+        self.search_entry.grab_focus()
+        if os.name is 'nt': return
         if ibus.is_global_engine_enabled():
             ibus.exit(True)
             print("sorry: killing ibus there is no way to disable")
-        self.search_entry.grab_focus()
+
 
 
     def makeWidgets(self):
@@ -200,7 +203,8 @@ class GUI(Gtk.Window):
         self.history_menu = Gtk.Menu()
         widget.set_menu(self.history_menu)
 
-        for i, (query, items, views) in enumerate(reversed(self.hist_LIST), 1):
+        for i, (query_RESULTS, all_FUZZ) in enumerate(reversed(self.hist_LIST), 1):
+            query = ', '.join([ k for k in query_RESULTS.keys() ])
             rmi = Gtk.RadioMenuItem(label=query)
             rmi.show()
             if len(self.hist_LIST) - i == self.hist_CURSOR:
@@ -332,9 +336,19 @@ class GUI(Gtk.Window):
         tab = self.notebook.get_current_page()
         obj = self.notebook.get_nth_page(tab)
         row = list(model[treeiter])
-        self.viewer.parse(tab, obj, row)
+        self.viewer.parse(row, obj.SRC)
         self.viewer.jump_to_end()
         return
+
+
+    def create_search_SPACE(self):
+        search_SPACE = []
+        for i, obj in enumerate(self.notebook_OBJS):
+            for c in count():
+                widget = obj.get_nth_page(c)
+                if widget is None: break
+                search_SPACE.append((i, c, widget))
+        return search_SPACE
 
 
     def search_and_reflect(self):
@@ -343,18 +357,11 @@ class GUI(Gtk.Window):
         if 'r:' == raw_query[:2]: query = raw_query[2:]
         else: query = raw_query.strip().lower()
 
-        search_SPACE = []
-        for i, obj in enumerate(self.notebook_OBJS):
-            for c in count():
-                widget = obj.get_nth_page(c)
-                if widget is None: break
-                search_SPACE.append((i, c, widget))
-
         ## Ordered Dict use for undo/redo history
         query_RESULTS = OrderedDict()
         all_FUZZ = set()
         for word in set(query.split()):
-            n, FULL, FUZZ = self.searchWord(word, search_SPACE)
+            n, FULL, FUZZ = self.searchWord(word)
             query_RESULTS[word] = (FULL, n is not 0)
             all_FUZZ = all_FUZZ | FUZZ
 
@@ -366,10 +373,14 @@ class GUI(Gtk.Window):
         self.toolbar.b_Forward.set_sensitive(False)
 
 
-    def searchWord(self, word, search_space):
+    def searchWord(self, word, search_SPACE=None):
         FULL, FUZZ = [], set()
         c = 0
-        for note, tab, obj in search_space:
+        if search_SPACE is None:
+            self.search_SPACE = self.create_search_SPACE()
+            search_SPACE = self.search_SPACE
+
+        for note, tab, obj in search_SPACE:
             for item in obj.treebuffer:
                 if word not in item[1]: continue
                 c += 1
@@ -393,31 +404,31 @@ class GUI(Gtk.Window):
                 dict_grep2(word, self.viewer, False)
                 continue
             for item in results:
-                note, tab, treerow, obj = item
-                ID, w, raw = treerow
+                note, tab, row, obj = item
+                ID, w, raw = row
                 c += 1
                 self.sidebar.treemodel.append([c, note, tab, ID, w, obj.SRC])
 
                 meta = (note, tab, ID)
                 view = meta not in self.view_CURRENT
-                clip_out += self.viewer.parse(treerow, obj.SRC, print_=view)
+                clip_out += self.viewer.parse(row, obj.SRC, print_=view)
                 self.view_CURRENT.add(meta)
                 treeselection.select_path(c - 1)
 
         for item in all_FUZZ:
-            note, tab, treerow, obj = item
-            ID, w, raw = treerow
+            note, tab, row, obj = item
+            ID, w, raw = row
             c += 1
             self.sidebar.treemodel.append([c, note, tab, ID, w, obj.SRC])
             if not self.toolbar.t_ShowAll.get_active(): continue
 
             meta = (note, tab, ID)
             view = meta not in self.view_CURRENT
-            clip_out += self.viewer.parse(treerow, browser_obj.SRC, print_=view)
+            clip_out += self.viewer.parse(row, browser_obj.SRC, print_=view)
             self.view_CURRENT.append(meta)
             treeselection.select_path(c-1)
 
-        if len(self.view_CURRENT) == 0: return
+        if len(clip_out) == 0: return
         GUI.clip_CYCLE = utils.circle(clip_out)
         self._circular_search(+1)
         self.search_entry.grab_focus()
@@ -432,13 +443,16 @@ class GUI(Gtk.Window):
 
 
     def _open_src(self):
-        if self.items_FOUND:
-            t, obj, _id, *etc = self.items_FOUND[self.views_CURRENT[0]]
-        else:
+        if len(self.sidebar.treemodel) == 0:
             t = self.notebook.get_current_page()
-            _id = None
+            self.notebook.get_nth_page(t).open_src()
+            return
 
-        self.notebook.get_nth_page(t).open_src(_id)
+        treeselection = self.sidebar.treeview.get_selection()
+        model, pathlist = treeselection.get_selected_rows()
+        c, note, tab, ID, w, src = self.sidebar.treemodel[pathlist[0]]
+
+        self.notebook.get_nth_page(tab).open_src(ID)
         # TODO: connection
         # process.connect('delete-event', lambda e: print("i'm back"))
 
@@ -495,8 +509,6 @@ class GUI(Gtk.Window):
         if n >= t: n = 0
         elif n < 0: n = t - 1
         self.notebook.set_current_page(n)
-        # obj = self.notebook.get_nth_page(n)
-        # obj.grab_focus()
 
 
     def add_to_gloss(self, query=""):
@@ -506,10 +518,10 @@ class GUI(Gtk.Window):
         for obj in add.track_FONT:
             obj.modify_font(FONT_obj)
         # TODO: connection
-        add.connect('delete-event', self._add_to_gloss_reflect)
+        add.connect('destroy', self._add_to_gloss_reflect)
 
 
-    def _add_to_gloss_reflect(self, widget, event):
+    def _add_to_gloss_reflect(self, *args):
         print("hello i'm back")
 
 
@@ -528,8 +540,8 @@ class GUI(Gtk.Window):
         elif keyval == 65479: self.reload(LIST_GLOSS[2]) # F10
         elif keyval == 65476: xcowsay(query) # F7
         elif keyval == 65474: self._reload_gloss() # F5
-        elif keyval == 65362: self.sidebar_bind(widget, event)# UP-Arrow
-        elif keyval == 65364: self.sidebar_bind(widget, event)# DOWN-Arrow
+        elif keyval == 65362: self.sidebar.treeview.grab_focus() # UP-Arrow
+        elif keyval == 65364: self.sidebar.treeview.grab_focus() # DOWN-Arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('1'): print(dict_grep2(query, self.viewer, False))
             elif keyval == ord('2'): dict_grep(query, self.viewer, False)
@@ -549,15 +561,10 @@ class GUI(Gtk.Window):
                 if clip is None: return
                 query = clip.strip().lower()
                 self.search_entry.set_text(clip)
-                self.searchWord(query)
+                self.search_and_reflect()
             return
         elif Gdk.ModifierType.MOD1_MASK & state:
-            if ord('1') <= keyval <= ord('9'):
-                t = keyval - ord('1')
-                # obj = self.notebook.get_nth_page(t)
-                # if obj == None: return
-                self.notebook.set_current_page(t) # NOTE: range check not needed
-                # obj.grab_focus()
+            if ord('1') <= keyval <= ord('9'): self.notebook.set_current_page(keyval - ord('1')) # NOTE: range check not needed
             elif keyval == ord('0'): self.notebook.set_current_page(self.MAIN_TAB)
             elif keyval == 65361: self._jump_history(-1) # LEFT_ARROW
             elif keyval == 65363: self._jump_history(+1) # RIGHT_ARROW
@@ -595,16 +602,15 @@ def main():
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    global ibus
-    ibus = IBus.Bus()
-    print("ibus.isconnected:", ibus.is_connected())
-    # print("ibus.global.settings:", ibus.get_use_global_engine())
-
-    # ibus_engine = ibus.get_global_engine()
-    # print("ibus.engine.languge:", ibus_engine.get_language())
-    # print("ibus.isactive:", ibus.is_global_engine_enabled())
-    # print()
-
+    if os.name is not 'nt':
+        global ibus
+        ibus = IBus.Bus()
+        print("ibus.isconnected:", ibus.is_connected())
+        # print("ibus.global.settings:", ibus.get_use_global_engine())
+        # ibus_engine = ibus.get_global_engine()
+        # print("ibus.engine.languge:", ibus_engine.get_language())
+        # print("ibus.isactive:", ibus.is_global_engine_enabled())
+        # print()
 
     global root
     root = GUI()
