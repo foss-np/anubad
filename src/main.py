@@ -61,6 +61,7 @@ class GUI(Gtk.Window):
 
         self.hist_LIST = []
         self.hist_CURSOR = 0
+        self.copy_BUFFER = ""
 
         self.ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
 
@@ -68,6 +69,7 @@ class GUI(Gtk.Window):
         self.connect('key_press_event', self.key_binds)
         self.connect('delete-event', Gtk.main_quit)
         self.connect('focus-in-event', lambda *e: self._on_focus_in_event())
+        self.connect('focus-out-event', lambda *e: self._on_focus_out_event())
 
         self.search_entry.grab_focus()
         self.show_all()
@@ -84,6 +86,10 @@ class GUI(Gtk.Window):
             ibus.exit(True)
             print("sorry: killing ibus there is no way to disable")
 
+
+    def _on_focus_out_event(self):
+        if self.toolbar.t_Copy.get_active():
+            clipboard.set_text(self.copy_BUFFER, -1)
 
 
     def makeWidgets(self):
@@ -452,7 +458,8 @@ class GUI(Gtk.Window):
         model, pathlist = treeselection.get_selected_rows()
         c, note, tab, ID, w, src = self.sidebar.treemodel[pathlist[0]]
 
-        self.notebook.get_nth_page(tab).open_src(ID)
+        note_obj = GUI.notebook_OBJS[note]
+        note_obj.get_nth_page(tab).open_src(ID)
         # TODO: connection
         # process.connect('delete-event', lambda e: print("i'm back"))
 
@@ -497,9 +504,7 @@ class GUI(Gtk.Window):
         m = self.viewer.textbuffer.create_mark("tmp", position)
         self.viewer.textview.scroll_mark_onscreen(m)
         self.viewer.textbuffer.delete_mark(m)
-
-        if self.toolbar.t_Copy.get_active():
-            clipboard.set_text(text, -1)
+        self.copy_BUFFER = text
 
 
     def _circular_tab_switch(self, d):
@@ -565,7 +570,7 @@ class GUI(Gtk.Window):
             return
         elif Gdk.ModifierType.MOD1_MASK & state:
             if ord('1') <= keyval <= ord('9'): self.notebook.set_current_page(keyval - ord('1')) # NOTE: range check not needed
-            elif keyval == ord('0'): self.notebook.set_current_page(self.MAIN_TAB)
+            elif keyval == ord('0'): self.notebook.set_current_page(self.notebook.MAIN_TAB)
             elif keyval == 65361: self._jump_history(-1) # LEFT_ARROW
             elif keyval == 65363: self._jump_history(+1) # RIGHT_ARROW
             return
