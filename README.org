@@ -3,8 +3,11 @@
 
 Graphical Interface for glossary browsing.
 
-[[http://i.creativecommons.org/l/by/3.0/88x31.png][Creative Commons Attribution 3.0 Unported License IMAGE]]
-Copyright © 2013 to the Anubad Authors.
+[[http://i.creativecommons.org/l/by/3.0/88x31.png]]
+
+Copyright © 2013 - 2015 to the anubad Authors.
+
+[[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot2.png]]
 
 * How to get it
 
