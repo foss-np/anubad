@@ -502,6 +502,7 @@ class GUI(Gtk.Window):
             self.search_entry.grab_focus()
             return
 
+        self.toolbar.t_Copy.set_active(True)
         global clipboard
         utils.diff = d
         text = next(GUI.clip_CYCLE)

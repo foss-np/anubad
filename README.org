@@ -21,18 +21,17 @@ Copyright © 2013 - 2015 to the anubad Authors.
   ./configure
   #+end_src
 
-  Two version are avaliable one with native python /tkinter/, and Gtk.
-
-** Tkinter Version
+** quick-demo
 
    Earlier design was more focued on making the code run with various
-   platforms, without installation.
+   platforms, which is written in python /tkinter/ which is no longer
+   in development.
 
    - py2/3 compatible
    - Cross Platform (linux/mswin) hopefully mac
 
    #+begin_src bash
-   ./main.pyw
+   ./demo.pyw
    #+end_src
 
 
