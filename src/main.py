@@ -77,6 +77,13 @@ class GUI(Gtk.Window):
         self.notebook.set_current_page(self.notebook.MAIN_TAB)
 
 
+    def turn_off_auto_copy(func):
+        def wrapper(self, *args, **kwargs):
+            self.toolbar.t_Copy.set_active(False)
+            return func(self, *args, **kwargs)
+        return wrapper
+
+
     def _on_focus_in_event(self):
         # NOTE this is TEMP fixes for me
         print("focus: in")
@@ -440,14 +447,17 @@ class GUI(Gtk.Window):
         self.search_entry.grab_focus()
 
 
+    @turn_off_auto_copy
     def _open_dir(self):
         print("pid:", Popen(["nemo", self.notebook.GLOSS]).pid)
 
 
+    @turn_off_auto_copy
     def _open_term(self):
         print("pid:", Popen([TERMINAL, "--working-directory=%s"%self.notebook.GLOSS]).pid)
 
 
+    @turn_off_auto_copy
     def _open_src(self):
         if len(self.sidebar.treemodel) == 0:
             t = self.notebook.get_current_page()
@@ -515,7 +525,7 @@ class GUI(Gtk.Window):
         elif n < 0: n = t - 1
         self.notebook.set_current_page(n)
 
-
+    @turn_off_auto_copy
     def add_to_gloss(self, query=""):
         global clipboard
         Ad.clipboard = clipboard
