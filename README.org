@@ -18,7 +18,8 @@ Copyright © 2013 - 2015 to the anubad Authors.
 * Use
 
   #+begin_src bash
-  ./configure
+  ./configure     # downloads glossary
+  make            # runs anubad
   #+end_src
 
 ** quick-demo
@@ -31,6 +32,7 @@ Copyright © 2013 - 2015 to the anubad Authors.
    - Cross Platform (linux/mswin) hopefully mac
 
    #+begin_src bash
+   cd src
    ./demo.pyw
    #+end_src
 
@@ -42,7 +44,8 @@ Copyright © 2013 - 2015 to the anubad Authors.
    /Gtk/.
 
    #+begin_src bash
-   ./gtk3.py
+   cd src
+   ./main.py
    #+end_src
 
 * Running Gtk Version on Windows
