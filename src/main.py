@@ -636,9 +636,9 @@ def main():
 
 if __name__ == '__main__':
     main().connect('key_press_event', root_binds)
-    PATH_PLUGINS = fullpath + PATH_PLUGINS
+    # TODO: load plugins as modules
     if PATH_PLUGINS and os.path.isdir(PATH_PLUGINS):
-        # TODO: load plugins as modules
+        PATH_PLUGINS = fullpath + PATH_PLUGINS
         sys.path.append(PATH_PLUGINS)
         for file_name in os.listdir(PATH_PLUGINS):
             if file_name[-3:] not in ".py": continue

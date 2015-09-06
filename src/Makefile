@@ -22,6 +22,9 @@ dist:
 	rm -f "$(NAME).7z"
 	7z a "$(NAME)" $(PWD)
 
+mysettings.conf:
+	touch mysettings.conf
+
 browser:
 	./browser.py
 
