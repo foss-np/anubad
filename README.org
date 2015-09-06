@@ -18,8 +18,8 @@ Copyright © 2013 - 2015 to the anubad Authors.
 * Use
 
   #+begin_src bash
-  ./configure     # downloads glossary
-  make            # runs anubad
+    ./configure  # downloads glossary
+    make         # runs gtk-version
   #+end_src
 
 ** quick-demo
@@ -32,8 +32,8 @@ Copyright © 2013 - 2015 to the anubad Authors.
    - Cross Platform (linux/mswin) hopefully mac
 
    #+begin_src bash
-   cd src
-   ./demo.pyw
+     cd src
+     ./demo.pyw
    #+end_src
 
 
@@ -44,8 +44,8 @@ Copyright © 2013 - 2015 to the anubad Authors.
    /Gtk/.
 
    #+begin_src bash
-   cd src
-   ./main.py
+     cd src
+     ./main.py
    #+end_src
 
 * Running Gtk Version on Windows

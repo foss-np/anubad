@@ -88,7 +88,7 @@ class GUI(Gtk.Window):
         # NOTE this is TEMP fixes for me
         print("focus: in")
         self.search_entry.grab_focus()
-        if os.name is 'nt': return
+        if os.name is 'nt' and FLAG_IBus: return
         if ibus.is_global_engine_enabled():
             ibus.exit(True)
             print("sorry: killing ibus there is no way to disable")
@@ -550,7 +550,7 @@ class GUI(Gtk.Window):
         # print(e.keyval)
         keyval, state = event.keyval, event.state
         query = self.search_entry.get_text().strip().lower()
-        if   keyval == 65307: Gtk.main_quit() # Esc
+        if   keyval == 65307 and FLAG_Quit: Gtk.main_quit() # Esc
         elif keyval == 65481: self.reload(LIST_GLOSS[0]) # F12
         elif keyval == 65480: self.reload(LIST_GLOSS[1]) # F11
         elif keyval == 65479: self.reload(LIST_GLOSS[2]) # F10
@@ -637,8 +637,8 @@ def main():
 if __name__ == '__main__':
     main().connect('key_press_event', root_binds)
     # TODO: load plugins as modules
-    if PATH_PLUGINS and os.path.isdir(PATH_PLUGINS):
-        PATH_PLUGINS = fullpath + PATH_PLUGINS
+    PATH_PLUGINS = fullpath + PATH_PLUGINS
+    if PATH_PLUGINS != fullpath and os.path.isdir(fullpath):
         sys.path.append(PATH_PLUGINS)
         for file_name in os.listdir(PATH_PLUGINS):
             if file_name[-3:] not in ".py": continue
