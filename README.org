@@ -7,7 +7,7 @@ Graphical Interface for glossary browsing.
 
 Copyright © 2013 - 2015 to the anubad Authors.
 
-[[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot2.png]]
+[[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot3.png]]
 
 * How to get it
 
