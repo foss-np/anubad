@@ -16,7 +16,7 @@ fp_dev_null = open(os.devnull, 'w')
 fp3 = fp_dev_null
 
 from gi.repository import Gtk, Gdk, Pango
-if os.name is not 'nt':
+if os.name is not 'nt' and FLAG_IBus:
     from gi.repository import IBus
 
 from collections import OrderedDict
@@ -618,7 +618,7 @@ def main():
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    if os.name is not 'nt':
+    if os.name is not 'nt' and FLAG_IBus:
         global ibus
         ibus = IBus.Bus()
         print("ibus.isconnected:", ibus.is_connected())
