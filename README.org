@@ -1,5 +1,6 @@
 #+TITLE: anubad
 #+DATE: Sunday, Apr 19 2015
+#+STARTUP: showall
 
 Graphical Interface for glossary browsing.
 
@@ -7,57 +8,56 @@ Graphical Interface for glossary browsing.
 
 Copyright © 2013 - 2015 to the anubad Authors.
 
-[[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot3.png]]
+[[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot4.png]]
 
 
-* How to get it
 
-** Dependencies
+** Installation
 
-   - GTK+3
-   - Python 2 (2.6 or later) or Python 3 (3.1 or later)
-   - gobject-introspection
+** Requirement
 
-  #+begin_src bash
-  git clone https://github.com/foss-np/anubad
-  #+end_src
+   |                       | linux          | ms windows            |
+   |-----------------------+----------------+-----------------------|
+   | python                | python 3.xx    | [[https://www.python.org/downloads/][python 3.xx]]           |
+   | gobject-introspection | python-gobject | [[http://sourceforge.net/projects/pygobjectwin32/files/][pygobjectwin32]]        |
+   | GTK                   | GTK+ 3         | included in pygobject |
 
-* Use
+** how to get it
+   #+begin_src bash
+     git clone https://github.com/foss-np/anubad
+   #+end_src
 
-  #+begin_src bash
-    ./configure  # downloads glossary
-    make         # runs gtk-version
-  #+end_src
+** config
 
-** quick-demo
-
-   Earlier design was more focued on making the code run with various
-   platforms, which is written in python /tkinter/ which is no longer
-   in development.
-
-   - py2/3 compatible
-   - Cross Platform (linux/mswin) hopefully mac
+   to auto configure run..
 
    #+begin_src bash
-     cd src
+     ./configure
+   #+end_src
+
+   for more detail configuration see =src/gsettings= and
+   =src/mysettings=.
+
+* Usage
+** quick-demo
+
+   Earlier design was more focused on making the code run with various
+   platforms including python 2 and 3 compatibility, which is written
+   in python /tkinter/ which is no longer in development.
+
+   #+begin_src bash
+     cd /path/to/anubad/src
      ./demo.pyw
    #+end_src
 
 
-** Gtk Version
+** Gtk version
 
-   Anubad was re-written in /Gtk/, due font rendering issues, and poor
-   system intergation in /tkinter/. Current development version is in
-   /Gtk/.
+   The *anubad* was re-written in /Gtk/, due font rendering issues,
+   and poor system intergation in /tkinter/. Current development
+   version is in /Gtk/.
 
    #+begin_src bash
-     cd src
+     cd /path/to/anubad/src
      ./main.py
    #+end_src
-
-* Running Gtk Version on Windows
-** Requirement
-   - git
-   - python 3
-   - pygtk
-     http://sourceforge.net/projects/pygobjectwin32/files/
