@@ -9,7 +9,14 @@ Copyright © 2013 - 2015 to the anubad Authors.
 
 [[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot3.png]]
 
+
 * How to get it
+
+** Dependencies
+
+   - GTK+3
+   - Python 2 (2.6 or later) or Python 3 (3.1 or later)
+   - gobject-introspection
 
   #+begin_src bash
   git clone https://github.com/foss-np/anubad
