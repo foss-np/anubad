@@ -21,6 +21,8 @@ Copyright © 2013 - 2015 to the anubad Authors.
    | python                | python 3.xx    | [[https://www.python.org/downloads/][python 3.xx]]           |
    | gobject-introspection | python-gobject | [[http://sourceforge.net/projects/pygobjectwin32/files/][pygobjectwin32]]        |
    | GTK                   | GTK+ 3         | included in pygobject |
+   | Keybinder             | libkeybinder3  |                       |
+
 
 ** how to get it
    #+begin_src bash

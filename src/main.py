@@ -16,9 +16,12 @@ fp_dev_null = open(os.devnull, 'w')
 fp3 = fp_dev_null
 
 from gi.repository import Gtk, Gdk, Pango
+from gi.repository import Keybinder
+
 if os.name is not 'nt' and FLAG_IBus:
     from gi.repository import IBus
 
+import importlib
 from collections import OrderedDict
 from subprocess import Popen
 from itertools import count
@@ -86,7 +89,7 @@ class GUI(Gtk.Window):
 
     def _on_focus_in_event(self):
         # NOTE this is TEMP fixes for me
-        print("focus: in")
+        # print("focus: in")
         self.search_entry.grab_focus()
         if os.name is 'nt' and FLAG_IBus: return
         if ibus.is_global_engine_enabled():
@@ -414,8 +417,10 @@ class GUI(Gtk.Window):
         for word, (results, found) in query_RESULTS.items():
             if not found:
                 self.viewer.not_found(word)
-                dict_grep2(word, self.viewer, False)
+                # TODO wrap this
+                # dict_grep2(word, self.viewer, False)
                 continue
+
             for item in results:
                 note, tab, row, obj = item
                 ID, w, raw = row
@@ -559,11 +564,8 @@ class GUI(Gtk.Window):
         elif keyval == 65362: self.sidebar.treeview.grab_focus() # UP-Arrow
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # DOWN-Arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
-            if   keyval == ord('1'): print(dict_grep2(query, self.viewer, False))
-            elif keyval == ord('2'): dict_grep(query, self.viewer, False)
-            elif keyval == ord('3'): web_search(query, self.viewer)
-            elif keyval == ord('4'): dict_grep(query, self.viewer)
-            elif keyval == ord('e'): self._open_src()
+            # elif keyval == ord('4'): web_dict(query, self.viewer)
+            if   keyval == ord('e'): self._open_src()
             elif keyval == ord('i'): self.add_to_gloss(query)
             elif keyval == ord('l'): self.viewer.clean()
             elif keyval == ord('o'): self._open_dir()
@@ -633,16 +635,23 @@ def main():
 
     return root
 
+def load_plugins():
+    global PATH_PLUGINS
+    PATH_PLUGINS = fullpath + PATH_PLUGINS
+    if PATH_PLUGINS == fullpath and not os.path.isdir(fullpath): return
+
+    sys.path.append(PATH_PLUGINS)
+
+    for file_name in os.listdir(PATH_PLUGINS):
+        if file_name[-3:] not in ".py": continue
+
+        print("plugin:", file_name, file=sys.stderr)
+        namespace = importlib.__import__(file_name[:-3])
+        namespace.plugin_main(root, fullpath)
+
 
 if __name__ == '__main__':
     main().connect('key_press_event', root_binds)
-    # TODO: load plugins as modules
-    PATH_PLUGINS = fullpath + PATH_PLUGINS
-    if PATH_PLUGINS != fullpath and os.path.isdir(fullpath):
-        sys.path.append(PATH_PLUGINS)
-        for file_name in os.listdir(PATH_PLUGINS):
-            if file_name[-3:] not in ".py": continue
-            print("plugin:", file_name, file=sys.stderr)
-            # import file_name[:-3]
-            exec(open(PATH_PLUGINS + file_name, encoding="UTF-8").read())
+    Keybinder.init()
+    load_plugins()
     Gtk.main()
