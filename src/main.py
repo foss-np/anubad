@@ -10,11 +10,6 @@ fullpath = os.path.dirname(filepath) + '/'
 exec(open(fullpath + "gsettings.conf", encoding="UTF-8").read())
 exec(open(fullpath + "mysettings.conf", encoding="UTF-8").read())
 
-PATH_GLOSS = fullpath + PATH_GLOSS
-
-fp_dev_null = open(os.devnull, 'w')
-fp3 = fp_dev_null
-
 from gi.repository import Gtk, Gdk, Pango
 from gi.repository import Keybinder
 
@@ -417,8 +412,6 @@ class GUI(Gtk.Window):
         for word, (results, found) in query_RESULTS.items():
             if not found:
                 self.viewer.not_found(word)
-                # TODO wrap this
-                # dict_grep2(word, self.viewer, False)
                 continue
 
             for item in results:
@@ -555,16 +548,13 @@ class GUI(Gtk.Window):
         # print(e.keyval)
         keyval, state = event.keyval, event.state
         query = self.search_entry.get_text().strip().lower()
-        if   keyval == 65307 and FLAG_Quit: Gtk.main_quit() # Esc
-        elif keyval == 65481: self.reload(LIST_GLOSS[0]) # F12
+        if   keyval == 65481: self.reload(LIST_GLOSS[0]) # F12
         elif keyval == 65480: self.reload(LIST_GLOSS[1]) # F11
         elif keyval == 65479: self.reload(LIST_GLOSS[2]) # F10
-        elif keyval == 65476: xcowsay(query) # F7
         elif keyval == 65474: self._reload_gloss() # F5
         elif keyval == 65362: self.sidebar.treeview.grab_focus() # UP-Arrow
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # DOWN-Arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
-            # elif keyval == ord('4'): web_dict(query, self.viewer)
             if   keyval == ord('e'): self._open_src()
             elif keyval == ord('i'): self.add_to_gloss(query)
             elif keyval == ord('l'): self.viewer.clean()
@@ -602,23 +592,36 @@ class GUI(Gtk.Window):
         self.search_entry_binds(widget, event)
 
 
-def load_settings():
+def load_plugins():
+    if PATH_PLUGINS == fullpath and not os.path.isdir(fullpath): return
+    sys.path.append(PATH_PLUGINS)
+    for file_name in os.listdir(PATH_PLUGINS):
+        if file_name[-3:] not in ".py": continue
+
+        print("plugin:", file_name, file=sys.stderr)
+        namespace = importlib.__import__(file_name[:-3])
+        namespace.plugin_main(root, fullpath)
+
+
+def init():
+    global PATH_GLOSS
+    PATH_GLOSS = fullpath + PATH_GLOSS
+
+    global fp_dev_null
+    fp_dev_null = open(os.devnull, 'w')
+
+    global fp3
+    fp3 = fp_dev_null
+
     global FONT_obj
     FONT_obj =  Pango.font_description_from_string(def_FONT)
     BL.fp3 = fp3
 
-
-def root_binds(widget, event):
-    # print(event.keyval)
-    if event.keyval == 65307:
-        Gtk.main_quit()
-
-
-def main():
-    load_settings()
-
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+
+    global PATH_PLUGINS
+    PATH_PLUGINS = fullpath + PATH_PLUGINS
 
     if os.name is not 'nt' and FLAG_IBus:
         global ibus
@@ -630,28 +633,15 @@ def main():
         # print("ibus.isactive:", ibus.is_global_engine_enabled())
         # print()
 
+
+def main():
+    init()
     global root
     root = GUI()
-
-    return root
-
-def load_plugins():
-    global PATH_PLUGINS
-    PATH_PLUGINS = fullpath + PATH_PLUGINS
-    if PATH_PLUGINS == fullpath and not os.path.isdir(fullpath): return
-
-    sys.path.append(PATH_PLUGINS)
-
-    for file_name in os.listdir(PATH_PLUGINS):
-        if file_name[-3:] not in ".py": continue
-
-        print("plugin:", file_name, file=sys.stderr)
-        namespace = importlib.__import__(file_name[:-3])
-        namespace.plugin_main(root, fullpath)
+    Keybinder.init()
+    load_plugins()
 
 
 if __name__ == '__main__':
-    main().connect('key_press_event', root_binds)
-    Keybinder.init()
-    load_plugins()
+    main()
     Gtk.main()
