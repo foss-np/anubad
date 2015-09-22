@@ -13,9 +13,6 @@ exec(open(fullpath + "mysettings.conf", encoding="UTF-8").read())
 from gi.repository import Gtk, Gdk, Pango
 from gi.repository import Keybinder
 
-if os.name is not 'nt' and FLAG_IBus:
-    from gi.repository import IBus
-
 import importlib
 from collections import OrderedDict
 from subprocess import Popen
@@ -86,10 +83,6 @@ class GUI(Gtk.Window):
         # NOTE this is TEMP fixes for me
         # print("focus: in")
         self.search_entry.grab_focus()
-        if os.name is 'nt' and FLAG_IBus: return
-        if ibus.is_global_engine_enabled():
-            ibus.exit(True)
-            print("sorry: killing ibus there is no way to disable")
 
 
     def _on_focus_out_event(self):
@@ -547,7 +540,6 @@ class GUI(Gtk.Window):
     def key_binds(self, widget, event):
         # print(e.keyval)
         keyval, state = event.keyval, event.state
-        query = self.search_entry.get_text().strip().lower()
         if   keyval == 65481: self.reload(LIST_GLOSS[0]) # F12
         elif keyval == 65480: self.reload(LIST_GLOSS[1]) # F11
         elif keyval == 65479: self.reload(LIST_GLOSS[2]) # F10
@@ -556,7 +548,7 @@ class GUI(Gtk.Window):
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # DOWN-Arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('e'): self._open_src()
-            elif keyval == ord('i'): self.add_to_gloss(query)
+            elif keyval == ord('i'): self.add_to_gloss()
             elif keyval == ord('l'): self.viewer.clean()
             elif keyval == ord('o'): self._open_dir()
             elif keyval == ord('r'): self._circular_search(-1)
@@ -622,16 +614,6 @@ def init():
 
     global PATH_PLUGINS
     PATH_PLUGINS = fullpath + PATH_PLUGINS
-
-    if os.name is not 'nt' and FLAG_IBus:
-        global ibus
-        ibus = IBus.Bus()
-        print("ibus.isconnected:", ibus.is_connected())
-        # print("ibus.global.settings:", ibus.get_use_global_engine())
-        # ibus_engine = ibus.get_global_engine()
-        # print("ibus.engine.languge:", ibus_engine.get_language())
-        # print("ibus.isactive:", ibus.is_global_engine_enabled())
-        # print()
 
 
 def main():
