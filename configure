@@ -2,8 +2,8 @@
 
 WD="$(dirname $(readlink $0 || echo $0))"
 FILE="$WD/src/mysettings.conf"
-echo $FILE
-if [[ ! -e $FILE ]]; then
+
+if [[ -e $FILE ]]; then
     echo "$FILE file already exists!"
     echo -n "Do you still want to continue? [y/n] "
     read reply

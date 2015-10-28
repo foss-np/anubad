@@ -11,7 +11,6 @@ exec(open(fullpath + "gsettings.conf", encoding="UTF-8").read())
 exec(open(fullpath + "mysettings.conf", encoding="UTF-8").read())
 
 from gi.repository import Gtk, Gdk, Pango
-from gi.repository import Keybinder
 
 import importlib
 from collections import OrderedDict
@@ -31,7 +30,6 @@ if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
     from debugly import *
     from pprint import pprint
 else:
-    sys.stdout = fp_dev_null
     debug = lambda f, *arg, **karg: f(arg, karg)
 
 #   ____ _   _ ___
@@ -309,7 +307,6 @@ class GUI(Gtk.Window):
             # if treeiter is None:
             #     print("It clean")
         self.viewer.clean = smart_clean
-
         return self.viewer
 
 
@@ -584,18 +581,25 @@ class GUI(Gtk.Window):
         self.search_entry_binds(widget, event)
 
 
-def load_plugins():
-    if PATH_PLUGINS == fullpath and not os.path.isdir(fullpath): return
+def load_plugins(parent):
+    if not os.path.isdir(fullpath): return
+    if PATH_PLUGINS == fullpath: return
     sys.path.append(PATH_PLUGINS)
+
+    global plugins
     for file_name in os.listdir(PATH_PLUGINS):
         if file_name[-3:] not in ".py": continue
 
         print("plugin:", file_name, file=sys.stderr)
         namespace = importlib.__import__(file_name[:-3])
-        namespace.plugin_main(root, fullpath)
+        namespace.plugin_main(parent, fullpath)
+        plugins[file_name[:-3]] = namespace
 
 
 def init():
+    global plugins
+    plugins = dict()
+
     global PATH_GLOSS
     PATH_GLOSS = fullpath + PATH_GLOSS
 
@@ -618,10 +622,7 @@ def init():
 
 def main():
     init()
-    global root
-    root = GUI()
-    Keybinder.init()
-    load_plugins()
+    return GUI()
 
 
 if __name__ == '__main__':

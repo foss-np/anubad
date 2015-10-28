@@ -12,16 +12,21 @@ Copyright © 2013 - 2015 to the anubad Authors.
 
 
 
-** Installation
+* Installation
 
 ** Requirement
 
-   |                       | linux          | ms windows            |
-   |-----------------------+----------------+-----------------------|
-   | python                | python 3.xx    | [[https://www.python.org/downloads/][python 3.xx]]           |
-   | gobject-introspection | python-gobject | [[http://sourceforge.net/projects/pygobjectwin32/files/][pygobjectwin32]]        |
-   | GTK                   | GTK+ 3         | included in pygobject |
-   | Keybinder             | libkeybinder3  |                       |
+   *ms windows* : download [[http://sourceforge.net/projects/pygobjectwin32/files/][pygi installer]]
+
+   *linux*      : distro specific package manager
+
+   |                       | linux          | ms windows  |
+   |-----------------------+----------------+-------------|
+   | python                | python 3.xx    | [[https://www.python.org/downloads/][python 3.xx]] |
+   | gobject-introspection | python-gobject | pygi/base   |
+   | GTK                   | GTK+ 3         | pygi/       |
+   | Pango                 |                |             |
+   | Keybinder             | libkeybinder3  | pygi/GIR    |
 
 
 ** how to get it
@@ -61,5 +66,5 @@ Copyright © 2013 - 2015 to the anubad Authors.
 
    #+begin_src bash
      cd /path/to/anubad/src
-     ./main.py
+     ./app.py
    #+end_src

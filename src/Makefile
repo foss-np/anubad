@@ -11,7 +11,7 @@ tk-py2: mysettings.conf
 	python2 demo.pyw
 
 gtk3: mysettings.conf
-	./main.py
+	./app.py
 
 wine: mysettings.conf
 	# note should load from same directory
@@ -39,3 +39,6 @@ add:
 
 preference:
 	./preferences.py
+
+wordnet:
+	./wordnet.py
