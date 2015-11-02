@@ -6,7 +6,7 @@ A module for the interactive text interface and Decoration.
 """
 
 import os
-from gi.repository import Gtk, Pango
+from gi.repository import Gtk, Gdk, Pango
 
 class Viewer(Gtk.Overlay):
     """
@@ -52,6 +52,7 @@ class Viewer(Gtk.Overlay):
         self.tag_li = self.textbuffer.create_tag("li", foreground="gray", weight=Pango.Weight.BOLD)
         self.tag_pos = self.textbuffer.create_tag("pos", foreground="red")
         self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
+        self.tag_example = self.textbuffer.create_tag("example", foreground="blue", style=Pango.Style.ITALIC)
         self.tag_source = self.textbuffer.create_tag("source", foreground="gray", scale=.8)
         self.tag_found = self.textbuffer.create_tag("found", background="yellow")
 
@@ -106,8 +107,8 @@ class Viewer(Gtk.Overlay):
         >>> obj = Viewer(root)
         >>> root.add(obj)
         >>> data = [1, 'hello', 'नमस्कार']
-        >>> obj.parse(0, None, data)
-        0 [1, 'hello', 'नमस्कार']
+        >>> obj.parse(data)
+        1 hello नमस्कार
         ['नमस्कार']
         """
 
@@ -209,7 +210,6 @@ def main():
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
@@ -219,6 +219,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main().show_all()
+    root = main()
     import doctest
     doctest.testmod()
+    root.show_all()
+    Gtk.main()

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-PKG_NAME = "anubad - अनुवाद"
-
 import os, sys
 
 filepath = os.path.abspath(__file__)
@@ -17,7 +15,6 @@ from collections import OrderedDict
 from subprocess import Popen
 from itertools import count
 
-from sidebar import treeview_signal_safe_toggler
 import preferences as Pre
 import sidebar as Side
 import browser as BL
@@ -25,12 +22,14 @@ import viewer as Vi
 import add as Ad
 import utils
 
-if PATH_MYLIB and os.path.isdir(PATH_MYLIB):
-    sys.path.append(PATH_MYLIB)
+from sidebar import treeview_signal_safe_toggler
+
+fp_dev_null = open(os.devnull, 'w')
+if 'DEBUGLY' in globals() and os.path.isdir(DEBUGLY):
+    sys.path.append(DEBUGLY)
     from debugly import *
-    from pprint import pprint
 else:
-    debug = lambda f, *arg, **karg: f(arg, karg)
+    debug = lambda f, *arg, **kwarg: f(arg, kwarg)
 
 #   ____ _   _ ___
 #  / ___| | | |_ _|
@@ -39,17 +38,17 @@ else:
 #  \____|\___/|___|
 #
 class GUI(Gtk.Window):
+    clips = []
     clip_CYCLE = None
     notebook_OBJS = []
 
     def __init__(self, parent=None):
-        Gtk.Window.__init__(self, title=PKG_NAME)
+        Gtk.Window.__init__(self)
         self.set_default_size(600, 500)
         self.parent = parent
         self.track_FONT = set()
 
         self.view_CURRENT = set()
-        self.view_LAST = None
         self.search_SPACE = None
 
         self.hist_LIST = []
@@ -66,8 +65,10 @@ class GUI(Gtk.Window):
 
         self.search_entry.grab_focus()
         self.show_all()
+
         # NOTE: GTK BUG, notebook page switch only after its visible
-        self.notebook.set_current_page(self.notebook.MAIN_TAB)
+        if self.notebook is not None:
+            self.notebook.set_current_page(self.notebook.MAIN_TAB)
 
 
     def turn_off_auto_copy(func):
@@ -103,6 +104,7 @@ class GUI(Gtk.Window):
         hpaned.set_position(165)
 
         self.notebook = self.makeWidgets_browser(LIST_GLOSS[0])
+        if self.notebook is None: return
         self.layout.attach(self.notebook, 0, 5, 5, 2)
 
 
@@ -169,7 +171,6 @@ class GUI(Gtk.Window):
         ##
         ## About
         bar.b_About = Gtk.ToolButton(icon_name=Gtk.STOCK_ABOUT)
-        bar.b_About.connect("clicked", self._about_dialog)
         bar.add(bar.b_About)
         bar.b_About.set_tooltip_markup("More About Anubad")
         return bar
@@ -186,12 +187,7 @@ class GUI(Gtk.Window):
         if diff == -1: self.toolbar.b_Forward.set_sensitive(True)
 
         self.hist_CURSOR = pos
-
-        self.items_FOUND.clear()
-        self.views_CURRENT.clear()
-        query, self.items_FOUND, views = self.hist_LIST[pos]
-        self._view_items(views)
-        self.search_entry.set_text(query)
+        self._view_results(self.hist_LIST[pos])
 
 
     def _show_history(self, widget):
@@ -214,20 +210,6 @@ class GUI(Gtk.Window):
             self.history_menu.append(rmi)
 
         self.history_menu.show_all()
-
-
-    def _about_dialog(self, widget):
-        aboutdialog = Gtk.AboutDialog(parent=self)
-        # aboutdialog.set_default_size(200, 800) # BUG: Not WORKING
-        aboutdialog.set_logo_icon_name(Gtk.STOCK_ABOUT)
-        aboutdialog.set_program_name(PKG_NAME)
-        aboutdialog.set_comments("\nTranslation Glossary\n")
-        aboutdialog.set_website("http://github.com/foss-np/anubad/")
-        aboutdialog.set_website_label("Some Label")
-        aboutdialog.set_authors(open(fullpath + '../AUTHORS').read().splitlines())
-        aboutdialog.set_license(open(fullpath + '../LICENSE').read())
-        aboutdialog.run()
-        aboutdialog.destroy()
 
 
     def makeWidgets_searchbar(self):
@@ -311,13 +293,21 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets_browser(self, gloss):
-        GLOSS = PATH_GLOSS + gloss
         print("loading:", gloss, file=sys.stderr)
+
+        GLOSS = PATH_GLOSS + gloss
+        if not os.path.isdir(GLOSS):
+            print("error: invalid glossary path ")
+            return
+
         notebook = Gtk.Notebook()
         notebook.GLOSS = GLOSS
+        notebook.MAIN_TAB = 0
         tab = 0
+
         for file_name in os.listdir(GLOSS):
-            if not file_name[-4:] in FILE_TYPES: continue
+            if 'FILE_TYPES' in globals():
+                if not file_name[-4:] in FILE_TYPES: continue
             if "main.tra" in file_name: notebook.MAIN_TAB = tab
             obj = BL.BrowseList(self.parent, GLOSS + file_name)
             obj.treeview.connect("row-activated", self.browser_row_double_click)
@@ -329,6 +319,7 @@ class GUI(Gtk.Window):
         return notebook
 
 
+    @debug
     def browser_row_double_click(self, widget, treepath, treeviewcol):
         selection = widget.get_selection()
         model, treeiter = selection.get_selected()
@@ -341,6 +332,17 @@ class GUI(Gtk.Window):
         self.viewer.jump_to_end()
         return
 
+
+    def get_active_query(self):
+        selection = self.sidebar.treeview.get_selection()
+        model, pathlst, = selection.get_selected_rows()
+
+        if pathlst:
+            *c, query, src = model[pathlst[0]]
+        else:
+            query = self.search_entry.get_text().strip().lower()
+
+        return query
 
     def create_search_SPACE(self):
         search_SPACE = []
@@ -360,77 +362,67 @@ class GUI(Gtk.Window):
 
         ## Ordered Dict use for undo/redo history
         query_RESULTS = OrderedDict()
-        all_FUZZ = set()
+
         for word in set(query.split()):
-            n, FULL, FUZZ = self.searchWord(word)
-            query_RESULTS[word] = (FULL, n is not 0)
-            all_FUZZ = all_FUZZ | FUZZ
+            query_RESULTS[word] = self.searchWord(word)
 
-        self._view_items(query_RESULTS, all_FUZZ)
+        self._view_results(query_RESULTS)
 
-        self.hist_LIST.append((query_RESULTS, all_FUZZ))
+        self.hist_LIST.append(query_RESULTS)
         self.hist_CURSOR = len(self.hist_LIST) - 1
         self.toolbar.bm_Backward.set_sensitive(True)
         self.toolbar.b_Forward.set_sensitive(False)
 
 
     def searchWord(self, word, search_SPACE=None):
-        FULL, FUZZ = [], set()
-        c = 0
         if search_SPACE is None:
             self.search_SPACE = self.create_search_SPACE()
             search_SPACE = self.search_SPACE
 
+        FULL, FUZZ = [], set()
+
         for note, tab, obj in search_SPACE:
             for item in obj.treebuffer:
                 if word not in item[1]: continue
-                c += 1
                 row = (note, tab, item, obj)
                 if word == item[1]: FULL.append(row)
                 else: FUZZ.add(row)
-        return c, FULL, FUZZ
+        return FULL, FUZZ
 
 
     @treeview_signal_safe_toggler
-    def _view_items(self, query_RESULTS, all_FUZZ=set()):
-        self.sidebar.treemodel.clear()
-        treeselection = self.sidebar.treeview.get_selection()
-
-        # pprint(query_RESULTS)
-        clip_out = []
-        c = 0
-        for word, (results, found) in query_RESULTS.items():
-            if not found:
-                self.viewer.not_found(word)
-                continue
-
-            for item in results:
+    def _view_results(self, query_RESULTS):
+        def _add_view_items(c, iter_obj, show=True):
+            for item in iter_obj:
                 note, tab, row, obj = item
                 ID, w, raw = row
                 c += 1
                 self.sidebar.treemodel.append([c, note, tab, ID, w, obj.SRC])
 
+                if not show: continue
                 meta = (note, tab, ID)
                 view = meta not in self.view_CURRENT
-                clip_out += self.viewer.parse(row, obj.SRC, print_=view)
+                GUI.clips += self.viewer.parse(row, obj.SRC, print_=view)
                 self.view_CURRENT.add(meta)
                 treeselection.select_path(c - 1)
+            return c
 
-        for item in all_FUZZ:
-            note, tab, row, obj = item
-            ID, w, raw = row
-            c += 1
-            self.sidebar.treemodel.append([c, note, tab, ID, w, obj.SRC])
-            if not self.toolbar.t_ShowAll.get_active(): continue
+        self.sidebar.treemodel.clear()
+        treeselection = self.sidebar.treeview.get_selection()
 
-            meta = (note, tab, ID)
-            view = meta not in self.view_CURRENT
-            clip_out += self.viewer.parse(row, browser_obj.SRC, print_=view)
-            self.view_CURRENT.append(meta)
-            treeselection.select_path(c-1)
+        # pprint(query_RESULTS)
+        all_FUZZ = set()
+        GUI.clips.clear()
+        c = 0
+        for word, (FULL, FUZZ) in query_RESULTS.items():
+            if FULL: c = _add_view_items(c, FULL)
+            else: self.viewer.not_found(word)
+            all_FUZZ = all_FUZZ | FUZZ
 
-        if len(clip_out) == 0: return
-        GUI.clip_CYCLE = utils.circle(clip_out)
+        c = _add_view_items(c, all_FUZZ, self.toolbar.t_ShowAll.get_active())
+
+        if len(GUI.clips) == 0: return
+        GUI.clip_CYCLE = utils.circle(GUI.clips)
         self._circular_search(+1)
         self.search_entry.grab_focus()
 
@@ -453,8 +445,8 @@ class GUI(Gtk.Window):
             return
 
         treeselection = self.sidebar.treeview.get_selection()
-        model, pathlist = treeselection.get_selected_rows()
-        c, note, tab, ID, w, src = self.sidebar.treemodel[pathlist[0]]
+        model, pathlst = treeselection.get_selected_rows()
+        c, note, tab, ID, w, src = self.sidebar.treemodel[pathlst[0]]
 
         note_obj = GUI.notebook_OBJS[note]
         note_obj.get_nth_page(tab).open_src(ID)
@@ -587,6 +579,7 @@ def load_plugins(parent):
     sys.path.append(PATH_PLUGINS)
 
     global plugins
+    plugins = dict()
     for file_name in os.listdir(PATH_PLUGINS):
         if file_name[-3:] not in ".py": continue
 
@@ -597,21 +590,15 @@ def load_plugins(parent):
 
 
 def init():
-    global plugins
-    plugins = dict()
-
+    # import __main__
+    # TODO where to add __main__function
     global PATH_GLOSS
     PATH_GLOSS = fullpath + PATH_GLOSS
 
-    global fp_dev_null
-    fp_dev_null = open(os.devnull, 'w')
-
-    global fp3
-    fp3 = fp_dev_null
-
     global FONT_obj
     FONT_obj =  Pango.font_description_from_string(def_FONT)
-    BL.fp3 = fp3
+    # MAYBE do __main__ import here
+    BL.fp3 = fp_dev_null
 
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
@@ -623,7 +610,6 @@ def init():
 def main():
     init()
     return GUI()
-
 
 if __name__ == '__main__':
     main()

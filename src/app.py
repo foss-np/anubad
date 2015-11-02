@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
-from main import *
+import argparse
 from gi.repository import Gtk
 from gi.repository import Keybinder
+
+from main import *
+
+PKG_NAME = "anubad - अनुवाद"
 
 class TrayIcon(Gtk.StatusIcon):
     def __init__(self, parent=None):
@@ -55,12 +59,43 @@ class TrayIcon(Gtk.StatusIcon):
         self.staticon.set_visible(False)
         del self.staticon
 
-if __name__ == '__main__':
-    root = main()
-    root.visible = True
 
-    Keybinder.init()
-    load_plugins(root)
+def about_dialog(widget):
+    aboutdialog = Gtk.AboutDialog()
+    # aboutdialog.set_default_size(200, 800) # BUG: Not WORKING
+    aboutdialog.set_logo_icon_name(Gtk.STOCK_ABOUT)
+    aboutdialog.set_program_name(PKG_NAME)
+    aboutdialog.set_comments("\nTranslation Glossary\n")
+    aboutdialog.set_website("http://github.com/foss-np/anubad/")
+    aboutdialog.set_website_label("Some Label")
+    aboutdialog.set_authors(open(fullpath + '../AUTHORS').read().splitlines())
+    aboutdialog.set_license(open(fullpath + '../LICENSE').read())
+    aboutdialog.run()
+    aboutdialog.destroy()
+
+
+def argparser():
+    parser = argparse.ArgumentParser(description="anubad")
+    parser.add_argument(
+        "-q", "--quick",
+        action  = "store_true",
+        default = False,
+        help    = "Disable plugins loading")
+
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = argparser()
+
+    root = main()
+    root.set_title(PKG_NAME)
+    root.visible = True
+    root.toolbar.b_About.connect("clicked", about_dialog)
+
+    if not args.quick:
+        Keybinder.init()
+        load_plugins(root)
 
     tray = TrayIcon(root)
     Gtk.main()

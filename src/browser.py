@@ -63,11 +63,16 @@ class BrowseList(Gtk.Overlay):
         >>> obj = BrowseList(root)
         >>> root.add(obj)
         >>> obj.fill_tree(PATH_GLOSS + LIST_GLOSS[0] + "main.tra")
-        loading: *../gloss/foss_gloss/en2np/main.tra
         """
 
         print("loading: *" + src[-40:], file=fp3)
-        data = open(src, encoding="UTF-8").read()
+
+        try:
+            data = open(src, encoding="UTF-8").read()
+        except:
+            print("error: in file", src)
+            return()
+
         self.count = 0
 
         for line in data.splitlines():
@@ -117,16 +122,17 @@ def root_binds(widget, event):
 
 
 def main():
-    global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
     root.set_default_size(600, 300)
 
+    return root
+
 
 if __name__ == '__main__':
-    main()
-    fp3 = open(os.devnull, 'w')
+    fp3 = sys.stdout
+    root = main()
 
     import doctest
     doctest.testmod()
