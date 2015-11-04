@@ -40,5 +40,8 @@ add:
 preference:
 	./preferences.py
 
+relations:
+	./relations.py
+
 wordnet:
 	./wordnet.py

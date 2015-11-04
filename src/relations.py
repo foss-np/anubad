@@ -2,9 +2,6 @@
 
 import os, sys
 from gi.repository import Gtk, Gdk, Pango
-from nltk.corpus import wordnet as wn
-
-import viewer as Vi
 
 class Relatives(Gtk.Expander):
     types = (
@@ -56,33 +53,10 @@ class Relatives(Gtk.Expander):
             Relatives.pages[text] = obj
 
 
-def search_wordnet(view, query):
-    FULL, FUZZ = [], []
-    synonyms = set()
-    for syn in wn.synsets(query):
-        synonyms.add(syn.name().split('.')[0])
-        if query in syn.name():
-            FULL.append(syn)
-        else:
-            FUZZ.append(syn)
-
-    obj = relatives.pages['Synonyms']
-    for i, word in enumerate(sorted(synonyms), 1):
-        obj.treemodel.append((i, word))
-
-    end = view.textbuffer.get_end_iter()
-    view.textbuffer.insert_with_tags(end, query + '\n', view.tag_h1)
-
-    for i, syn in enumerate(sorted(FULL) + sorted(FUZZ), 1):
-        end = view.textbuffer.get_end_iter()
-        view.textbuffer.insert_with_tags(end, "%4d. "%i, view.tag_li)
-        end = view.textbuffer.get_end_iter()
-        view.textbuffer.insert_with_tags(end, "%s » "%syn.pos(), view.tag_pos)
-        end = view.textbuffer.get_end_iter()
-        view.textbuffer.insert(end, "%s ~ %s\n"%(syn.name(), syn.definition()))
-        for eg in syn.examples():
-            end = view.textbuffer.get_end_iter()
-            view.textbuffer.insert_with_tags(end, "%9s%s\n"%(' ',eg), view.tag_example)
+def root_binds(widget, event):
+    # print(event.keyval)
+    if event.keyval == 65307:
+        Gtk.main_quit()
 
 
 def main():
@@ -92,7 +66,7 @@ def main():
     global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
-    root.connect('key_release_event', Vi.root_binds)
+    root.connect('key_release_event', root_binds)
     root.set_default_size(500, 300)
 
     root.layout = Gtk.VBox(root)
@@ -101,19 +75,10 @@ def main():
 
 
 if __name__ == '__main__':
-    exec(open("mysettings.conf", encoding="UTF-8").read())
-    FONT_obj =  Pango.font_description_from_string(def_FONT)
     root = main()
-
-    obj = Vi.Viewer(root)
-    root.layout.add(obj)
-
-    obj.textview.modify_font(FONT_obj)
-    # obj.parse([1, 'hello', 'नमस्कार'])
 
     relatives = Relatives(root.layout)
     root.layout.add(relatives)
 
-    search_wordnet(obj, sys.argv[1])
     root.show_all()
     Gtk.main()

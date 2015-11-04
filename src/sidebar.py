@@ -8,6 +8,7 @@ class Sidebar(Gtk.VBox):
         Gtk.HBox.__init__(self)
         self.parent = parent
         self.track_FONT = set()
+        self.dictstore = {}
         self.makeWidgets()
 
 
@@ -25,12 +26,22 @@ class Sidebar(Gtk.VBox):
         self.cb_filter.set_active(0)
 
 
+    def add_suggestion(self, c, instance, category, row):
+        self.treemodel.append((c, row[1]))
+        self.dictstore[c] = (instance, category, row)
+
+
+    def get_suggestion(self, index):
+        c, word = self.treemodel[index]
+        return self.dictstore[c]
+
+
     def makeWidgets_treeview(self):
         scroll = Gtk.ScrolledWindow()
         scroll.set_hexpand(True)
         scroll.set_vexpand(True)
 
-        self.treemodel = Gtk.ListStore(int, int, int, int, str, str)
+        self.treemodel = Gtk.ListStore(int, str)
 
         self.treeview = Gtk.TreeView(self.treemodel)
         scroll.add(self.treeview)
@@ -40,7 +51,7 @@ class Sidebar(Gtk.VBox):
 
         renderer_text = Gtk.CellRendererText()
         self.treeview.append_column(Gtk.TreeViewColumn("#", renderer_text, text=0))
-        self.treeview.append_column(Gtk.TreeViewColumn("w", renderer_text, text=4))
+        self.treeview.append_column(Gtk.TreeViewColumn("w", renderer_text, text=1))
         return scroll
 
 
@@ -48,17 +59,14 @@ class Sidebar(Gtk.VBox):
         model, pathlist = treeselection.get_selected_rows()
         clip_out = []
         for path in pathlist:
-            c, note, tab, ID, w, src = self.treemodel[path]
-            note_obj = GUI.notebook_OBJS[note]
-            browser_obj = note_obj.get_nth_page(tab)
-            treerow = browser_obj.treebuffer[ID-1]
-            meta = (note, tab, ID)
+            instance, category, row = self.get_suggestion(path)
+            meta = (instance, category, row)
             view = meta not in self.parent.view_CURRENT
-            clip_out += self.parent.viewer.parse(treerow, browser_obj.SRC, print_=view)
+            clip_out += self.parent.viewer.parse(row, category.fullpath, print_=view)
             self.parent.view_CURRENT.add(meta)
 
         if len(clip_out) > 0:
-            GUI.clip_CYCLE = utils.circle(clip_out)
+            self.parent.clip_CYCLE = utils.circle(clip_out)
             self.parent._circular_search(+1)
 
 

@@ -5,16 +5,16 @@ from subprocess import Popen
 from gi.repository import Gtk, Gdk, Pango
 
 class BrowseList(Gtk.Overlay):
-    def __init__(self, parent=None, src=None):
+    def __init__(self, parent=None, lstore=None):
         Gtk.Overlay.__init__(self)
-        self.SRC = src
-        self.makeWidgets()
+        if lstore is None:
+            print("lstore canno't be None")
+            exit()
+        self.treebuffer = lstore
+        self.makeWidgets(lstore)
 
-        if self.SRC:
-            self.fill_tree(src)
 
-
-    def makeWidgets(self):
+    def makeWidgets(self, lstore):
         self.scroll = Gtk.ScrolledWindow()
         self.add(self.scroll)
         self.scroll.set_hexpand(True)
@@ -26,7 +26,6 @@ class BrowseList(Gtk.Overlay):
         self.tool_b_Refresh.set_valign(Gtk.Align.START)
         self.tool_b_Refresh.set_halign(Gtk.Align.END)
 
-        self.treebuffer = Gtk.ListStore(int, str, str)
         self.treeview = Gtk.TreeView(model=self.treebuffer)
         self.scroll.add(self.treeview)
         self.treeview.connect('key_press_event', self.treeview_key_press)
@@ -57,52 +56,6 @@ class BrowseList(Gtk.Overlay):
         self.treebuffer[path][2] = text
 
 
-    def fill_tree(self, src):
-        """
-        >>> exec(open("mysettings.conf").read())
-        >>> obj = BrowseList(root)
-        >>> root.add(obj)
-        >>> obj.fill_tree(PATH_GLOSS + LIST_GLOSS[0] + "main.tra")
-        """
-
-        print("loading: *" + src[-40:], file=fp3)
-
-        try:
-            data = open(src, encoding="UTF-8").read()
-        except:
-            print("error: in file", src)
-            return()
-
-        self.count = 0
-
-        for line in data.splitlines():
-            self.count += 1
-            row = line.split('; ')
-            if len(row) != 2:
-                # TODO: open leafpad automatically with the current error line
-                print("File Format Error: %s: %d"%(self.SRC, self.count))
-                arg = "--jump=%d"%self.count
-                # NOTE: we need something to hang on till we edit
-                ## print("pid:", Popen(["leafpad", arg, self.SRC]).pid)
-                ## DONT USES Popen ^^^^
-                os.system("setsid leafpad %s %s"%(arg, self.SRC))
-                exit(1)
-            row.insert(0, self.count)
-            self.treebuffer.append(row)
-
-
-    def reload(self):
-        print("reload:", self.SRC[-30:], file=sys.stderr)
-        self.treebuffer.clear()
-        self.fill_tree(self.SRC)
-
-
-    def add_to_tree(self, row):
-        self.count += 1
-        self.treebuffer.append([self.count] + row)
-        return self.count
-
-
     def open_src(self, ID=None):
         # TODO : smart xdg-open with arguments
         # if not self.CURRENT_FOUND_ITEM:
@@ -112,7 +65,7 @@ class BrowseList(Gtk.Overlay):
             arg = "--jump=%d"%ID
             print("pid:", Popen(["leafpad", arg, self.SRC]).pid)
         else:
-            print("pid:", Popen(["leafpad", self.SRC]).pid)
+            print("pid:", Popen(["leafpad", self.treebuffer.fullpath]).pid)
 
 
 def root_binds(widget, event):
@@ -134,7 +87,5 @@ if __name__ == '__main__':
     fp3 = sys.stdout
     root = main()
 
-    import doctest
-    doctest.testmod()
     root.show_all()
     Gtk.main()
