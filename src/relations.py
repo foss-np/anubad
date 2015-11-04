@@ -5,6 +5,7 @@ from gi.repository import Gtk, Gdk, Pango
 
 class Relatives(Gtk.Expander):
     types = (
+        '      #tags       ', #SPACE HACK for width
         'Synonyms',
         'Antonyms',
         'Derivatives',
@@ -32,6 +33,10 @@ class Relatives(Gtk.Expander):
     def makeWidgets(self):
         self.notebook = Gtk.Notebook()
         self.add(self.notebook)
+
+        self.notebook.set_hexpand(True)
+        self.notebook.set_vexpand(True)
+
         self.notebook.set_tab_pos(Gtk.PositionType.LEFT)
         self.notebook.set_scrollable(True)
         self.notebook.set_show_border(True)

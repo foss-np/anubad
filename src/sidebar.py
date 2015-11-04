@@ -8,6 +8,7 @@ class Sidebar(Gtk.VBox):
         Gtk.HBox.__init__(self)
         self.parent = parent
         self.track_FONT = set()
+        self.count = 0
         self.dictstore = {}
         self.makeWidgets()
 
@@ -15,10 +16,8 @@ class Sidebar(Gtk.VBox):
     def makeWidgets(self):
         self.pack_start(self.makeWidgets_treeview(), True, True, 0)
         self.track_FONT.add(self.treeview)
-        self.treeview.connect("row-activated", self._on_row_double_click)
         treeselection = self.treeview.get_selection()
         treeselection.set_mode(Gtk.SelectionMode.MULTIPLE)
-        self.select_signal = treeselection.connect("changed", self._on_row_changed)
 
         self.cb_filter = Gtk.ComboBoxText()
         self.pack_start(self.cb_filter, False, False, 0)
@@ -26,14 +25,21 @@ class Sidebar(Gtk.VBox):
         self.cb_filter.set_active(0)
 
 
-    def add_suggestion(self, c, instance, category, row):
-        self.treemodel.append((c, row[1]))
-        self.dictstore[c] = (instance, category, row)
+    def add_suggestion(self, instance, category, row):
+        self.count += 1
+        self.treemodel.append((self.count, row[1]))
+        self.dictstore[self.count] = (instance, category, row)
 
 
     def get_suggestion(self, index):
         c, word = self.treemodel[index]
         return self.dictstore[c]
+
+
+    def clear(self):
+        self.treemodel.clear()
+        self.dictstore.clear()
+        self.count = 0
 
 
     def makeWidgets_treeview(self):
@@ -53,42 +59,6 @@ class Sidebar(Gtk.VBox):
         self.treeview.append_column(Gtk.TreeViewColumn("#", renderer_text, text=0))
         self.treeview.append_column(Gtk.TreeViewColumn("w", renderer_text, text=1))
         return scroll
-
-
-    def _on_row_changed(self, treeselection):
-        model, pathlist = treeselection.get_selected_rows()
-        clip_out = []
-        for path in pathlist:
-            instance, category, row = self.get_suggestion(path)
-            meta = (instance, category, row)
-            view = meta not in self.parent.view_CURRENT
-            clip_out += self.parent.viewer.parse(row, category.fullpath, print_=view)
-            self.parent.view_CURRENT.add(meta)
-
-        if len(clip_out) > 0:
-            self.parent.clip_CYCLE = utils.circle(clip_out)
-            self.parent._circular_search(+1)
-
-
-    def _on_row_double_click(self, widget, treepath, treeviewcol):
-        path, column = widget.get_cursor()
-        # tab, obj, n, *row = self.items_FOUND[path[0]]
-        # self.notebook.set_current_page(tab)
-        # obj.treeview.set_cursor(n-1)
-
-
-def treeview_signal_safe_toggler(func, ):
-    '''Gtk.TreeView() :changed: signal should be disable before new
-    selection is added, if connect it will trigger the change.
-
-    '''
-    def wrapper(self, *args, **kwargs):
-        treeselection = self.sidebar.treeview.get_selection()
-        treeselection.disconnect(self.sidebar.select_signal)
-        func_return = func(self, *args, **kwargs)
-        self.sidebar.select_signal = treeselection.connect("changed", self.sidebar._on_row_changed)
-        return func_return
-    return wrapper
 
 
 def root_binds(widget, event):

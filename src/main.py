@@ -24,7 +24,6 @@ import relations
 import add as Ad
 import utils
 
-from sidebar import treeview_signal_safe_toggler
 
 fp_dev_null = open(os.devnull, 'w')
 if 'DEBUGLY' in globals() and os.path.isdir(DEBUGLY):
@@ -36,6 +35,21 @@ else:
     pprint = print
 
 
+def treeview_signal_safe_toggler(func):
+    '''Gtk.TreeView() :changed: signal should be disable before new
+    selection is added, if connect it will trigger the change.
+
+    '''
+    def wrapper(self, *args, **kwargs):
+        treeselection = self.sidebar.treeview.get_selection()
+        treeselection.disconnect(self.sidebar.select_signal)
+        func_return = func(self, *args, **kwargs)
+        self.sidebar.select_signal = treeselection.connect("changed", self.sidebar_on_row_changed)
+        return func_return
+    return wrapper
+
+
+
 #   ____ _   _ ___
 #  / ___| | | |_ _|
 # | |  _| | | || |
@@ -43,6 +57,8 @@ else:
 #  \____|\___/|___|
 #
 class GUI(Gtk.Window):
+    clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+
     def __init__(self, parent=None):
         Gtk.Window.__init__(self)
         self.parent = parent
@@ -67,7 +83,7 @@ class GUI(Gtk.Window):
         self.connect('focus-out-event', lambda *e: self._on_focus_out_event())
 
         self.search_entry.grab_focus()
-        self.set_default_size(600, 500)
+        self.set_default_size(600, 550)
         self.show_all()
 
 
@@ -86,7 +102,7 @@ class GUI(Gtk.Window):
 
     def _on_focus_out_event(self):
         if self.toolbar.t_Copy.get_active():
-            clipboard.set_text(self.copy_BUFFER, -1)
+            __class__.clipboard.set_text(self.copy_BUFFER, -1)
 
 
     def makeWidgets(self):
@@ -263,14 +279,26 @@ class GUI(Gtk.Window):
 
     def makeWidgets_sidebar(self):
         self.sidebar = Side.Sidebar(self)
+        treeselection = self.sidebar.treeview.get_selection()
+        self.sidebar.select_signal = treeselection.connect("changed", self.sidebar_on_row_changed)
+
         for obj in self.sidebar.track_FONT:
             obj.modify_font(FONT_obj)
         return self.sidebar
 
 
+    def sidebar_on_row_changed(self, treeselection):
+        model, pathlist = treeselection.get_selected_rows()
+        self.clips.clear()
+        for path in pathlist:
+            self._view_item(*self.sidebar.get_suggestion(path))
+
+        if len(self.clips) == 0: return
+        self.clips_CYCLE = utils.circle(self.clips)
+        self._circular_search(+1)
+
+
     def makeWidgets_viewer(self):
-        global clipboard
-        Vi.clipboard = clipboard
         self.viewer = Vi.Viewer(self)
         self.viewer.textview.modify_font(FONT_obj)
         self.track_FONT.add(self.viewer.textview)
@@ -290,7 +318,17 @@ class GUI(Gtk.Window):
             # if treeiter is None:
             #     print("It clean")
         self.viewer.clean = smart_clean
+
+        self.viewer.textview.connect("button-release-event", self.viewer_click)
         return self.viewer
+
+
+    def viewer_click(self, *args):
+        bound = self.viewer.textbuffer.get_selection_bounds()
+        if not bound: return
+        begin, end = bound
+        text = self.viewer.textbuffer.get_text(begin, end, True)
+        self.search_and_reflect(text)
 
 
     def makeWidgets_browser(self, gloss):
@@ -301,7 +339,7 @@ class GUI(Gtk.Window):
         for i, (name, lstore) in enumerate(gloss.categories.items()):
             if "main" == name: notebook.MAIN_TAB = i
             obj = BL.BrowseList(self.parent, lstore)
-            obj.treeview.connect("row-activated", self.browser_row_double_click)
+            # obj.treeview.connect("row-activated", self.browser_row_double_click)
             obj.treeview.modify_font(FONT_obj)
             self.track_FONT.add(obj.treeview)
             notebook.append_page(obj, Gtk.Label(label=name))
@@ -315,18 +353,18 @@ class GUI(Gtk.Window):
         return self.relatives
 
 
-    @debug
-    def browser_row_double_click(self, widget, treepath, treeviewcol):
-        selection = widget.get_selection()
-        model, treeiter = selection.get_selected()
+    # @debug
+    # def browser_row_double_click(self, widget, treepath, treeviewcol):
+    #     selection = widget.get_selection()
+    #     model, treeiter = selection.get_selected()
 
-        if treeiter is None: return
-        tab = self.notebook.get_current_page()
-        obj = self.notebook.get_nth_page(tab)
-        row = list(model[treeiter])
-        self.viewer.parse(row, obj.SRC)
-        self.viewer.jump_to_end()
-        return
+    #     if treeiter is None: return
+    #     tab = self.notebook.get_current_page()
+    #     obj = self.notebook.get_nth_page(tab)
+    #     row = list(model[treeiter])
+    #     self.viewer.parse(row, obj.SRC)
+    #     self.viewer.jump_to_end()
+    #     return
 
 
     def get_active_query(self):
@@ -334,18 +372,19 @@ class GUI(Gtk.Window):
         model, pathlst, = selection.get_selected_rows()
 
         if pathlst:
-            *c, query, src = model[pathlst[0]]
+            *c, query = model[pathlst[0]]
         else:
             query = self.search_entry.get_text().strip().lower()
 
         return query
 
 
-    def search_and_reflect(self):
-        raw_query = self.search_entry.get_text()
-        if not raw_query: return
-        if 'r:' == raw_query[:2]: query = raw_query[2:]
-        else: query = raw_query.strip().lower()
+    def search_and_reflect(self, query=None):
+        if query is None:
+            raw_query = self.search_entry.get_text()
+            if not raw_query: return
+            if 'r:' == raw_query[:2]: query = raw_query[2:]
+            else: query = raw_query.strip().lower()
 
         ## Ordered Dict use for undo/redo history
         query_RESULTS = OrderedDict()
@@ -361,35 +400,36 @@ class GUI(Gtk.Window):
         self.toolbar.b_Forward.set_sensitive(False)
 
 
+    def _view_item(self, instance, category, row):
+        meta = (instance, category, row)
+        view = meta not in self.view_CURRENT
+        self.viewer.parse(row, category.fullpath, print_=view)
+        self.view_CURRENT.add(meta)
+
+
     @treeview_signal_safe_toggler
     def _view_results(self, query_RESULTS):
-        def _add_view_items(c, iter_obj, show=True):
+        def _add_view_items(iter_obj, show=True):
             for item in iter_obj:
-                instance, category, row = item
-                c += 1
-                self.sidebar.add_suggestion(c, instance, category, row)
+                self.sidebar.add_suggestion(*item)
 
                 if not show: continue
-                meta = (instance, category, row)
-                view = meta not in self.view_CURRENT
-                self.clips += self.viewer.parse(row, category.fullpath, print_=view)
-                self.view_CURRENT.add(meta)
-                treeselection.select_path(c - 1)
-            return c
+                self._view_item(*item)
+                treeselection.select_path(self.sidebar.count - 1)
 
-        self.sidebar.treemodel.clear()
+
+        self.sidebar.clear()
         treeselection = self.sidebar.treeview.get_selection()
 
         # pprint(query_RESULTS)
         all_FUZZ = set()
         self.clips.clear()
-        c = 0
         for word, (FULL, FUZZ) in query_RESULTS.items():
-            if FULL: c = _add_view_items(c, FULL)
+            if FULL: _add_view_items(FULL)
             else: self.viewer.not_found(word)
             all_FUZZ = all_FUZZ | FUZZ
 
-        c = _add_view_items(c, sorted(all_FUZZ, key=lambda k: k[2][1]), self.toolbar.t_ShowAll.get_active())
+        _add_view_items(sorted(all_FUZZ, key=lambda k: k[2][1]), self.toolbar.t_ShowAll.get_active())
 
         if len(self.clips) == 0: return
         self.clips_CYCLE = utils.circle(self.clips)
@@ -447,14 +487,12 @@ class GUI(Gtk.Window):
     #     obj = self.notebook.get_nth_page(current_tab)
     #     obj.reload()
 
-
     def _circular_search(self, d):
         if not self.clips_CYCLE:
             self.search_entry.grab_focus()
             return
 
         self.toolbar.t_Copy.set_active(True)
-        global clipboard
         utils.diff = d
         text = next(self.clips_CYCLE)
 
@@ -469,18 +507,18 @@ class GUI(Gtk.Window):
         self.copy_BUFFER = text
 
 
-    def _circular_tab_switch(self, d):
-        c = self.notebook.get_current_page()
-        t = self.notebook.get_n_pages()
-        n = c + d
-        if n >= t: n = 0
-        elif n < 0: n = t - 1
-        self.notebook.set_current_page(n)
+    # def _circular_tab_switch(self, d):
+    #     c = self.notebook.get_current_page()
+    #     t = self.notebook.get_n_pages()
+    #     n = c + d
+    #     if n >= t: n = 0
+    #     elif n < 0: n = t - 1
+    #     self.notebook.set_current_page(n)
 
     @turn_off_auto_copy
     def add_to_gloss(self, query=""):
-        global clipboard
-        Ad.clipboard = clipboard
+        # global clipboard
+        # Ad.clipboard = clipboard
         add = Ad.Add(self, l1=query, l2="")
         for obj in add.track_FONT:
             obj.modify_font(FONT_obj)
@@ -517,7 +555,7 @@ class GUI(Gtk.Window):
             # elif keyval == 65365: self._circular_tab_switch(-1) # Pg-Dn
             # elif keyval == 65366: self._circular_tab_switch(+1) # Pg-Up
             elif keyval == ord('g'): # grab clipboard
-                clip = clipboard.wait_for_text()
+                clip = __class__.clipboard.wait_for_text()
                 if clip is None: return
                 query = clip.strip().lower()
                 self.search_entry.set_text(clip)
@@ -555,9 +593,6 @@ def init():
     # MAYBE do __main__ import here
     BL.fp3 = fp_dev_null
 
-    global clipboard
-    clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-
     for path in LIST_GLOSS:
         core.Glossary(path)
 
@@ -568,7 +603,7 @@ def main():
     return root
 
     root.notebook = root.makeWidgets_browser(core.Glossary.instances[0])
-    root.layout.attach(root.notebook, 0, 5, 5, 2)
+    root.layout.attach(root.notebook, 0, 7, 5, 2)
     root.notebook.show_all()
     # NOTE: GTK BUG, notebook page switch only after its visible
     root.notebook.set_current_page(root.notebook.MAIN_TAB)

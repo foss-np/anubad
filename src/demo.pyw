@@ -20,7 +20,7 @@ except:
 
 tmp = def_FONT.split()
 def_FONT = [ ' '.join(tmp[:-1]), tmp[-1] ]
-
+FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
 PATH_GLOSS = fullpath + PATH_GLOSS + LIST_GLOSS[0]
 
 #  ____
@@ -281,7 +281,7 @@ class GUI(tk.Frame):
     def load_files(self):
         tab = 0
         for file_name in os.listdir(PATH_GLOSS):
-            if not file_name[-4:] in FILE_TYPES: continue
+            if not file_name[-3:] in FILE_TYPES: continue
             if "main" in file_name:
                 self.MAIN_TAB = tab
 

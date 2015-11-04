@@ -10,12 +10,17 @@ from gi.repository import Gtk, Gdk, Pango
 
 class Viewer(Gtk.Overlay):
     """
-    Viewer is the modified TextView
+    Viewer is charged Gtk.TextView
     """
     # TODO make Viewer as TextView()
     def __init__(self, parent=None):
         Gtk.Overlay.__init__(self)
+        self._parent = parent # overlay has the parent field
         self.makeWidgets()
+
+        # self.set_hexpand(True)
+        # self.set_vexpand(True)
+
 
     def makeWidgets(self):
         self.scroll = Gtk.ScrolledWindow()
@@ -37,9 +42,9 @@ class Viewer(Gtk.Overlay):
         self.textview.set_left_margin(10)
         self.textview.set_right_margin(20)
 
-
         # self.textview.connect("select-all", lambda *a: print("signal: select-all"))
         # self.textview.connect("size-allocate", self._autoscroll)
+        # self.textview.connect("copy-clipboard", lambda *a: print("signal: copy-clipboard"))
 
         self.textbuffer = self.textview.get_buffer()
         # self.textbuffer.connect("mark-set", lambda *a: print("signal: mark-set"))
@@ -53,7 +58,7 @@ class Viewer(Gtk.Overlay):
         self.tag_pos = self.textbuffer.create_tag("pos", foreground="red")
         self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
         self.tag_example = self.textbuffer.create_tag("example", foreground="blue", style=Pango.Style.ITALIC)
-        self.tag_source = self.textbuffer.create_tag("source", foreground="gray", scale=.8)
+        self.tag_source = self.textbuffer.create_tag("source", foreground="gray", scale=.65)
         self.tag_found = self.textbuffer.create_tag("found", background="yellow")
 
 
@@ -70,7 +75,9 @@ class Viewer(Gtk.Overlay):
 
 
     def _auto_copy_select(self, *args):
+        # track select signal and execute
         return
+
         # select_mark = self.textbuffer.get_selection_bound()
         # self.textbuffer.add_selection_clipboard(clipboard)
         # print(type(select_mark))
@@ -83,7 +90,8 @@ class Viewer(Gtk.Overlay):
 
     def mark_found(self, text, begin, n=1):
         """
-        n - state the number of match to repeat
+        n - number of match to repeat
+        n < 0 - match all
         """
         end = self.textbuffer.get_end_iter()
         match = begin.forward_search(text, 0, end)
@@ -109,7 +117,6 @@ class Viewer(Gtk.Overlay):
         >>> data = [1, 'hello', 'नमस्कार']
         >>> obj.parse(data)
         1 hello नमस्कार
-        ['नमस्कार']
         """
 
         ID, word, raw = data
@@ -154,7 +161,9 @@ class Viewer(Gtk.Overlay):
         for p, t in translations:
             r += [ u.strip() for u in t.split(',') ]
 
-        if not print_: return r
+        # NOTE: _parent because overlay has its own too
+        self._parent.clips += r
+        if not print_: return
 
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, word, self.tag_h1)
@@ -184,7 +193,7 @@ class Viewer(Gtk.Overlay):
 
             # print(self.textview.scroll_to_iter(end, 0, True, 1.0, 0.0 ))
 
-        return r
+        return
 
 
     def _autoscroll(self, *args):
@@ -207,14 +216,11 @@ def root_binds(widget, event):
 
 
 def main():
-    global clipboard
-    clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
     root.set_default_size(500, 300)
-
+    root.clips = []
     return root
 
 
