@@ -2,13 +2,14 @@
 
 import os, sys
 
-filepath = os.path.abspath(__file__)
-fullpath = os.path.dirname(filepath) + '/'
+__filepath__ = os.path.abspath(__file__)
+PWD = os.path.dirname(__filepath__) + '/'
 
-exec(open(fullpath + "gsettings.conf", encoding="UTF-8").read())
-exec(open(fullpath + "mysettings.conf", encoding="UTF-8").read())
+exec(open(PWD + "gsettings.conf", encoding="UTF-8").read())
+exec(open(PWD + "mysettings.conf", encoding="UTF-8").read())
 
 from gi.repository import Gtk, Gdk, Pango
+from gi.repository import GdkPixbuf
 
 import importlib
 from collections import OrderedDict
@@ -75,7 +76,13 @@ class GUI(Gtk.Window):
         self.copy_BUFFER = ""
 
         self.ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
+        self.engines = {
+            'r:': lambda query: self._view_results({ query: core.Glossary.search(query[2:]) }),
+            # w: lambda: self._view_results({ query: core.Glossary.search(query[2:]) }),
+            # s:
+        }
 
+        # accelerators
         self.makeWidgets()
         self.connect('key_press_event', self.key_binds)
         self.connect('delete-event', Gtk.main_quit)
@@ -205,8 +212,6 @@ class GUI(Gtk.Window):
 
 
     def _show_history(self, widget):
-        # print(widget.get_state_flags())
-        # TODO: fix state with widget attrib
         state = self.hist_menu_toggle_state
         self.hist_menu_toggle_state = not state
         if state: return
@@ -244,20 +249,15 @@ class GUI(Gtk.Window):
         self.search_entry.modify_font(FONT_obj)
         self.track_FONT.add(self.search_entry)
 
-        # accelerators
-        accel_search = Gtk.AccelGroup()
-        self.add_accel_group(accel_search)
-        self.search_entry.add_accelerator("grab_focus", accel_search, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
+        accel = Gtk.AccelGroup()
+        self.add_accel_group(accel)
+        self.search_entry.add_accelerator("grab_focus", accel, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
 
         ## Search Button
         self.b_search = Gtk.Button(label="Search")
         layout.pack_start(self.b_search, expand=False, fill=False, padding=1)
         self.b_search.connect('clicked', lambda w: self.search_entry_binds(w, None))
         self.b_search.set_tooltip_markup(tool_tip)
-
-        ## Search Dropdown
-        # self.bm_search = Gtk.MenuButton()
-        # layout.pack_start(self.bm_search, expand=False, fill=False, padding=1)
 
         return layout
 
@@ -319,16 +319,17 @@ class GUI(Gtk.Window):
             #     print("It clean")
         self.viewer.clean = smart_clean
 
-        self.viewer.textview.connect("button-release-event", self.viewer_click)
+        self.viewer.textview.connect("button-press-event", self.viewer_on_click)
         return self.viewer
 
 
-    def viewer_click(self, *args):
-        bound = self.viewer.textbuffer.get_selection_bounds()
-        if not bound: return
-        begin, end = bound
-        text = self.viewer.textbuffer.get_text(begin, end, True)
-        self.search_and_reflect(text)
+    def viewer_on_click(self, *args):
+        bounds = self.viewer.textbuffer.get_selection_bounds()
+        if not bounds: return
+        begin, end = bounds
+        query = self.viewer.textbuffer.get_text(begin, end, True)
+        self.search_entry.set_text(query)
+        self.search_and_reflect(query)
 
 
     def makeWidgets_browser(self, gloss):
@@ -349,7 +350,6 @@ class GUI(Gtk.Window):
 
     def makeWidgets_relations(self):
         self.relatives = relations.Relatives()
-        # self.relatives.set_height(300)
         return self.relatives
 
 
@@ -381,15 +381,19 @@ class GUI(Gtk.Window):
 
     def search_and_reflect(self, query=None):
         if query is None:
-            raw_query = self.search_entry.get_text()
-            if not raw_query: return
-            if 'r:' == raw_query[:2]: query = raw_query[2:]
-            else: query = raw_query.strip().lower()
+            query = self.search_entry.get_text()
+            if not query: return
+
+            for key, func in self.engines.items():
+                if key == query[:2]: # raw mode
+                    func(query)
+                    return
 
         ## Ordered Dict use for undo/redo history
         query_RESULTS = OrderedDict()
 
-        for word in set(query.split()):
+        for w in set(query.split()):
+            word = w.strip().lower()
             query_RESULTS[word] = core.Glossary.search(word)
 
         self._view_results(query_RESULTS)
@@ -421,7 +425,6 @@ class GUI(Gtk.Window):
         self.sidebar.clear()
         treeselection = self.sidebar.treeview.get_selection()
 
-        # pprint(query_RESULTS)
         all_FUZZ = set()
         self.clips.clear()
         for word, (FULL, FUZZ) in query_RESULTS.items():
@@ -461,8 +464,6 @@ class GUI(Gtk.Window):
             line = row[0]
 
         print("pid:", Popen(["leafpad", "--jump=%d"%line, path]).pid)
-        # TODO: connection
-        # process.connect('delete-event', lambda e: print("i'm back"))
 
 
     # def reload(self, gloss):
@@ -586,7 +587,7 @@ def init():
     # import __main__
     # TODO where to add __main__function
     global PATH_GLOSS
-    core.PATH_GLOSS = PATH_GLOSS = fullpath + PATH_GLOSS
+    core.PATH_GLOSS = PATH_GLOSS = PWD + PATH_GLOSS
 
     global FONT_obj
     FONT_obj =  Pango.font_description_from_string(def_FONT)

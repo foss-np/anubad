@@ -76,9 +76,9 @@ def about_dialog(widget):
 
 def load_plugins(parent):
     global PATH_PLUGINS
-    PATH_PLUGINS = fullpath + PATH_PLUGINS
-    if not os.path.isdir(fullpath): return
-    if PATH_PLUGINS == fullpath: return
+    PATH_PLUGINS = PWD + PATH_PLUGINS
+    if not os.path.isdir(PATH_PLUGINS): return
+    if PATH_PLUGINS == PWD: return
     sys.path.append(PATH_PLUGINS)
 
     global plugins
@@ -86,9 +86,11 @@ def load_plugins(parent):
     for file_name in os.listdir(PATH_PLUGINS):
         if file_name[-3:] not in ".py": continue
 
-        print("plugin:", file_name, file=sys.stderr)
+
         namespace = importlib.__import__(file_name[:-3])
-        namespace.plugin_main(parent, fullpath)
+        if namespace.plugin_main(parent, PWD):
+            print("plugin:", file_name, file=sys.stderr)
+            continue
         plugins[file_name[:-3]] = namespace
 
 

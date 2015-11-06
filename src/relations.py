@@ -5,8 +5,7 @@ from gi.repository import Gtk, Gdk, Pango
 
 class Relatives(Gtk.Expander):
     types = (
-        '      #tags       ', #SPACE HACK for width
-        'Synonyms',
+        '    Synonyms    ', #SPACE HACK for width
         'Antonyms',
         'Derivatives',
         'Relates to' ,#Pertainyms
