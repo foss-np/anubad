@@ -49,8 +49,6 @@ def treeview_signal_safe_toggler(func):
         return func_return
     return wrapper
 
-
-
 #   ____ _   _ ___
 #  / ___| | | |_ _|
 # | |  _| | | || |
@@ -311,7 +309,7 @@ class GUI(Gtk.Window):
             # if len(self.items_VIEWED) > 1:
             #     self.view_last
             self.view_CURRENT.clear()
-            # NOTE: vvv is for sugession
+            # NOTE: vvv is for suggession
             selection = self.sidebar.treeview.get_selection()
             selection.unselect_all()
             # model, treeiter = selection.get_selected()
@@ -407,7 +405,10 @@ class GUI(Gtk.Window):
     def _view_item(self, instance, category, row):
         meta = (instance, category, row)
         view = meta not in self.view_CURRENT
-        self.viewer.parse(row, category.fullpath, print_=view)
+        ID, word, info = row
+        parsed_info = core.Glossary.format_parser(info)
+        self.viewer.append_result(word, parsed_info, category.fullpath)
+        # self.viewer.parse(row, category.fullpath, print_=view)
         self.view_CURRENT.add(meta)
 
 

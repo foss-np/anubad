@@ -6,20 +6,25 @@ A module for the interactive text interface and Decoration.
 """
 
 import os
+import webbrowser
 from gi.repository import Gtk, Gdk, Pango
 
 class Viewer(Gtk.Overlay):
     """
     Viewer is charged Gtk.TextView
+    # TODO: Viewer object access TextView members
     """
-    # TODO make Viewer as TextView()
+
     def __init__(self, parent=None):
         Gtk.Overlay.__init__(self)
         self._parent = parent # overlay has the parent field
         self.makeWidgets()
 
-        # self.set_hexpand(True)
-        # self.set_vexpand(True)
+        self.set_hexpand(True)
+        self.set_vexpand(True)
+
+        # self.textview.connect('enter-notify-event', self._enter)
+        # self.textview.connect('leave-notify-event', self._leave)
 
 
     def makeWidgets(self):
@@ -42,50 +47,28 @@ class Viewer(Gtk.Overlay):
         self.textview.set_left_margin(10)
         self.textview.set_right_margin(20)
 
-        # self.textview.connect("select-all", lambda *a: print("signal: select-all"))
-        # self.textview.connect("size-allocate", self._autoscroll)
-        # self.textview.connect("copy-clipboard", lambda *a: print("signal: copy-clipboard"))
+        buffer = self.textview.get_buffer()
+        self.textbuffer = buffer
 
-        self.textbuffer = self.textview.get_buffer()
-        # self.textbuffer.connect("mark-set", lambda *a: print("signal: mark-set"))
-        # self.textbuffer.connect("clicked", lambda *a: print("signal: clicked"))
+        self.tag_bold = buffer.create_tag("bold",  weight=Pango.Weight.BOLD)
+        # self.tag_italic = buffer.create_tag("italic", style=Pango.Style.ITALIC)
+        # self.tag_underline = buffer.create_tag("underline", underline=Pango.Underline.SINGLE)
 
-        self.tag_bold = self.textbuffer.create_tag("bold",  weight=Pango.Weight.BOLD)
-        self.tag_italic = self.textbuffer.create_tag("italic", style=Pango.Style.ITALIC)
-        self.tag_underline = self.textbuffer.create_tag("underline", underline=Pango.Underline.SINGLE)
+        self.tag_li = buffer.create_tag("li", foreground="gray", weight=Pango.Weight.BOLD)
+        self.tag_pos = buffer.create_tag("pos", foreground="red")
+        self.tag_trans = buffer.create_tag("trans", foreground="blue")
+        self.tag_example = buffer.create_tag("example", foreground="blue", style=Pango.Style.ITALIC)
+        self.tag_source = buffer.create_tag("source", foreground="gray", scale=.65)
+        self.tag_found = buffer.create_tag("found", background="yellow")
+        self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD)
 
-        self.tag_li = self.textbuffer.create_tag("li", foreground="gray", weight=Pango.Weight.BOLD)
-        self.tag_pos = self.textbuffer.create_tag("pos", foreground="red")
-        self.tag_trans = self.textbuffer.create_tag("trans", foreground="blue")
-        self.tag_example = self.textbuffer.create_tag("example", foreground="blue", style=Pango.Style.ITALIC)
-        self.tag_source = self.textbuffer.create_tag("source", foreground="gray", scale=.65)
-        self.tag_found = self.textbuffer.create_tag("found", background="yellow")
-
-
-        self.tag_click = self.textbuffer.create_tag("click", background="green")
-
-        self.tag_h1 = self.textbuffer.create_tag("h1", weight=Pango.Weight.BOLD)
-        # self.tag_h1.connect("event", lambda *e: print("signal: event"))
-        # print(type(self.tag_bold))
+        # self.tag_url = buffer.create_tag("url", foreground="blue", underline=Pango.Underline.SINGLE)
+        # self.tag_url.connect("event", self._url_clicked)
 
 
     def clean(self):
         # NOTE: kept outside because it needs wrapping
         self.textbuffer.set_text("")
-
-
-    def _auto_copy_select(self, *args):
-        # track select signal and execute
-        return
-
-        # select_mark = self.textbuffer.get_selection_bound()
-        # self.textbuffer.add_selection_clipboard(clipboard)
-        # print(type(select_mark))
-        # if select_mark != None:
-        #     start, end = select_mark
-        #     self.textbuffer.apply_tag(self.tag_found, start, end)
-        #     m = self.textbuffer.create_mark("click", match_start)
-        #     self.textview.scroll_mark_onscreen(m)
 
 
     def mark_found(self, text, begin, n=1):
@@ -112,10 +95,7 @@ class Viewer(Gtk.Overlay):
 
     def parse(self, data, src='\n', print_=True):
         """
-        >>> obj = Viewer(root)
-        >>> root.add(obj)
-        >>> data = [1, 'hello', 'नमस्कार']
-        >>> obj.parse(data)
+        >>> obj.parse([1, 'hello', 'नमस्कार'])
         1 hello नमस्कार
         """
 
@@ -166,7 +146,7 @@ class Viewer(Gtk.Overlay):
         if not print_: return
 
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, word, self.tag_h1)
+        self.textbuffer.insert_with_tags(end, word, self.tag_bold)
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, '    ['+trasliterate+']', self.tag_trans)
 
@@ -191,9 +171,76 @@ class Viewer(Gtk.Overlay):
             end = self.textbuffer.get_end_iter()
             self.textbuffer.insert(end, t[1].strip()+"\n")
 
-            # print(self.textview.scroll_to_iter(end, 0, True, 1.0, 0.0 ))
 
-        return
+    def append_result(self, word, parsed_info, src='\n'):
+        """
+        >>> obj.append_result('hello', [('unknown', 'नमस्कार')], 'gloss/demo')
+        >>> obj.append_result('hello',\
+        [('transliterate', 'हेल्\u200dलो'),\
+        ('noun', 'नमस्कार'), ('noun', 'नमस्ते'),\
+        ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')],\
+        'gloss/demo')
+        >>> obj.append_result('wheat',\
+        [('transliterate', 'वीट्'),\
+        ('noun', 'गहूँ'),\
+        ('#', 'crop'),\
+        ('#', 'food'),\
+        ('wiki', 'Wheat')],\
+        'gloss/demo')
+        """
+        end = self.textbuffer.get_end_iter()
+        self.textbuffer.insert_with_tags(end, word, self.tag_bold)
+
+        info = iter(parsed_info)
+        pos, val = next(info)
+        if pos == "transliterate":
+            end = self.textbuffer.get_end_iter()
+            self.textbuffer.insert_with_tags(end, '  [%s]'%val, self.tag_trans)
+        else:
+            info = parsed_info
+
+        if src != '\n':
+            *a, tmp = src.split('gloss/')
+            end = self.textbuffer.get_end_iter()
+            self.textbuffer.insert_with_tags(end, "\nsource: %s"%tmp, self.tag_source)
+
+        _pos = ""
+        c = 0
+        for pos, val in info:
+            if pos == "transliterate":
+                end = self.textbuffer.get_end_iter()
+                self.textbuffer.insert_with_tags(end, '  [%s]'%val, self.tag_trans)
+                continue;
+            if pos == "#":
+                end = self.textbuffer.get_end_iter()
+                self.textbuffer.insert(end, "  ")
+                end = self.textbuffer.get_end_iter()
+                self.textbuffer.insert_with_tags(end, "#"+val, self.tag_hashtag)
+                continue
+            if pos == "wiki": self.link_wiki(val); continue
+            if val == "": _pos = ""; continue
+            if pos != _pos:
+                c += 1
+                end = self.textbuffer.get_end_iter()
+                self.textbuffer.insert_with_tags(end, "\n%4d. "%c, self.tag_li)
+
+                end = self.textbuffer.get_end_iter()
+                self.textbuffer.insert_with_tags(end, pos, self.tag_pos)
+
+                end = self.textbuffer.get_end_iter()
+                self.textbuffer.insert(end, " » ")
+            else:
+                end = self.textbuffer.get_end_iter()
+                self.textbuffer.insert(end, ", ")
+
+            end = self.textbuffer.get_end_iter()
+            self.textbuffer.insert(end, val)
+            self._parent.clips.append(val)
+            _pos = pos
+        else:
+            end = self.textbuffer.get_end_iter()
+            self.textbuffer.insert(end, "\n")
+
 
 
     def _autoscroll(self, *args):
@@ -209,6 +256,50 @@ class Viewer(Gtk.Overlay):
         self.textbuffer.insert(end, " Not Found %s\n"%msg)
 
 
+    # def _leave(self, *args):
+    #     self.parent.set_cursor(None)
+
+    # def _enter(self, *args):
+    #     self.parent.set_cursor(Gdk.Cursor(Gdk.HAND2))
+
+    def link_wiki(self, key):
+        end = self.textbuffer.get_end_iter()
+        self.textbuffer.insert(end, " ")
+
+        def url_clicked(textag, textview, event, textiter):
+            if event.type == Gdk.EventType.BUTTON_RELEASE: #and event.button == 1:
+                webbrowser.open("https://en.wikipedia.org/wiki/"+key)
+
+        tag = self.textbuffer.create_tag(None, foreground="blue", underline=Pango.Underline.SINGLE)
+        tag.connect("event", url_clicked )
+        # tag.connect("enter-notify-event", self._enter)
+
+        end = self.textbuffer.get_end_iter()
+        self.textbuffer.insert_with_tags(end, "wiki", tag)
+
+
+    def link_button(self):
+        link = Gtk.LinkButton(uri="https://en.wikipedia.org/wiki/", label="wiki")
+        link.show()
+        # link.set_size_request(30, 40)
+        anchor = Gtk.TextChildAnchor()
+        end = self.textbuffer.get_end_iter()
+        self.textbuffer.insert_child_anchor(end, anchor)
+        self.textview.add_child_at_anchor(link, anchor)
+
+
+    def add_anchor(self):
+        end = self.viewer.textbuffer.get_end_iter()
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file(PWD + 'globe.svg')
+        self.viewer.textbuffer.insert_pixbuf(end, pixbuf)
+
+
+    def add_pic(self):
+        pixbuf = GdkPixbuf('')
+        pixbuf.scale_simple(dest_width, dest_height, gtk.gdk.INTERP_BILINEAR)
+        self.viewer.insert_pixbuf()
+
+
 def root_binds(widget, event):
     # print(event.keyval)
     if event.keyval == 65307:
@@ -221,6 +312,10 @@ def main():
     root.connect('key_release_event', root_binds)
     root.set_default_size(500, 300)
     root.clips = []
+
+    global obj
+    obj = Viewer(root)
+    root.add(obj)
     return root
 
 

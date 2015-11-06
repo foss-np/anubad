@@ -5,6 +5,13 @@ from gi.repository import Gtk
 
 fp_dev_null = open(os.devnull, 'w')
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
+pos_map = {
+    'n': "noun",
+    'noun': "noun",
+    'j': "adjective",
+    'adj': "adjective",
+    'v': "verb",
+}
 
 class Glossary():
     instances = []
@@ -52,6 +59,65 @@ class Glossary():
                 exit(1)
             category.append((i, word, defination))
 
+    @staticmethod
+    def format_parser(raw):
+        """
+        >>> Glossary.format_parser('नमस्कार')
+        [('unknown', 'नमस्कार')]
+        >>> Glossary.format_parser('नमस्कार, नमस्ते')
+        [('unknown', 'नमस्कार'), ('unknown', 'नमस्ते')]
+        >>> Glossary.format_parser('n(नमस्कार, नमस्ते)')
+        [('noun', 'नमस्कार'), ('noun', 'नमस्ते')]
+        >>> Glossary.format_parser('n:v(नमस्कार, नमस्ते)')
+        [('noun:verb', 'नमस्कार'), ('noun:verb', 'नमस्ते')]
+        >>> Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
+        [('transliterate', 'हेल्\u200dलो'), ('noun', 'नमस्कार'), ('noun', 'नमस्ते'), ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')]
+        """
+
+        operator = []
+        buffer = ""
+        output = []
+        fbreak = 0
+        pos = 'unknown'
+        for i, c in enumerate(raw):
+            if   c == '[':
+                operator.append((']', i));
+                pos = 'transliterate'
+                fbreak = i + 1
+                buffer = ""
+            elif c == '{':
+                operator.append(('}', i));
+                pos = buffer
+                fbreak = i + 1
+                buffer = ""
+            elif c == '(':
+                operator.append((')', i))
+                pos = ':'.join(pos_map.get(b, 'unknown') for b in buffer.split(':'))
+                fbreak = i + 1
+                buffer = ""
+            elif c == " " and buffer == "": pass
+            elif c == "#": pos = "#"
+            elif c == ',':
+                output.append((pos, buffer.strip()))
+                buffer = ""
+                fbreak = i + 1
+            elif c in '>])}':
+                symbol, index = operator.pop()
+                if c != symbol:
+                    print("error: unbalanced paranthesis", file=sys.stderr)
+                    return carry_error_to_be_handled
+                output.append((pos, buffer.strip()))
+                buffer = ""
+                fbreak = i + 1
+                pos = 'unknown'
+            else:
+                buffer += c
+
+        if buffer != "":
+            output.append((pos, buffer.strip()))
+
+        return output
+
 
     @staticmethod
     def search(query):
@@ -69,6 +135,7 @@ class Glossary():
 if __name__ == '__main__':
     exec(open("gsettings.conf").read())
     foss_gloss = Glossary(LIST_GLOSS[0])
-    FULL, FUZZ = gloss.search('hello')
-
+    FULL, FUZZ = Glossary.search('hello')
     print(FULL[0][2][:])
+    import doctest
+    doctest.testmod()

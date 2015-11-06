@@ -25,6 +25,9 @@ dist:
 mysettings.conf:
 	touch mysettings.conf
 
+core:
+	./core.py
+
 browser:
 	./browser.py
 
