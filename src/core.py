@@ -3,7 +3,6 @@
 import os, sys
 from gi.repository import Gtk
 
-fp_dev_null = open(os.devnull, 'w')
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
 pos_map = {
     'n': "noun",
@@ -38,7 +37,7 @@ class Glossary():
 
 
     def load_entries(self, category, src):
-        print("loading: *" + src[-40:], file=fp_dev_null)
+        print("loading: *" + src[-40:], file=fp3)
 
         try:
             data = open(src, encoding="UTF-8").read()
@@ -62,50 +61,73 @@ class Glossary():
     @staticmethod
     def format_parser(raw):
         """
-        >>> Glossary.format_parser('नमस्कार')
-        [('unknown', 'नमस्कार')]
-        >>> Glossary.format_parser('नमस्कार, नमस्ते')
-        [('unknown', 'नमस्कार'), ('unknown', 'नमस्ते')]
-        >>> Glossary.format_parser('n(नमस्कार, नमस्ते)')
-        [('noun', 'नमस्कार'), ('noun', 'नमस्ते')]
-        >>> Glossary.format_parser('n:v(नमस्कार, नमस्ते)')
-        [('noun:verb', 'नमस्कार'), ('noun:verb', 'नमस्ते')]
-        >>> Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
+        >>> print("Test 06"); Glossary.format_parser('wheat; [वीट्] n(गहूँ) #crop, wiki{Wheat}')
+        Test 06
+        [('transliterate', 'वीट्'), ('noun', 'गहूँ'), ('unknown', ''), ('_#', 'crop'), ('_wiki', 'Wheat')]
+        >>> print("Test 05"); Glossary.format_parser('shell; [शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)')
+        Test 05
+        [('transliterate', 'शेल'), ('noun', 'शंख किरो'), ('_#', 'animal'), ('noun', ''), ('noun', 'छिल्का'), ('noun', 'खोल'), ('noun', 'बोक्रा')]
+        >>> print("Test 04"); Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
+        Test 04
         [('transliterate', 'हेल्\u200dलो'), ('noun', 'नमस्कार'), ('noun', 'नमस्ते'), ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')]
+        >>> print("Test 03"); Glossary.format_parser('n(<thin> तुवाँलो ~fog)')
+        Test 03
+        [('_note', 'thin'), ('unknown', 'तुवाँलो ~fog')]
+        >>> print("Test 02"); Glossary.format_parser('कर')
+        Test 02
+        [('unknown', 'कर')]
+        >>> print("Test 01"); Glossary.format_parser('n:v(मस्त)')
+        Test 01
+        [('noun:verb', 'मस्त')]
         """
 
-        operator = []
-        buffer = ""
-        output = []
-        fbreak = 0
+        operator, output = [], []
         pos = 'unknown'
+        buffer = ""
+        fbreak = 0
+        hashtag = False
+        # TODO: refacator, reduce repeted segements
         for i, c in enumerate(raw):
             if   c == '[':
                 operator.append((']', i));
                 pos = 'transliterate'
                 fbreak = i + 1
                 buffer = ""
+            elif c == '<':
+                operator.append(('>', i));
+                pos = "_note" # '_' prefix for meta tags
+                fbreak = i + 1
+                buffer = ""
             elif c == '{':
                 operator.append(('}', i));
-                pos = buffer
+                pos = '_' + buffer # '_' prefix for meta tags
                 fbreak = i + 1
                 buffer = ""
             elif c == '(':
                 operator.append((')', i))
-                pos = ':'.join(pos_map.get(b, 'unknown') for b in buffer.split(':'))
+                pos = ':'.join(pos_map.get(b, b) for b in buffer.split(':'))
                 fbreak = i + 1
                 buffer = ""
-            elif c == " " and buffer == "": pass
-            elif c == "#": pos = "#"
+            elif c == ' ' and buffer == "": pass
+            elif c in ' ,)>}' and hashtag:
+                output.append(("_#", buffer.strip()))
+                buffer = ""
+                hashtag = False
+            elif c == '#':
+                hashtag = True;
+                output.append((pos, buffer.strip()))
+                buffer = ""
             elif c == ',':
+                # print(buffer, file=fp3)
                 output.append((pos, buffer.strip()))
                 buffer = ""
                 fbreak = i + 1
             elif c in '>])}':
                 symbol, index = operator.pop()
                 if c != symbol:
+                    print('buffer: "%s"'%buffer, 'got: "%s"'%c, 'expected: "%s"'%symbol)
                     print("error: unbalanced paranthesis", file=sys.stderr)
-                    return carry_error_to_be_handled
+                    return # TODO error handling
                 output.append((pos, buffer.strip()))
                 buffer = ""
                 fbreak = i + 1
@@ -121,18 +143,19 @@ class Glossary():
 
     @staticmethod
     def search(query):
-        FULL, FUZZ = [], set()
+        FULL, FUZZ = [], []
         for instance in __class__.instances:
             for category in instance.categories.values():
                 for row in category:
                     if query not in row[1]: continue
-                    match = (instance, category, row)
+                    match = (instance, category.fullpath, list(row))
                     if query == row[1]: FULL.append(match)
-                    else: FUZZ.add(match)
+                    else: FUZZ.append(match)
         return FULL, FUZZ
 
 
 if __name__ == '__main__':
+    fp3 = sys.stderr
     exec(open("gsettings.conf").read())
     foss_gloss = Glossary(LIST_GLOSS[0])
     FULL, FUZZ = Glossary.search('hello')

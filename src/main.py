@@ -25,15 +25,29 @@ import relations
 import add as Ad
 import utils
 
-
 fp_dev_null = open(os.devnull, 'w')
-if 'DEBUGLY' in globals() and os.path.isdir(DEBUGLY):
+
+DEBUG = 0
+if "DEBUG" in os.environ:
+    try:
+        DEBUG = int(os.environ["DEBUG"])
+    except:
+        DEBUG = 1
+
+if 'DEBUGLY' in globals() and os.path.isdir(DEBUGLY) and DEBUG:
     sys.path.append(DEBUGLY)
     from debugly import *
-    from pprint import pprint
 else:
-    debug = lambda f, *arg, **kwarg: f(arg, kwarg)
-    pprint = print
+    debug = lambda func: func
+
+for i in range(3, 7):
+    if DEBUG > 0:
+        print("DEBUG: %d fp%d enabled"%(DEBUG, i), file=sys.stderr)
+        stream = "sys.stderr"
+        DEBUG -= 1
+    else:
+        stream = "fp_dev_null"
+    exec("fp%d = %s"%(i, stream))
 
 
 def treeview_signal_safe_toggler(func):
@@ -67,7 +81,7 @@ class GUI(Gtk.Window):
         self.clips_CYCLE = None
 
         self.view_CURRENT = set()
-        self.search_SPACE = None
+        # self.parsed_CACHE = dict()
 
         self.hist_LIST = []
         self.hist_CURSOR = 0
@@ -267,7 +281,7 @@ class GUI(Gtk.Window):
             if event.keyval == ord('c'): self.search_entry.set_text("")
         elif Gdk.ModifierType.SHIFT_MASK & event.state:
             if event.keyval == 65293: # <enter> return
-                print("shift enter")
+                print("action: shift enter", file=fp3)
                 state = self.toolbar.t_ShowAll.get_active()
                 self.toolbar.t_ShowAll.set_active(not state)
                 self.search_and_reflect()
@@ -284,7 +298,7 @@ class GUI(Gtk.Window):
             obj.modify_font(FONT_obj)
         return self.sidebar
 
-
+    @debug
     def sidebar_on_row_changed(self, treeselection):
         model, pathlist = treeselection.get_selected_rows()
         self.clips.clear()
@@ -314,7 +328,7 @@ class GUI(Gtk.Window):
             selection.unselect_all()
             # model, treeiter = selection.get_selected()
             # if treeiter is None:
-            #     print("It clean")
+            #     It clean
         self.viewer.clean = smart_clean
 
         self.viewer.textview.connect("button-press-event", self.viewer_on_click)
@@ -403,12 +417,21 @@ class GUI(Gtk.Window):
 
 
     def _view_item(self, instance, category, row):
-        meta = (instance, category, row)
-        view = meta not in self.view_CURRENT
         ID, word, info = row
+        meta = (instance, category, ID)
         parsed_info = core.Glossary.format_parser(info)
-        self.viewer.append_result(word, parsed_info, category.fullpath)
-        # self.viewer.parse(row, category.fullpath, print_=view)
+        print(parsed_info, file=fp4)
+        ## put trasliteration copy at last
+        transliterate = []
+        for pos, val in parsed_info:
+            if pos[0] == "_" or val == "": continue
+            if pos == "transliterate": transliterate.append(val); continue
+            self.clips.append(val)
+
+        self.clips += transliterate
+
+        if meta in self.view_CURRENT: return
+        self.viewer.append_result(word, parsed_info, category)
         self.view_CURRENT.add(meta)
 
 
@@ -426,29 +449,22 @@ class GUI(Gtk.Window):
         self.sidebar.clear()
         treeselection = self.sidebar.treeview.get_selection()
 
-        all_FUZZ = set()
+        all_FUZZ = []
         self.clips.clear()
         for word, (FULL, FUZZ) in query_RESULTS.items():
             if FULL: _add_view_items(FULL)
             else: self.viewer.not_found(word)
-            all_FUZZ = all_FUZZ | FUZZ
+            all_FUZZ += FUZZ
 
         _add_view_items(sorted(all_FUZZ, key=lambda k: k[2][1]), self.toolbar.t_ShowAll.get_active())
 
+        ## Let the clips handel it jumping
+        # self.viewer.jump_to_end()
+        print("clip:", self.clips, file=fp3)
         if len(self.clips) == 0: return
         self.clips_CYCLE = utils.circle(self.clips)
         self._circular_search(+1)
         self.search_entry.grab_focus()
-
-
-    @turn_off_auto_copy
-    def _open_dir(self):
-        print("pid:", Popen(["nemo", PATH_GLOSS]).pid)
-
-
-    @turn_off_auto_copy
-    def _open_term(self):
-        print("pid:", Popen([TERMINAL, "--working-directory=%s"%self.notebook.GLOSS]).pid)
 
 
     @turn_off_auto_copy
@@ -461,10 +477,10 @@ class GUI(Gtk.Window):
             path = core.Glossary.instances[0].categories['main'].fullpath
         else:
             instance, category, row = self.sidebar.get_suggestion(pathlst[0])
-            path = category.fullpath
+            path = category
             line = row[0]
 
-        print("pid:", Popen(["leafpad", "--jump=%d"%line, path]).pid)
+        print("pid:", Popen(["leafpad", "--jump=%d"%line, path]).pid, file=fp5)
 
 
     # def reload(self, gloss):
@@ -529,7 +545,7 @@ class GUI(Gtk.Window):
 
 
     def _add_to_gloss_reflect(self, *args):
-        print("hello i'm back")
+        print("hello i'm back", file=fp5)
 
 
     def preference(self, query=""):
@@ -538,11 +554,7 @@ class GUI(Gtk.Window):
 
 
     def key_binds(self, widget, event):
-        # print(e.keyval)
         keyval, state = event.keyval, event.state
-        # if   keyval == 65481: self.reload(LIST_GLOSS[0]) # F12
-        # elif keyval == 65480: self.reload(LIST_GLOSS[1]) # F11
-        # elif keyval == 65479: self.reload(LIST_GLOSS[2]) # F10
         # elif keyval == 65474: self._reload_gloss() # F5
         if   keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
@@ -550,10 +562,8 @@ class GUI(Gtk.Window):
             if   keyval == ord('e'): self._open_src()
             elif keyval == ord('i'): self.add_to_gloss()
             elif keyval == ord('l'): self.viewer.clean()
-            elif keyval == ord('o'): self._open_dir()
             elif keyval == ord('r'): self._circular_search(-1)
             elif keyval == ord('s'): self._circular_search(+1)
-            elif keyval == ord('t'): self._open_term()
             # elif keyval == 65365: self._circular_tab_switch(-1) # Pg-Dn
             # elif keyval == 65366: self._circular_tab_switch(+1) # Pg-Up
             elif keyval == ord('g'): # grab clipboard
@@ -587,13 +597,18 @@ class GUI(Gtk.Window):
 def init():
     # import __main__
     # TODO where to add __main__function
+    core.fp3 = fp6
+
     global PATH_GLOSS
     core.PATH_GLOSS = PATH_GLOSS = PWD + PATH_GLOSS
 
     global FONT_obj
     FONT_obj =  Pango.font_description_from_string(def_FONT)
     # MAYBE do __main__ import here
-    BL.fp3 = fp_dev_null
+    BL.fp3 = fp4
+
+    global BROWSER
+    Vi.BROWSER = BROWSER
 
     for path in LIST_GLOSS:
         core.Glossary(path)

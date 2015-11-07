@@ -6,7 +6,7 @@ A module for the interactive text interface and Decoration.
 """
 
 import os
-import webbrowser
+from subprocess import Popen
 from gi.repository import Gtk, Gdk, Pango
 
 class Viewer(Gtk.Overlay):
@@ -93,88 +93,10 @@ class Viewer(Gtk.Overlay):
         self.textview.scroll_mark_onscreen(m)
 
 
-    def parse(self, data, src='\n', print_=True):
-        """
-        >>> obj.parse([1, 'hello', 'नमस्कार'])
-        1 hello नमस्कार
-        """
-
-        ID, word, raw = data
-
-        if os.name is not 'nt': # MSWIN BUG: can't print unicode
-            print(ID, word, raw)
-
-        trasliterate = ""
-        translations = []
-        tags = []
-        pos = ""
-        level = 0
-
-        fbreak = ftsl = 0
-        # TODO: dictonary map of pos-tags
-        for i, c in enumerate(raw):
-            if c == '[': ftsl = i; level += 1
-            elif c == ']':
-                trasliterate = raw[ftsl+1:i]
-                ftsl = i + 2
-                fbreak = i + 2
-                level -= 1
-            elif c == '(':
-                pos = raw[fbreak:i]
-                fbreak = i + 1
-                level += 1
-            elif c == ',':
-                if raw[i-1] in ')]': continue
-                if level > 0: continue
-                translations.append([pos, raw[fbreak:i]])
-                fbreak = i + 2
-            elif c == ')':
-                translations.append([pos, raw[fbreak:i]])
-                pos = ""
-                fbreak = i + 3
-                level -= 1
-
-        if i - fbreak > 2 or len(translations) < 1:
-            translations.append([pos, raw[fbreak:]])
-
-        r = []
-        for p, t in translations:
-            r += [ u.strip() for u in t.split(',') ]
-
-        # NOTE: _parent because overlay has its own too
-        self._parent.clips += r
-        if not print_: return
-
-        end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, word, self.tag_bold)
-        end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, '    ['+trasliterate+']', self.tag_trans)
-
-        if src != '\n':
-            *a, gloss, lang, label = src.split('/')
-            src = " source: %s/%s/%s\n"%(gloss, lang, label)
-
-        end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, src, self.tag_source)
-
-        for c, t in enumerate(translations):
-            end = self.textbuffer.get_end_iter()
-            self.textbuffer.insert_with_tags(end, "%4d. "%(c+1), self.tag_li)
-
-            pos_ = t[0].strip() if t[0] else "undefined"
-            end = self.textbuffer.get_end_iter()
-            self.textbuffer.insert_with_tags(end, pos_, self.tag_pos)
-
-            end = self.textbuffer.get_end_iter()
-            self.textbuffer.insert(end, " » ")
-
-            end = self.textbuffer.get_end_iter()
-            self.textbuffer.insert(end, t[1].strip()+"\n")
-
-
     def append_result(self, word, parsed_info, src='\n'):
         """
         >>> obj.append_result('hello', [('unknown', 'नमस्कार')], 'gloss/demo')
+        >>> obj.append_result('gray', [('unknown', 'नमस्कार')], 'gloss/demo')
         >>> obj.append_result('hello',\
         [('transliterate', 'हेल्\u200dलो'),\
         ('noun', 'नमस्कार'), ('noun', 'नमस्ते'),\
@@ -183,8 +105,7 @@ class Viewer(Gtk.Overlay):
         >>> obj.append_result('wheat',\
         [('transliterate', 'वीट्'),\
         ('noun', 'गहूँ'),\
-        ('#', 'crop'),\
-        ('#', 'food'),\
+        ('_#', 'crop'), ('_#', 'food'),\
         ('wiki', 'Wheat')],\
         'gloss/demo')
         """
@@ -211,13 +132,13 @@ class Viewer(Gtk.Overlay):
                 end = self.textbuffer.get_end_iter()
                 self.textbuffer.insert_with_tags(end, '  [%s]'%val, self.tag_trans)
                 continue;
-            if pos == "#":
+            if pos == "_#":
                 end = self.textbuffer.get_end_iter()
                 self.textbuffer.insert(end, "  ")
                 end = self.textbuffer.get_end_iter()
                 self.textbuffer.insert_with_tags(end, "#"+val, self.tag_hashtag)
                 continue
-            if pos == "wiki": self.link_wiki(val); continue
+            if pos == "_wiki": self.link_wiki(val); continue
             if val == "": _pos = ""; continue
             if pos != _pos:
                 c += 1
@@ -235,12 +156,10 @@ class Viewer(Gtk.Overlay):
 
             end = self.textbuffer.get_end_iter()
             self.textbuffer.insert(end, val)
-            self._parent.clips.append(val)
             _pos = pos
         else:
             end = self.textbuffer.get_end_iter()
             self.textbuffer.insert(end, "\n")
-
 
 
     def _autoscroll(self, *args):
@@ -254,6 +173,7 @@ class Viewer(Gtk.Overlay):
 
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert(end, " Not Found %s\n"%msg)
+        self.jump_to_end()
 
 
     # def _leave(self, *args):
@@ -268,7 +188,8 @@ class Viewer(Gtk.Overlay):
 
         def url_clicked(textag, textview, event, textiter):
             if event.type == Gdk.EventType.BUTTON_RELEASE: #and event.button == 1:
-                webbrowser.open("https://en.wikipedia.org/wiki/"+key)
+                print("pid:", Popen(['setsid', BROWSER, "https://en.wikipedia.org/wiki/%s"%key]).pid)
+                # webbrowser.open("https://en.wikipedia.org/wiki/"+key)
 
         tag = self.textbuffer.create_tag(None, foreground="blue", underline=Pango.Underline.SINGLE)
         tag.connect("event", url_clicked )
@@ -311,7 +232,6 @@ def main():
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
     root.set_default_size(500, 300)
-    root.clips = []
 
     global obj
     obj = Viewer(root)

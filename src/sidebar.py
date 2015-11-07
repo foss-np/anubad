@@ -26,9 +26,11 @@ class Sidebar(Gtk.VBox):
 
 
     def add_suggestion(self, instance, category, row):
+        meta = (instance, category, row)
+        if meta in self.dictstore.values(): return
         self.count += 1
         self.treemodel.append((self.count, row[1]))
-        self.dictstore[self.count] = (instance, category, row)
+        self.dictstore[self.count] = meta
 
 
     def get_suggestion(self, index):

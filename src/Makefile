@@ -13,6 +13,9 @@ tk-py2: mysettings.conf
 gtk3: mysettings.conf
 	./app.py
 
+debug:
+	DEBUG=3 ./app.py
+
 wine: mysettings.conf
 	# note should load from same directory
 	# and please set the python path in wine
