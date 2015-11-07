@@ -8,6 +8,7 @@ A module for the interactive text interface and Decoration.
 import os
 from subprocess import Popen
 from gi.repository import Gtk, Gdk, Pango
+from gi.repository import GdkPixbuf
 
 class Viewer(Gtk.Overlay):
     """
@@ -18,6 +19,8 @@ class Viewer(Gtk.Overlay):
     def __init__(self, parent=None):
         Gtk.Overlay.__init__(self)
         self._parent = parent # overlay has the parent field
+        self.pixbuf_cache = dict()
+
         self.makeWidgets()
 
         self.set_hexpand(True)
@@ -42,7 +45,7 @@ class Viewer(Gtk.Overlay):
         self.textview = Gtk.TextView()
         self.scroll.add(self.textview)
         self.textview.set_editable(False)
-        self.textview.set_cursor_visible(False)
+        # self.textview.set_cursor_visible(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
         self.textview.set_left_margin(10)
         self.textview.set_right_margin(20)
@@ -61,9 +64,6 @@ class Viewer(Gtk.Overlay):
         self.tag_source = buffer.create_tag("source", foreground="gray", scale=.65)
         self.tag_found = buffer.create_tag("found", background="yellow")
         self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD)
-
-        # self.tag_url = buffer.create_tag("url", foreground="blue", underline=Pango.Underline.SINGLE)
-        # self.tag_url.connect("event", self._url_clicked)
 
 
     def clean(self):
@@ -191,12 +191,18 @@ class Viewer(Gtk.Overlay):
                 print("pid:", Popen(['setsid', BROWSER, "https://en.wikipedia.org/wiki/%s"%key]).pid)
                 # webbrowser.open("https://en.wikipedia.org/wiki/"+key)
 
-        tag = self.textbuffer.create_tag(None, foreground="blue", underline=Pango.Underline.SINGLE)
+        tag = self.textbuffer.create_tag(None)
         tag.connect("event", url_clicked )
         # tag.connect("enter-notify-event", self._enter)
 
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, "wiki", tag)
+        offset = end.get_offset()
+        # print(offset)
+        self.insert_image('../assets/globe.svg')
+        end = self.textbuffer.get_end_iter()
+        begin = self.textbuffer.get_iter_at_offset(offset)
+        self.textbuffer.apply_tag(tag, begin, end)
+        # self.textbuffer.insert_with_tags(end, "wiki", tag)
 
 
     def link_button(self):
@@ -209,15 +215,20 @@ class Viewer(Gtk.Overlay):
         self.textview.add_child_at_anchor(link, anchor)
 
 
-    def add_anchor(self):
-        end = self.viewer.textbuffer.get_end_iter()
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file(PWD + 'globe.svg')
-        self.viewer.textbuffer.insert_pixbuf(end, pixbuf)
+    def insert_image(self, file):
+        end = self.textbuffer.get_end_iter()
+        if file in self.pixbuf_cache:
+            self.textbuffer.insert_pixbuf(end, self.pixbuf_cache[file])
+            return
+
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file(PWD + file)
+        new = pixbuf.scale_simple(16, 16, GdkPixbuf.InterpType.BILINEAR)
+        self.pixbuf_cache[file] = new
+        self.textbuffer.insert_pixbuf(end, new)
 
 
     def add_pic(self):
         pixbuf = GdkPixbuf('')
-        pixbuf.scale_simple(dest_width, dest_height, gtk.gdk.INTERP_BILINEAR)
         self.viewer.insert_pixbuf()
 
 
@@ -240,6 +251,9 @@ def main():
 
 
 if __name__ == '__main__':
+    __filepath__ = os.path.abspath(__file__)
+    PWD = os.path.dirname(__filepath__) + '/'
+
     root = main()
     import doctest
     doctest.testmod()
