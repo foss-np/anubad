@@ -9,7 +9,6 @@ exec(open(PWD + "gsettings.conf", encoding="UTF-8").read())
 exec(open(PWD + "mysettings.conf", encoding="UTF-8").read())
 
 from gi.repository import Gtk, Gdk, Pango
-from gi.repository import GdkPixbuf
 
 import importlib
 from collections import OrderedDict
@@ -331,17 +330,37 @@ class GUI(Gtk.Window):
             #     It clean
         self.viewer.clean = smart_clean
 
-        self.viewer.textview.connect("button-press-event", self.viewer_on_click)
+        self.viewer.textview.connect("button-release-event", self.viewer_after_click)
+        self.viewer.textview.connect("event", self.viewer_on_activity)
         return self.viewer
 
 
-    def viewer_on_click(self, *args):
-        bounds = self.viewer.textbuffer.get_selection_bounds()
-        if not bounds: return
-        begin, end = bounds
-        query = self.viewer.textbuffer.get_text(begin, end, True)
-        self.search_entry.set_text(query)
-        self.search_and_reflect(query)
+    def viewer_after_click(self, textview, eventbutton):
+        mark = self.viewer.textbuffer.get_insert()
+        end = self.viewer.textbuffer.get_iter_at_mark(mark)
+        char = end.get_char()
+        # print(end.get_offset())
+        if not end.forward_word_end(): return
+        begin = end.copy()
+        if not begin.backward_word_start(): return
+        word = self.viewer.textbuffer.get_text(begin, end, True)
+        # validity of the select
+        if char not in word: return
+        BEGIN = self.viewer.textbuffer.get_start_iter()
+        END = self.viewer.textbuffer.get_end_iter()
+        self.viewer.textbuffer.remove_tag(self.viewer.tag_found, BEGIN, END)
+        self.viewer.textbuffer.apply_tag(self.viewer.tag_found, begin, end)
+        self.copy_BUFFER = word
+
+
+    def viewer_on_activity(self, textview, event):
+        if event.type == Gdk.EventType._2BUTTON_PRESS:
+            bounds = self.viewer.textbuffer.get_selection_bounds()
+            if not bounds: return
+            begin, end = bounds
+            query = self.viewer.textbuffer.get_text(begin, end, True)
+            self.search_entry.set_text(query)
+            self.search_and_reflect(query)
 
 
     def makeWidgets_browser(self, gloss):
@@ -600,6 +619,7 @@ def init():
     # import __main__
     # TODO where to add __main__function
     core.fp3 = fp6
+    Vi.PWD = PWD
 
     global PATH_GLOSS
     core.PATH_GLOSS = PATH_GLOSS = PWD + PATH_GLOSS
