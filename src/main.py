@@ -138,7 +138,7 @@ class GUI(Gtk.Window):
         hpaned.add2(self.makeWidgets_viewer())
         hpaned.set_position(165)
 
-        self.layout.attach(self.makeWidgets_relations(), left=0, top=5, width=5, height=2)
+        # self.layout.attach(self.makeWidgets_relations(), left=0, top=5, width=5, height=2)
 
 
     def makeWidgets_toolbar(self):
@@ -170,13 +170,13 @@ class GUI(Gtk.Window):
         ## Open Gloss
         bar.b_Open = Gtk.ToolButton(icon_name=Gtk.STOCK_OPEN)
         bar.add(bar.b_Open)
-        bar.b_Open.connect("clicked", lambda w: self._open_dir())
+        # bar.b_Open.connect("clicked", lambda w: self._open_dir())
         bar.b_Open.set_tooltip_markup("Load New Glossary")
         ##
         ## Add Button
         bar.b_Add = Gtk.ToolButton(icon_name=Gtk.STOCK_ADD)
         bar.add(bar.b_Add)
-        bar.b_Add.connect("clicked", lambda w: self.add_to_gloss())
+        # bar.b_Add.connect("clicked", lambda w: self.add_to_gloss())
         bar.b_Add.set_tooltip_markup("Add new word to Glossary, <u>Ctrl+i</u>")
         ##
         #
@@ -352,7 +352,7 @@ class GUI(Gtk.Window):
         for i, (name, lstore) in enumerate(gloss.categories.items()):
             if "main" == name: notebook.MAIN_TAB = i
             obj = BL.BrowseList(self.parent, lstore)
-            # obj.treeview.connect("row-activated", self.browser_row_double_click)
+            obj.treeview.connect("row-activated", self.browser_row_double_click)
             obj.treeview.modify_font(FONT_obj)
             self.track_FONT.add(obj.treeview)
             notebook.append_page(obj, Gtk.Label(label=name))
@@ -365,18 +365,20 @@ class GUI(Gtk.Window):
         return self.relatives
 
 
-    # @debug
-    # def browser_row_double_click(self, widget, treepath, treeviewcol):
-    #     selection = widget.get_selection()
-    #     model, treeiter = selection.get_selected()
+    def browser_row_double_click(self, widget, treepath, treeviewcol):
+        selection = widget.get_selection()
+        model, treeiter = selection.get_selected()
 
-    #     if treeiter is None: return
-    #     tab = self.notebook.get_current_page()
-    #     obj = self.notebook.get_nth_page(tab)
-    #     row = list(model[treeiter])
-    #     self.viewer.parse(row, obj.SRC)
-    #     self.viewer.jump_to_end()
-    #     return
+        if treeiter is None: return
+        tab = self.notebook.get_current_page()
+        obj = self.notebook.get_nth_page(tab)
+        ID, word, info = model[treeiter]
+
+        # self.viewer.parse(row, obj.SRC)
+        parsed_info = core.Glossary.format_parser(info)
+        self.viewer.append_result(word, parsed_info, obj.treebuffer.fullpath)
+        self.viewer.jump_to_end()
+        return
 
 
     def get_active_query(self):
@@ -560,7 +562,7 @@ class GUI(Gtk.Window):
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('e'): self._open_src()
-            elif keyval == ord('i'): self.add_to_gloss()
+            # elif keyval == ord('i'): self.add_to_gloss()
             elif keyval == ord('l'): self.viewer.clean()
             elif keyval == ord('r'): self._circular_search(-1)
             elif keyval == ord('s'): self._circular_search(+1)
@@ -617,7 +619,7 @@ def init():
 def main():
     init()
     root = GUI()
-    return root
+    # return root
 
     root.notebook = root.makeWidgets_browser(core.Glossary.instances[0])
     root.layout.attach(root.notebook, 0, 7, 5, 2)

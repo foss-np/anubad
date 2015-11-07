@@ -11,22 +11,25 @@ Copyright © 2013 - 2015 to the anubad Authors.
 [[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot4.png]]
 
 
-
 * Installation
 
 ** Requirement
 
-   *ms windows* : download [[http://sourceforge.net/projects/pygobjectwin32/files/][pygi installer]]
+   *ms-windows* : download [[http://sourceforge.net/projects/pygobjectwin32/files/][pygi installer]]
 
    *linux*      : distro specific package manager
 
-   |                       | linux          | ms windows  |
-   |-----------------------+----------------+-------------|
-   | python                | python 3.xx    | [[https://www.python.org/downloads/][python 3.xx]] |
-   | gobject-introspection | python-gobject | pygi/base   |
-   | GTK                   | GTK+ 3         | pygi/       |
-   | Pango                 |                |             |
-   | Keybinder             | libkeybinder3  | pygi/GIR    |
+   |                       | linux          | ms-windows** |
+   |-----------------------+----------------+--------------|
+   | python                | python 3.xx    | [[https://www.python.org/downloads/][python 3.xx]]  |
+   | gobject-introspection | python-gobject | pygi/base    |
+   | GTK                   | GTK+ 3         | pygi/        |
+   | Pango                 |                |              |
+   | Keybinder             | libkeybinder3  | pygi/GIR     |
+
+   ** Might have some icon issues, and features may not work***.
+
+   *** Seriously we don't have developers *HELP*
 
 
 ** how to get it
@@ -45,26 +48,43 @@ Copyright © 2013 - 2015 to the anubad Authors.
    for more detail configuration see =src/gsettings= and
    =src/mysettings=.
 
+*** manually config
+
+    For ms-windows and others without =gnu-bash= and =gnu-make=.
+
+    1. Create a folder =gloss= at =/path/to/anubad/=.
+    2. Download np-l10n-glossary [[https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz][zip]] [[https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz][tar]] or =clone= it into the folder
+    3. Extract the downloaded file.
+    4. Rename extracted =np-l10n-glossary-current= to =foss=
+    5. Copy =/path/to/anubad/src/gsettings.conf= to
+       =/path/to/anubad/src/gsettings.conf=.
+
 * Usage
 ** quick-demo
 
    Earlier design was more focused on making the code run with various
    platforms including python 2 and 3 compatibility, which is written
-   in python /tkinter/ which is no longer in development.
+   in python /tkinter/ which is no longer in development due font
+   rendering issues, and poor system intergation
 
    #+begin_src bash
-     cd /path/to/anubad/src
-     ./demo.pyw
+     /path/to/anubad/demo.pyw
    #+end_src
 
 
-** Gtk version
-
-   The *anubad* was re-written in /Gtk/, due font rendering issues,
-   and poor system intergation in /tkinter/. Current development
-   version is in /Gtk/.
+** Gtk application
 
    #+begin_src bash
-     cd /path/to/anubad/src
-     ./app.py
+     cd /path/to/anubad/
+     make
+     # or direcly run
+     /path/to/anubad/src/app.py
+     # if problem occurs run
+     /path/to/anubad/src/main.py
    #+end_src
+
+* Development & Contribution
+
+  Please Use the =dev= branch to send any changes.
+
+  All the modules are independent and can be executed separetly.

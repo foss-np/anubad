@@ -27,3 +27,6 @@ echo "Downloading glossary"
 wget https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz
 tar xvzf current.tar.gz
 mv np-l10n-glossary-current foss
+
+# TODO generate myconfig
+# xdg-tools

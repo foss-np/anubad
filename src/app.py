@@ -68,8 +68,8 @@ def about_dialog(widget):
     aboutdialog.set_comments("\nTranslation Glossary\n")
     aboutdialog.set_website("https://foss-np.github.io/anubad/")
     aboutdialog.set_website_label("Web Version")
-    aboutdialog.set_authors(open(fullpath + '../AUTHORS').read().splitlines())
-    aboutdialog.set_license(open(fullpath + '../LICENSE').read())
+    aboutdialog.set_authors(open(PWD + '../AUTHORS').read().splitlines())
+    aboutdialog.set_license(open(PWD + '../LICENSE').read())
     aboutdialog.run()
     aboutdialog.destroy()
 
@@ -85,8 +85,6 @@ def load_plugins(parent):
     plugins = dict()
     for file_name in os.listdir(PATH_PLUGINS):
         if file_name[-3:] not in ".py": continue
-
-
         namespace = importlib.__import__(file_name[:-3])
         if namespace.plugin_main(parent, PWD):
             print("plugin:", file_name, file=sys.stderr)
