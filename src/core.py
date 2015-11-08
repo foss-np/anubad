@@ -14,12 +14,18 @@ pos_map = {
 
 class Glossary():
     instances = []
+    total_entries = 0
+
     def __init__(self, path):
-        print("glossary:", path, file=sys.stderr)
-        self.fullpath = PATH_GLOSS + path
+        self.entries = 0
         self.categories = dict()
+        self.fullpath = PATH_GLOSS + path
+
         self.load_glossary(self.fullpath)
+        print("glossary:", path, self.entries, file=sys.stderr)
+
         __class__.instances.append(self)
+        __class__.total_entries += self.entries
 
 
     def load_glossary(self, path):
@@ -32,7 +38,7 @@ class Glossary():
             if ext not in FILE_TYPES: continue
             lstore = Gtk.ListStore(int, str, str)
             lstore.fullpath = path + file
-            self.load_entries(lstore, self.fullpath + file)
+            self.entries += self.load_entries(lstore, self.fullpath + file)
             self.categories[name] = lstore
 
 
@@ -57,14 +63,18 @@ class Glossary():
                 os.system("setsid leafpad --jump=%d %s"%(i, src))
                 exit(1)
             category.append((i, word, defination))
+        return i
 
     @staticmethod
     def format_parser(raw):
         """
-        >>> print("Test 06"); Glossary.format_parser('wheat; [वीट्] n(गहूँ) #crop, wiki{Wheat}')
+        >>> print("Test 07"); Glossary.format_parser('[मस्टर्ड] n(<leaves>रायोको साग), #vegetable')
+        Test 07
+        [('transliterate', 'मस्टर्ड'), ('_note', 'leaves'), ('noun', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', 'vegetable')]
+        >>> print("Test 06"); Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}')
         Test 06
         [('transliterate', 'वीट्'), ('noun', 'गहूँ'), ('unknown', ''), ('_#', 'crop'), ('_wiki', 'Wheat')]
-        >>> print("Test 05"); Glossary.format_parser('shell; [शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)')
+        >>> print("Test 05"); Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)')
         Test 05
         [('transliterate', 'शेल'), ('noun', 'शंख किरो'), ('_#', 'animal'), ('noun', ''), ('noun', 'छिल्का'), ('noun', 'खोल'), ('noun', 'बोक्रा')]
         >>> print("Test 04"); Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
@@ -72,7 +82,7 @@ class Glossary():
         [('transliterate', 'हेल्\u200dलो'), ('noun', 'नमस्कार'), ('noun', 'नमस्ते'), ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')]
         >>> print("Test 03"); Glossary.format_parser('n(<thin> तुवाँलो ~fog)')
         Test 03
-        [('_note', 'thin'), ('unknown', 'तुवाँलो ~fog')]
+        [('_note', 'thin'), ('noun', 'तुवाँलो ~fog')]
         >>> print("Test 02"); Glossary.format_parser('कर')
         Test 02
         [('unknown', 'कर')]
@@ -86,6 +96,7 @@ class Glossary():
         buffer = ""
         fbreak = 0
         hashtag = False
+        note = False
         # TODO: refacator, reduce repeted segements
         for i, c in enumerate(raw):
             if   c == '[':
@@ -93,11 +104,8 @@ class Glossary():
                 pos = 'transliterate'
                 fbreak = i + 1
                 buffer = ""
-            elif c == '<':
-                operator.append(('>', i));
-                pos = "_note" # '_' prefix for meta tags
-                fbreak = i + 1
-                buffer = ""
+            elif c == '<' and buffer == "":
+                note = True
             elif c == '{':
                 operator.append(('}', i));
                 pos = '_' + buffer # '_' prefix for meta tags
@@ -113,6 +121,10 @@ class Glossary():
                 output.append(("_#", buffer.strip()))
                 buffer = ""
                 hashtag = False
+            elif c in '>':
+                output.append(("_note", buffer.strip()))
+                buffer = ""
+                note = False
             elif c == '#':
                 hashtag = True;
                 output.append((pos, buffer.strip()))
@@ -122,7 +134,7 @@ class Glossary():
                 output.append((pos, buffer.strip()))
                 buffer = ""
                 fbreak = i + 1
-            elif c in '>])}':
+            elif c in '])}':
                 symbol, index = operator.pop()
                 if c != symbol:
                     print('buffer: "%s"'%buffer, 'got: "%s"'%c, 'expected: "%s"'%symbol)
@@ -136,6 +148,7 @@ class Glossary():
                 buffer += c
 
         if buffer != "":
+            if hashtag: pos = '_#'
             output.append((pos, buffer.strip()))
 
         return output

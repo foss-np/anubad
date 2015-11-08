@@ -4,8 +4,9 @@ from subprocess import Popen
 from gi.repository import Gtk
 
 
-def espeak(word):
-    print("espeak:", Popen(["espeak", "-v", "nepali", word]).pid)
+def espeak(word, tone="nepali"):
+    print("espeak:", word)
+    Popen(["espeak", "-v", tone, word])
 
 
 def plugin_main(root, fullpath):

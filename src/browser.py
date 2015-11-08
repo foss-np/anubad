@@ -56,6 +56,9 @@ class BrowseList(Gtk.Overlay):
         self.treebuffer[path][2] = text
 
 
+    def reload(self):
+        pass
+
     def open_src(self, ID=None):
         # TODO : smart xdg-open with arguments
         # if not self.CURRENT_FOUND_ITEM:

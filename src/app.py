@@ -81,15 +81,14 @@ def load_plugins(parent):
     if PATH_PLUGINS == PWD: return
     sys.path.append(PATH_PLUGINS)
 
-    global plugins
-    plugins = dict()
+
+    parent.plugins = dict()
     for file_name in os.listdir(PATH_PLUGINS):
         if file_name[-3:] not in ".py": continue
         namespace = importlib.__import__(file_name[:-3])
         if namespace.plugin_main(parent, PWD):
             print("plugin:", file_name, file=sys.stderr)
-            continue
-        plugins[file_name[:-3]] = namespace
+            parent.plugins[file_name[:-3]] = namespace
 
 
 def argparser():

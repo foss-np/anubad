@@ -38,7 +38,7 @@ class Viewer(Gtk.Overlay):
 
         self.tb_clean = Gtk.ToolButton(icon_name=Gtk.STOCK_CLEAR)
         self.add_overlay(self.tb_clean)
-        self.tb_clean.connect("clicked", lambda *a: self.clean())
+
         self.tb_clean.set_valign(Gtk.Align.START)
         self.tb_clean.set_halign(Gtk.Align.END)
 
@@ -53,10 +53,7 @@ class Viewer(Gtk.Overlay):
         buffer = self.textview.get_buffer()
         self.textbuffer = buffer
 
-        self.tag_bold = buffer.create_tag("bold",  weight=Pango.Weight.BOLD)
-        # self.tag_italic = buffer.create_tag("italic", style=Pango.Style.ITALIC)
-        # self.tag_underline = buffer.create_tag("underline", underline=Pango.Underline.SINGLE)
-
+        self.tag_bold = buffer.create_tag("bold", weight=Pango.Weight.BOLD)
         self.tag_li = buffer.create_tag("li", foreground="gray", weight=Pango.Weight.BOLD)
         self.tag_pos = buffer.create_tag("pos", foreground="red")
         self.tag_trans = buffer.create_tag("trans", foreground="blue")
@@ -64,11 +61,6 @@ class Viewer(Gtk.Overlay):
         self.tag_source = buffer.create_tag("source", foreground="gray", scale=.65)
         self.tag_found = buffer.create_tag("found", background="yellow")
         self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD)
-
-
-    def clean(self):
-        # NOTE: kept outside because it needs wrapping
-        self.textbuffer.set_text("")
 
 
     def mark_found(self, text, begin, n=1):
@@ -108,6 +100,11 @@ class Viewer(Gtk.Overlay):
         ('_#', 'crop'), ('_#', 'food'),\
         ('wiki', 'Wheat')],\
         'gloss/demo')
+        >>> obj.append_result('black mustard',\
+        [('_note', 'plant'), ('note', 'तोरी'), ('_#', 'spice'), ('noun', ''),\
+        ('_note', 'leaves'), ('noun', 'तोरीको साग'), ('_#', 'vegetable'),\
+        ('_sci', 'Brassica nigra L')],\
+        'gloss/demo')
         """
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, word, self.tag_bold)
@@ -127,6 +124,8 @@ class Viewer(Gtk.Overlay):
 
         _pos = ""
         c = 0
+        note = ""
+        pre = ""
         for pos, val in info:
             if pos == "transliterate":
                 end = self.textbuffer.get_end_iter()
@@ -138,8 +137,10 @@ class Viewer(Gtk.Overlay):
                 end = self.textbuffer.get_end_iter()
                 self.textbuffer.insert_with_tags(end, "#"+val, self.tag_hashtag)
                 continue
+            if pos == "_note": pre = "<%s>"%val; continue
             if pos == "_wiki": self.link_wiki(val); continue
             if val == "": _pos = ""; continue
+            if pos == "_sci": pos = "scientific name"
             if pos != _pos:
                 c += 1
                 end = self.textbuffer.get_end_iter()
@@ -153,6 +154,11 @@ class Viewer(Gtk.Overlay):
             else:
                 end = self.textbuffer.get_end_iter()
                 self.textbuffer.insert(end, ", ")
+
+            if pre != "":
+                end = self.textbuffer.get_end_iter()
+                self.textbuffer.insert(end, pre)
+                pre = ""
 
             end = self.textbuffer.get_end_iter()
             self.textbuffer.insert(end, val)
@@ -179,8 +185,10 @@ class Viewer(Gtk.Overlay):
     # def _leave(self, *args):
     #     self.parent.set_cursor(None)
 
+
     # def _enter(self, *args):
     #     self.parent.set_cursor(Gdk.Cursor(Gdk.HAND2))
+
 
     def link_wiki(self, key):
         end = self.textbuffer.get_end_iter()
@@ -246,6 +254,7 @@ def main():
 
     global obj
     obj = Viewer(root)
+    obj.tb_clean.connect("clicked", lambda *a: obj.textbuffer.set_text(""))
     root.add(obj)
     return root
 

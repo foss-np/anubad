@@ -80,7 +80,6 @@ class GUI(Gtk.Window):
         self.clips_CYCLE = None
 
         self.view_CURRENT = set()
-        # self.parsed_CACHE = dict()
 
         self.hist_LIST = []
         self.hist_CURSOR = 0
@@ -169,7 +168,7 @@ class GUI(Gtk.Window):
         ## Open Gloss
         bar.b_Open = Gtk.ToolButton(icon_name=Gtk.STOCK_OPEN)
         bar.add(bar.b_Open)
-        # bar.b_Open.connect("clicked", lambda w: self._open_dir())
+        bar.b_Open.connect("clicked", lambda w: self._open_dir())
         bar.b_Open.set_tooltip_markup("Load New Glossary")
         ##
         ## Add Button
@@ -314,25 +313,18 @@ class GUI(Gtk.Window):
         self.viewer.textview.modify_font(FONT_obj)
         self.track_FONT.add(self.viewer.textview)
 
-        old_clean = self.viewer.clean
-        # FIX-ME: make it real smart
-        def smart_clean():
-            old_clean()
-            # TODO last clean job after view is fixed
-            # if len(self.items_VIEWED) > 1:
-            #     self.view_last
-            self.view_CURRENT.clear()
-            # NOTE: vvv is for suggession
-            selection = self.sidebar.treeview.get_selection()
-            selection.unselect_all()
-            # model, treeiter = selection.get_selected()
-            # if treeiter is None:
-            #     It clean
-        self.viewer.clean = smart_clean
-
+        self.viewer.tb_clean.connect("clicked", self.viewer_clean)
         self.viewer.textview.connect("button-release-event", self.viewer_after_click)
         self.viewer.textview.connect("event", self.viewer_on_activity)
         return self.viewer
+
+
+    def viewer_clean(self, widget=None):
+        self.copy_BUFFER = ""
+        self.view_CURRENT.clear()
+        self.viewer.textbuffer.set_text("")
+        selection = self.sidebar.treeview.get_selection()
+        selection.unselect_all()
 
 
     def viewer_after_click(self, textview, eventbutton):
@@ -504,6 +496,12 @@ class GUI(Gtk.Window):
         print("pid:", Popen(["leafpad", "--jump=%d"%line, path]).pid, file=fp5)
 
 
+    @turn_off_auto_copy
+    def _open_dir(self):
+        path = core.Glossary.instances[0].fullpath
+        print("pid:", Popen(["nemo", path]).pid, file=fp5)
+
+
     # def reload(self, gloss):
     #     GLOSS = PATH_GLOSS + gloss
     #     if self.notebook.GLOSS == GLOSS: return
@@ -545,7 +543,6 @@ class GUI(Gtk.Window):
         self.viewer.textbuffer.delete_mark(m)
         self.copy_BUFFER = text
 
-
     # def _circular_tab_switch(self, d):
     #     c = self.notebook.get_current_page()
     #     t = self.notebook.get_n_pages()
@@ -582,7 +579,7 @@ class GUI(Gtk.Window):
         elif Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('e'): self._open_src()
             # elif keyval == ord('i'): self.add_to_gloss()
-            elif keyval == ord('l'): self.viewer.clean()
+            elif keyval == ord('l'): self.viewer_clean()
             elif keyval == ord('r'): self._circular_search(-1)
             elif keyval == ord('s'): self._circular_search(+1)
             # elif keyval == 65365: self._circular_tab_switch(-1) # Pg-Dn

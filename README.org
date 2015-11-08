@@ -33,8 +33,12 @@ Copyright © 2013 - 2015 to the anubad Authors.
 
 
 ** how to get it
+
+   Download the latest verion from [[https://github.com/foss-np/anubad/archive/master.zip][zip]] or [[https://github.com/foss-np/anubad/archive/master.tar.gz][tar]]
+
    #+begin_src bash
-     git clone https://github.com/foss-np/anubad
+   # OR CLONE the repo
+   git clone https://github.com/foss-np/anubad
    #+end_src
 
 ** config
@@ -53,7 +57,7 @@ Copyright © 2013 - 2015 to the anubad Authors.
     For ms-windows and others without =gnu-bash= and =gnu-make=.
 
     1. Create a folder =gloss= at =/path/to/anubad/=.
-    2. Download np-l10n-glossary [[https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz][zip]] [[https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz][tar]] or =clone= it into the folder
+    2. Download np-l10n-glossary [[https://github.com/foss-np/np-l10n-glossary/archive/current.zip][zip]]/[[https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz][tar]] (=clone= always works)
     3. Extract the downloaded file.
     4. Rename extracted =np-l10n-glossary-current= to =foss=
     5. Copy =/path/to/anubad/src/gsettings.conf= to
