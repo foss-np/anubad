@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import os, sys
+
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 from nltk.corpus import wordnet as wn
 
@@ -114,6 +117,7 @@ if __name__ == '__main__':
     relatives = Relatives(root.layout)
     root.layout.add(relatives)
 
-    search_wordnet(obj, sys.argv[1])
+    query = sys.argv[1] if len(sys.argv) > 1 else "hello"
+    search_wordnet(obj, query)
     root.show_all()
     Gtk.main()

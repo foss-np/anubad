@@ -7,6 +7,9 @@ A module for the interactive text interface and Decoration.
 
 import os
 from subprocess import Popen
+
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 from gi.repository import GdkPixbuf
 
@@ -175,7 +178,7 @@ class Viewer(Gtk.Overlay):
 
     def not_found(self, word, msg=""):
         end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_with_tags(end, "'%s'"%word, self.tag_bold)
+        self.textbuffer.insert_with_tags(end, "%s"%word, self.tag_bold)
 
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert(end, " Not Found %s\n"%msg)

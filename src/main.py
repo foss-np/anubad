@@ -8,6 +8,8 @@ PWD = os.path.dirname(__filepath__) + '/'
 exec(open(PWD + "gsettings.conf", encoding="UTF-8").read())
 exec(open(PWD + "mysettings.conf", encoding="UTF-8").read())
 
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 
 import importlib
@@ -18,7 +20,7 @@ from itertools import count
 import core
 import preferences as Pre
 import sidebar as Side
-import browser as BL
+import browser
 import viewer as Vi
 import relations
 import add as Ad
@@ -80,6 +82,7 @@ class GUI(Gtk.Window):
         self.clips_CYCLE = None
 
         self.view_CURRENT = set()
+        self.mark_CURRENT = (None, None)
 
         self.hist_LIST = []
         self.hist_CURSOR = 0
@@ -136,7 +139,7 @@ class GUI(Gtk.Window):
         hpaned.add2(self.makeWidgets_viewer())
         hpaned.set_position(165)
 
-        # self.layout.attach(self.makeWidgets_relations(), left=0, top=5, width=5, height=2)
+        self.layout.attach(self.makeWidgets_relations(), left=0, top=5, width=5, height=2)
 
 
     def makeWidgets_toolbar(self):
@@ -336,12 +339,13 @@ class GUI(Gtk.Window):
         begin = end.copy()
         if not begin.backward_word_start(): return
         word = self.viewer.textbuffer.get_text(begin, end, True)
-        # validity of the select
+        ## validate selectection
         if char not in word: return
         BEGIN = self.viewer.textbuffer.get_start_iter()
         END = self.viewer.textbuffer.get_end_iter()
         self.viewer.textbuffer.remove_tag(self.viewer.tag_found, BEGIN, END)
         self.viewer.textbuffer.apply_tag(self.viewer.tag_found, begin, end)
+        self.toolbar.t_Copy.set_active(True)
         self.copy_BUFFER = word
 
 
@@ -355,41 +359,9 @@ class GUI(Gtk.Window):
             self.search_and_reflect(query)
 
 
-    def makeWidgets_browser(self, gloss):
-        notebook = Gtk.Notebook()
-        notebook.set_scrollable(True)
-        notebook.MAIN_TAB = 0
-
-        for i, (name, lstore) in enumerate(gloss.categories.items()):
-            if "main" == name: notebook.MAIN_TAB = i
-            obj = BL.BrowseList(self.parent, lstore)
-            obj.treeview.connect("row-activated", self.browser_row_double_click)
-            obj.treeview.modify_font(FONT_obj)
-            self.track_FONT.add(obj.treeview)
-            notebook.append_page(obj, Gtk.Label(label=name))
-
-        return notebook
-
-
     def makeWidgets_relations(self):
         self.relatives = relations.Relatives()
         return self.relatives
-
-
-    def browser_row_double_click(self, widget, treepath, treeviewcol):
-        selection = widget.get_selection()
-        model, treeiter = selection.get_selected()
-
-        if treeiter is None: return
-        tab = self.notebook.get_current_page()
-        obj = self.notebook.get_nth_page(tab)
-        ID, word, info = model[treeiter]
-
-        # self.viewer.parse(row, obj.SRC)
-        parsed_info = core.Glossary.format_parser(info)
-        self.viewer.append_result(word, parsed_info, obj.treebuffer.fullpath)
-        self.viewer.jump_to_end()
-        return
 
 
     def get_active_query(self):
@@ -462,6 +434,9 @@ class GUI(Gtk.Window):
         self.sidebar.clear()
         treeselection = self.sidebar.treeview.get_selection()
 
+        end = self.viewer.textbuffer.get_end_iter()
+        begin = end.get_offset()
+
         all_FUZZ = []
         self.clips.clear()
         for word, (FULL, FUZZ) in query_RESULTS.items():
@@ -470,6 +445,9 @@ class GUI(Gtk.Window):
             all_FUZZ += FUZZ
 
         _add_view_items(sorted(all_FUZZ, key=lambda k: k[2][1]), self.toolbar.t_ShowAll.get_active())
+
+        end = self.viewer.textbuffer.get_end_iter()
+        self.mark_CURRENT = (begin, end.get_offset())
 
         ## Let the clips handel it jumping
         # self.viewer.jump_to_end()
@@ -493,7 +471,15 @@ class GUI(Gtk.Window):
             path = category
             line = row[0]
 
-        print("pid:", Popen(["leafpad", "--jump=%d"%line, path]).pid, file=fp5)
+        if EDITOR == "": return
+
+        if EDITOR == "leafpad ": command = EDITOR + " --jump=%d "%line
+        elif EDITOR == "gedit ": command = EDITOR + " +%d "%line
+        else: command = EDITOR + " "
+
+        command += path
+
+        print("pid:", command, Popen(command.split()).pid, file=fp5)
 
 
     @turn_off_auto_copy
@@ -501,28 +487,6 @@ class GUI(Gtk.Window):
         path = core.Glossary.instances[0].fullpath
         print("pid:", Popen(["nemo", path]).pid, file=fp5)
 
-
-    # def reload(self, gloss):
-    #     GLOSS = PATH_GLOSS + gloss
-    #     if self.notebook.GLOSS == GLOSS: return
-
-    #     self.layout.remove(self.notebook)
-    #     for obj in GUI.notebook_OBJS:
-    #         if obj.GLOSS == GLOSS:
-    #             self.notebook = obj
-    #             break
-    #     else:
-    #         self.notebook = self.makeWidgets_browser(gloss)
-
-    #     self.layout.attach(self.notebook, 0, 5, 5, 2)
-    #     self.show_all()
-    #     self.notebook.set_current_page(self.notebook.MAIN_TAB)
-
-
-    # def _reload_gloss(self):
-    #     current_tab = self.notebook.get_current_page()
-    #     obj = self.notebook.get_nth_page(current_tab)
-    #     obj.reload()
 
     def _circular_search(self, d):
         if not self.clips_CYCLE:
@@ -543,18 +507,9 @@ class GUI(Gtk.Window):
         self.viewer.textbuffer.delete_mark(m)
         self.copy_BUFFER = text
 
-    # def _circular_tab_switch(self, d):
-    #     c = self.notebook.get_current_page()
-    #     t = self.notebook.get_n_pages()
-    #     n = c + d
-    #     if n >= t: n = 0
-    #     elif n < 0: n = t - 1
-    #     self.notebook.set_current_page(n)
 
     @turn_off_auto_copy
     def add_to_gloss(self, query=""):
-        # global clipboard
-        # Ad.clipboard = clipboard
         add = Ad.Add(self, l1=query, l2="")
         for obj in add.track_FONT:
             obj.modify_font(FONT_obj)
@@ -573,7 +528,6 @@ class GUI(Gtk.Window):
 
     def key_binds(self, widget, event):
         keyval, state = event.keyval, event.state
-        # elif keyval == 65474: self._reload_gloss() # F5
         if   keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
@@ -582,8 +536,6 @@ class GUI(Gtk.Window):
             elif keyval == ord('l'): self.viewer_clean()
             elif keyval == ord('r'): self._circular_search(-1)
             elif keyval == ord('s'): self._circular_search(+1)
-            # elif keyval == 65365: self._circular_tab_switch(-1) # Pg-Dn
-            # elif keyval == 65366: self._circular_tab_switch(+1) # Pg-Up
             elif keyval == ord('g'): # grab clipboard
                 clip = __class__.clipboard.wait_for_text()
                 if clip is None: return
@@ -592,8 +544,6 @@ class GUI(Gtk.Window):
                 self.search_and_reflect()
             return
         elif Gdk.ModifierType.MOD1_MASK & state:
-            # if ord('1') <= keyval <= ord('9'): self.notebook.set_current_page(keyval - ord('1')) # NOTE: range check not needed
-            # elif keyval == ord('0'): self.notebook.set_current_page(self.notebook.MAIN_TAB)
             if   keyval == 65361: self._jump_history(-1) # Left-arrow
             elif keyval == 65363: self._jump_history(+1) # Right-arrow
             return
@@ -622,9 +572,9 @@ def init():
     core.PATH_GLOSS = PATH_GLOSS = PWD + PATH_GLOSS
 
     global FONT_obj
-    FONT_obj =  Pango.font_description_from_string(def_FONT)
+    FONT_obj = Pango.font_description_from_string(def_FONT)
     # MAYBE do __main__ import here
-    BL.fp3 = fp4
+    browser.fp3 = fp4
 
     global BROWSER
     Vi.BROWSER = BROWSER
@@ -637,12 +587,8 @@ def main():
     init()
     root = GUI()
     # return root
-
-    root.notebook = root.makeWidgets_browser(core.Glossary.instances[0])
-    root.layout.attach(root.notebook, 0, 7, 5, 2)
-    root.notebook.show_all()
-    # NOTE: GTK BUG, notebook page switch only after its visible
-    root.notebook.set_current_page(root.notebook.MAIN_TAB)
+    # root.notebook = root.makeWidgets_browser(core.Glossary.instances[0])
+    # root.layout.attach(root.notebook, 0, 7, 5, 2)
     return root
 
 

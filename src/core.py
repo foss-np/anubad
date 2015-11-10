@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 import os, sys
+
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
+fp3 = sys.stderr
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
 pos_map = {
     'n': "noun",
@@ -65,6 +69,29 @@ class Glossary():
             category.append((i, word, defination))
         return i
 
+    # def reload(self, gloss):
+    #     GLOSS = PATH_GLOSS + gloss
+    #     if self.notebook.GLOSS == GLOSS: return
+
+    #     self.layout.remove(self.notebook)
+    #     for obj in GUI.notebook_OBJS:
+    #         if obj.GLOSS == GLOSS:
+    #             self.notebook = obj
+    #             break
+    #     else:
+    #         self.notebook = self.makeWidgets_browser(gloss)
+
+    #     self.layout.attach(self.notebook, 0, 5, 5, 2)
+    #     self.show_all()
+    #     self.notebook.set_current_page(self.notebook.MAIN_TAB)
+
+
+    # def _reload_gloss(self):
+    #     current_tab = self.notebook.get_current_page()
+    #     obj = self.notebook.get_nth_page(current_tab)
+    #     obj.reload()
+
+
     @staticmethod
     def format_parser(raw):
         """
@@ -98,7 +125,7 @@ class Glossary():
         hashtag = False
         note = False
         # TODO: refacator, reduce repeted segements
-        for i, c in enumerate(raw):
+        for i, c in enumerate(raw.strip()): # bored strip!
             if   c == '[':
                 operator.append((']', i));
                 pos = 'transliterate'
@@ -168,8 +195,7 @@ class Glossary():
 
 
 if __name__ == '__main__':
-    fp3 = sys.stderr
-    exec(open("gsettings.conf").read())
+    exec(open("gsettings.conf", encoding="UTF-8").read())
     foss_gloss = Glossary(LIST_GLOSS[0])
     FULL, FUZZ = Glossary.search('hello')
     print(FULL[0][2][:])

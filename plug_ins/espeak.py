@@ -15,5 +15,5 @@ def plugin_main(root, fullpath):
     bar.b_espeak.show()
     bar.insert(bar.b_espeak, 8)
     bar.b_espeak.connect("clicked", lambda w: espeak(root.copy_BUFFER))
-    bar.b_espeak.set_tooltip_markup("Say the Word")
+    bar.b_espeak.set_tooltip_markup("Say it")
     return True
