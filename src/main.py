@@ -570,6 +570,7 @@ def init():
     FONT_obj = Pango.font_description_from_string(def_FONT)
     browser.FONT_obj = FONT_obj
     browser.fp3 = fp4
+
     # MAYBE do __main__ import here
 
     global BROWSER
@@ -586,7 +587,7 @@ def main():
     init()
     root = GUI()
     return root
-    notebook = browser.Notebook(core.Glossary.instances[0])
+    notebook = browser.Notebook(core.Glossary.instances[0], root)
     root.layout.attach(notebook, 0, 7, 5, 2)
     return root
 
