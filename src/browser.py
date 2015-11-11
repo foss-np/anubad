@@ -7,6 +7,8 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 
+import core
+
 class Table(Gtk.Overlay):
     def __init__(self, parent=None, lstore=None):
         Gtk.Overlay.__init__(self)
@@ -123,7 +125,7 @@ class Notebook(Gtk.Notebook):
 
         # self.viewer.parse(row, obj.SRC)
         parsed_info = core.Glossary.format_parser(info)
-        self.parent.viewer.append_result(word, parsed_info, obj.treebuffer.fullpath)
+        self.parent.viewer.append_result(word, parsed_info, "gloss/demo")
         self.parent.viewer.jump_to_end()
 
 
@@ -166,7 +168,6 @@ def main():
 
 if __name__ == '__main__':
     exec(open("gsettings.conf", encoding="UTF-8").read())
-    import core
     # import utils
     fp3 = sys.stdout
     core.fp3 = fp3
