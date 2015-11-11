@@ -88,7 +88,6 @@ class GUI(Gtk.Window):
         self.hist_CURSOR = 0
         self.copy_BUFFER = ""
 
-        self.ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
         self.engines = {
             'r:': lambda query: self._view_results({ query: core.Glossary.search(query[2:]) }),
             # w: lambda: self._view_results({ query: core.Glossary.search(query[2:]) }),
@@ -97,9 +96,9 @@ class GUI(Gtk.Window):
 
         # accelerators
         self.makeWidgets()
-        self.connect('key_press_event', self.key_binds)
+        self.connect('key_release_event', self.key_binds)
         self.connect('delete-event', Gtk.main_quit)
-        self.connect('focus-in-event', lambda *e: self._on_focus_in_event())
+        self.connect('focus-in-event', lambda *e: self.search_entry.grab_focus())
         self.connect('focus-out-event', lambda *e: self._on_focus_out_event())
 
         self.search_entry.grab_focus()
@@ -112,12 +111,6 @@ class GUI(Gtk.Window):
             self.toolbar.t_Copy.set_active(False)
             return func(self, *args, **kwargs)
         return wrapper
-
-
-    def _on_focus_in_event(self):
-        # NOTE this is TEMP fixes for me
-        # print("focus: in")
-        self.search_entry.grab_focus()
 
 
     def _on_focus_out_event(self):
@@ -139,7 +132,7 @@ class GUI(Gtk.Window):
         hpaned.add2(self.makeWidgets_viewer())
         hpaned.set_position(165)
 
-        self.layout.attach(self.makeWidgets_relations(), left=0, top=5, width=5, height=2)
+        # self.layout.attach(self.makeWidgets_relations(), left=0, top=5, width=5, height=2)
 
 
     def makeWidgets_toolbar(self):
@@ -189,9 +182,10 @@ class GUI(Gtk.Window):
         bar.t_Copy.set_active(True)
         ##
         ## Search Show Toggle Button
-        bar.t_ShowAll = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_DIALOG_INFO)
-        bar.t_ShowAll.set_active(False)
-        bar.add(bar.t_ShowAll)
+        bar.t_WordNet = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_DIALOG_INFO)
+        bar.t_WordNet.set_active(False)
+        bar.t_WordNet.set_tooltip_markup("Dictionary Mode (WordNet)")
+        bar.add(bar.t_WordNet)
         ##
         #
         bar.add(Gtk.SeparatorToolItem())
@@ -298,6 +292,7 @@ class GUI(Gtk.Window):
         for obj in self.sidebar.track_FONT:
             obj.modify_font(FONT_obj)
         return self.sidebar
+
 
     @debug
     def sidebar_on_row_changed(self, treeselection):
@@ -422,35 +417,33 @@ class GUI(Gtk.Window):
 
     @treeview_signal_safe_toggler
     def _view_results(self, query_RESULTS):
-        def _add_view_items(iter_obj, show=True):
-            for item in iter_obj:
-                self.sidebar.add_suggestion(*item)
-
-                if not show: continue
-                self._view_item(*item)
-                treeselection.select_path(self.sidebar.count - 1)
-
-
         self.sidebar.clear()
+        self.clips.clear()
         treeselection = self.sidebar.treeview.get_selection()
 
         end = self.viewer.textbuffer.get_end_iter()
         begin = end.get_offset()
 
         all_FUZZ = []
-        self.clips.clear()
         for word, (FULL, FUZZ) in query_RESULTS.items():
-            if FULL: _add_view_items(FULL)
-            else: self.viewer.not_found(word)
             all_FUZZ += FUZZ
+            if not FULL:
+                self.viewer.not_found(word)
+                continue
 
-        _add_view_items(sorted(all_FUZZ, key=lambda k: k[2][1]), self.toolbar.t_ShowAll.get_active())
+            for item in FULL:
+                self.sidebar.add_suggestion(*item)
+                self._view_item(*item)
+                treeselection.select_path(self.sidebar.count - 1)
+
 
         end = self.viewer.textbuffer.get_end_iter()
         self.mark_CURRENT = (begin, end.get_offset())
+        self.viewer.jump_to_end()
 
-        ## Let the clips handel it jumping
-        # self.viewer.jump_to_end()
+        for item in sorted(all_FUZZ, key=lambda k: k[2][1]):
+            self.sidebar.add_suggestion(*item)
+
         print("clip:", self.clips, file=fp3)
         if len(self.clips) == 0: return
         self.clips_CYCLE = utils.circle(self.clips)
@@ -465,16 +458,15 @@ class GUI(Gtk.Window):
 
         line = -1
         if len(pathlst) == 0:
-            path = core.Glossary.instances[0].categories['main'].fullpath
+            path = core.Glossary.instances[0].categories['main'][-1]
         else:
-            instance, category, row = self.sidebar.get_suggestion(pathlst[0])
-            path = category
+            instance, path, row = self.sidebar.get_suggestion(pathlst[0])
             line = row[0]
 
         if EDITOR == "": return
 
-        if EDITOR == "leafpad ": command = EDITOR + " --jump=%d "%line
-        elif EDITOR == "gedit ": command = EDITOR + " +%d "%line
+        if EDITOR == "leafpad": command = EDITOR + " --jump=%d "%line
+        elif EDITOR == "gedit": command = EDITOR + " +%d "%line
         else: command = EDITOR + " "
 
         command += path
@@ -553,7 +545,7 @@ class GUI(Gtk.Window):
             elif keyval == 65366: pass # Pg-Up
             return
 
-        if event.keyval in self.ignore_keys: return
+        if event.keyval in ignore_keys: return
         if self.search_entry.is_focus(): return
 
         self.search_entry.grab_focus()
@@ -574,11 +566,15 @@ def init():
 
     global FONT_obj
     FONT_obj = Pango.font_description_from_string(def_FONT)
-    # MAYBE do __main__ import here
+    browser.FONT_obj = FONT_obj
     browser.fp3 = fp4
+    # MAYBE do __main__ import here
 
     global BROWSER
     Vi.BROWSER = BROWSER
+
+    global ignore_keys
+    ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
 
     for path in LIST_GLOSS:
         core.Glossary(path)
@@ -587,9 +583,8 @@ def init():
 def main():
     init()
     root = GUI()
-    # return root
-    # root.notebook = root.makeWidgets_browser(core.Glossary.instances[0])
-    # root.layout.attach(root.notebook, 0, 7, 5, 2)
+    notebook = browser.Notebook(core.Glossary.instances[0])
+    root.layout.attach(notebook, 0, 7, 5, 2)
     return root
 
 

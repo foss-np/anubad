@@ -74,56 +74,42 @@ class Table(Gtk.Overlay):
             print("pid:", Popen(["leafpad", self.treebuffer.fullpath]).pid)
 
 
-class GUI(Gtk.Window):
+class Notebook(Gtk.Notebook):
     def __init__(self, gloss, parent=None):
-        Gtk.Window.__init__(self, title="Browser")
+        Gtk.Notebook.__init__(self)
         self.parent = parent
         self.gloss = gloss
         self.track_FONT = set()
 
+        self.MAIN_TAB = 0
+
         self.makeWidgets()
-
-        self.connect('key_press_event', self.key_binds)
-        self.set_default_size(600, 300)
+        self.set_scrollable(True)
         self.show_all()
+        # NOTE: GTK BUG, notebook page switch only after its visible
+        self.set_current_page(self.MAIN_TAB)
 
 
-    def makeWidgets(self):
-        self.layout = Gtk.VBox()
-        self.add(self.layout)
-        self.notebook = self.makeWidgets_notebook()
-        self.layout.add(self.notebook)
-
-
-    def makeWidgets_notebook(self, gloss=None):
+    def makeWidgets(self, gloss=None):
         if gloss is None:
             gloss = self.gloss
 
-        notebook = Gtk.Notebook()
-        notebook.set_scrollable(True)
-        notebook.MAIN_TAB = 0
-
-        for i, (name, lstore) in enumerate(gloss.categories.items()):
-            if "main" == name: notebook.MAIN_TAB = i
+        for i, (name, (lstore, invert, path)) in enumerate(gloss.categories.items()):
+            if "main" == name: self.MAIN_TAB = i
             obj = Table(self.parent, lstore)
             obj.treeview.connect("row-activated", self.browser_row_double_click)
             obj.treeview.modify_font(FONT_obj)
             self.track_FONT.add(obj.treeview)
-            notebook.append_page(obj, Gtk.Label(label=name))
-
-        notebook.show_all()
-        # NOTE: GTK BUG, notebook page switch only after its visible
-        notebook.set_current_page(notebook.MAIN_TAB)
-        return notebook
+            self.append_page(obj, Gtk.Label(label=name))
 
 
     def _circular_tab_switch(self, diff=1):
-        current = self.notebook.get_current_page()
-        total = self.notebook.get_n_pages()
+        current = self.get_current_page()
+        total = self.get_n_pages()
         new = current + diff
         if new >= total: new = 0
         elif new < 0: new = total - 1
-        self.notebook.set_current_page(new)
+        self.set_current_page(new)
 
 
     def browser_row_double_click(self, widget, treepath, treeviewcol):
@@ -131,57 +117,60 @@ class GUI(Gtk.Window):
         model, treeiter = selection.get_selected()
 
         if treeiter is None: return
-        tab = self.notebook.get_current_page()
-        obj = self.notebook.get_nth_page(tab)
+        tab = self.get_current_page()
+        obj = self.get_nth_page(tab)
         ID, word, info = model[treeiter]
 
         # self.viewer.parse(row, obj.SRC)
         parsed_info = core.Glossary.format_parser(info)
-        self.viewer.append_result(word, parsed_info, obj.treebuffer.fullpath)
-        self.viewer.jump_to_end()
-        return
+        self.parent.viewer.append_result(word, parsed_info, obj.treebuffer.fullpath)
+        self.parent.viewer.jump_to_end()
 
 
     def key_binds(self, widget, event):
         keyval, state = event.keyval, event.state
-        if keyval == 65307:  Gtk.main_quit()
         # elif keyval == 65474: self._reload_gloss() # F5
+        if keyval == 65307:  Gtk.main_quit()
         if Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == 65365: self._circular_tab_switch(-1) # Pg-Dn
             elif keyval == 65366: self._circular_tab_switch(+1) # Pg-Up
-            return
         elif Gdk.ModifierType.MOD1_MASK & state:
-            if ord('1') <= keyval <= ord('9'): self.notebook.set_current_page(keyval - ord('1')) # NOTE: range check not needed
-            elif keyval == ord('0'): self.notebook.set_current_page(self.notebook.MAIN_TAB)
-            return
-        elif Gdk.ModifierType.SHIFT_MASK & event.state:
-            # TODO Scroll viewer
-            if   keyval == 65365: pass # Pg-Dn
-            elif keyval == 65366: pass # Pg-Up
-            return
+            if ord('1') <= keyval <= ord('9'): self.set_current_page(keyval - ord('1')) # NOTE: range check not needed
+            elif keyval == ord('0'): self.set_current_page(self.MAIN_TAB)
+
+        # if event.keyval in ignore_keys: return
 
 
 def main():
     global PATH_GLOSS
     core.PATH_GLOSS = PATH_GLOSS = PATH_GLOSS
 
+    # global ignore_keys
+    # ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
+
     for path in LIST_GLOSS:
         core.Glossary(path)
+
+    root = Gtk.Window()
+    root.connect('delete-event', Gtk.main_quit)
+    root.set_default_size(600, 300)
 
     global FONT_obj
     FONT_obj = Pango.font_description_from_string(def_FONT)
 
-    root = Browser(core.Glossary.instances[0])
-    root.connect('delete-event', Gtk.main_quit)
-    # root.connect('key_release_event', root_binds)
+    notebook = Notebook(core.Glossary.instances[0])
+    root.add(notebook)
+    root.connect('key_release_event', notebook.key_binds)
     return root
 
 
 if __name__ == '__main__':
     exec(open("gsettings.conf", encoding="UTF-8").read())
     import core
+    # import utils
     fp3 = sys.stdout
     core.fp3 = fp3
 
     root = main()
+    root.show_all()
     Gtk.main()

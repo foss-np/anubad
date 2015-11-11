@@ -93,12 +93,12 @@ class Viewer(Gtk.Overlay):
         >>> obj.append_result('hello', [('unknown', 'नमस्कार')], 'gloss/demo')
         >>> obj.append_result('gray', [('unknown', 'नमस्कार')], 'gloss/demo')
         >>> obj.append_result('hello',\
-        [('transliterate', 'हेल्\u200dलो'),\
+        [('_transliterate', 'हेल्\u200dलो'),\
         ('noun', 'नमस्कार'), ('noun', 'नमस्ते'),\
         ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')],\
         'gloss/demo')
         >>> obj.append_result('wheat',\
-        [('transliterate', 'वीट्'),\
+        [('_transliterate', 'वीट्'),\
         ('noun', 'गहूँ'),\
         ('_#', 'crop'), ('_#', 'food'),\
         ('wiki', 'Wheat')],\
@@ -114,7 +114,7 @@ class Viewer(Gtk.Overlay):
 
         info = iter(parsed_info)
         pos, val = next(info)
-        if pos == "transliterate":
+        if pos == "_transliterate":
             end = self.textbuffer.get_end_iter()
             self.textbuffer.insert_with_tags(end, '  [%s]'%val, self.tag_trans)
         else:
@@ -130,7 +130,7 @@ class Viewer(Gtk.Overlay):
         note = ""
         pre = ""
         for pos, val in info:
-            if pos == "transliterate":
+            if pos == "_transliterate":
                 end = self.textbuffer.get_end_iter()
                 self.textbuffer.insert_with_tags(end, '  [%s]'%val, self.tag_trans)
                 continue;

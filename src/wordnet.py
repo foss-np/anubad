@@ -60,23 +60,20 @@ class Relatives(Gtk.Expander):
 
 
 def search_wordnet(view, query):
-    FULL, FUZZ = [], []
-    synonyms = set()
-    for syn in wn.synsets(query):
-        synonyms.add(syn.name().split('.')[0])
-        if query in syn.name():
-            FULL.append(syn)
-        else:
-            FUZZ.append(syn)
-
-    obj = relatives.pages['Synonyms']
-    for i, word in enumerate(sorted(synonyms), 1):
-        obj.treemodel.append((i, word))
-
     end = view.textbuffer.get_end_iter()
-    view.textbuffer.insert_with_tags(end, query + '\n', view.tag_h1)
+    view.textbuffer.insert_with_tags(end, query + '\n', view.tag_bold)
 
-    for i, syn in enumerate(sorted(FULL) + sorted(FUZZ), 1):
+    synonyms = []
+    count = 0
+    for i, syn in enumerate(wn.synsets(query), 1):
+        # print(syn.hypernyms(), syn.root_hypernyms())
+        for lemmas in syn.lemmas():
+            name = lemmas.name().replace('_', ' ')
+            if name not in synonyms:
+                synonyms.append(name)
+                count += 1
+                relatives.pages['Synonyms'].treemodel.append((count, name))
+
         end = view.textbuffer.get_end_iter()
         view.textbuffer.insert_with_tags(end, "%4d. "%i, view.tag_li)
         end = view.textbuffer.get_end_iter()
@@ -96,7 +93,7 @@ def main():
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', Vi.root_binds)
-    root.set_default_size(500, 300)
+    root.set_default_size(500, 600)
 
     root.layout = Gtk.VBox(root)
     root.add(root.layout)

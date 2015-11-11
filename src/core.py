@@ -48,7 +48,6 @@ class Glossary():
     def load_entries(self, path):
         print("loading: *" + path[-40:], file=fp4)
         liststore = Gtk.ListStore(int, str, str)
-        liststore.fullpath = path
         invert = dict()
 
         try:
@@ -82,7 +81,7 @@ class Glossary():
                 invert[val] = word
 
         self.entries += i
-        return (liststore, invert)
+        return (liststore, invert, path)
 
 
     # def reload(self, gloss):
@@ -206,16 +205,16 @@ class Glossary():
     def search(query):
         FULL, FUZZ = [], []
         for instance in __class__.instances:
-            for liststore, invert in instance.categories.values():
+            for liststore, invert, path in instance.categories.values():
                 for row in liststore:
                     if query not in row[1]: continue
-                    match = (instance, liststore.fullpath, tuple(row))
+                    match = (instance, path, tuple(row))
                     if query == row[1]: FULL.append(match)
                     else: FUZZ.append(match)
 
                 if query in invert.keys():
                     # TODO get location
-                    match = (instance, liststore.fullpath, (1, query, invert[query]))
+                    match = (instance, path, (1, query, invert[query]))
                     FULL.append(match)
 
         return FULL, FUZZ
