@@ -50,4 +50,4 @@ relations:
 	./relations.py
 
 wordnet:
-	./wordnet.py ${WORD}
+	./wni.py ${WORD}

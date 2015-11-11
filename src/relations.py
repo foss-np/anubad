@@ -57,7 +57,7 @@ class Relatives(Gtk.Expander):
             obj.treeview.append_column(Gtk.TreeViewColumn("w", renderer_text, text=1))
 
             self.notebook.append_page(obj, Gtk.Label(label=text))
-            Relatives.pages[text] = obj
+            Relatives.pages[text.strip()] = obj
 
 
 def root_binds(widget, event):

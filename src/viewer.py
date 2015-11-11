@@ -13,9 +13,9 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 from gi.repository import GdkPixbuf
 
-class Viewer(Gtk.Overlay):
+class Display(Gtk.Overlay):
     """
-    Viewer is charged Gtk.TextView
+    Display is charged Gtk.TextView
     # TODO: Viewer object access TextView members
     """
 
@@ -256,7 +256,7 @@ def main():
     root.set_default_size(500, 300)
 
     global obj
-    obj = Viewer(root)
+    obj = Display(root)
     obj.tb_clean.connect("clicked", lambda *a: obj.textbuffer.set_text(""))
     root.add(obj)
     return root

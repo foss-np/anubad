@@ -21,10 +21,11 @@ import core
 import preferences as Pre
 import sidebar as Side
 import browser
-import viewer as Vi
+import viewer
 import relations
 import add as Ad
 import utils
+import wni
 
 fp_dev_null = open(os.devnull, 'w')
 
@@ -90,7 +91,7 @@ class GUI(Gtk.Window):
 
         self.engines = {
             'r:': lambda query: self._view_results({ query: core.Glossary.search(query[2:]) }),
-            # w: lambda: self._view_results({ query: core.Glossary.search(query[2:]) }),
+            'w:': lambda query: wni.search_wordnet(self.viewer, self.relations, query[2:]),
             # s:
         }
 
@@ -132,7 +133,8 @@ class GUI(Gtk.Window):
         hpaned.add2(self.makeWidgets_viewer())
         hpaned.set_position(165)
 
-        # self.layout.attach(self.makeWidgets_relations(), left=0, top=5, width=5, height=2)
+        self.relations = self.makeWidgets_relations()
+        self.layout.attach(self.relations, left=0, top=5, width=5, height=2)
 
 
     def makeWidgets_toolbar(self):
@@ -307,7 +309,7 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets_viewer(self):
-        self.viewer = Vi.Viewer(self)
+        self.viewer = viewer.Display(self)
         self.viewer.textview.modify_font(FONT_obj)
         self.track_FONT.add(self.viewer.textview)
 
@@ -559,7 +561,7 @@ def init():
     # TODO where to add __main__function
     core.fp3 = fp5
     core.fp4 = fp6
-    Vi.PWD = PWD
+    viewer.PWD = PWD
 
     global PATH_GLOSS
     core.PATH_GLOSS = PATH_GLOSS = PWD + PATH_GLOSS
@@ -571,7 +573,7 @@ def init():
     # MAYBE do __main__ import here
 
     global BROWSER
-    Vi.BROWSER = BROWSER
+    viewer.BROWSER = BROWSER
 
     global ignore_keys
     ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
@@ -583,6 +585,7 @@ def init():
 def main():
     init()
     root = GUI()
+    return root
     notebook = browser.Notebook(core.Glossary.instances[0])
     root.layout.attach(notebook, 0, 7, 5, 2)
     return root
