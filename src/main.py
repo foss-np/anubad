@@ -409,8 +409,8 @@ class GUI(Gtk.Window):
         ## put trasliteration copy at last
         transliterate = []
         for pos, val in parsed_info:
-            if pos[0] == "_" or val == "": continue
-            if pos == "transliterate": transliterate.append(val); continue
+            if   pos[0] == "_" or val == "": continue
+            elif pos == "_transliterate": transliterate.append(val); continue
             self.clips.append(val)
 
         self.clips += transliterate
@@ -565,7 +565,8 @@ class GUI(Gtk.Window):
 def init():
     # import __main__
     # TODO where to add __main__function
-    core.fp3 = fp6
+    core.fp3 = fp5
+    core.fp4 = fp6
     Vi.PWD = PWD
 
     global PATH_GLOSS

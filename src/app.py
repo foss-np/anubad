@@ -5,7 +5,6 @@ import argparse
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Keybinder', '3.0')
-gi.require_version('IBus', '1.0')
 from gi.repository import Gtk
 from gi.repository import Keybinder
 
@@ -24,9 +23,9 @@ class TrayIcon(Gtk.StatusIcon):
         self.connect("activate", self.trayicon_activate)
         self.connect("popup_menu", self.trayicon_popup)
 
-        self.set_title("conky-forever")
-        self.set_name("conky-forever task-control")
-        self.set_tooltip_text("conky-forever")
+        self.set_title("anubad")
+        self.set_name("anubad glossary browser")
+        self.set_tooltip_text("anubad")
         self.set_has_tooltip(True)
         self.set_visible(True)
 
@@ -57,7 +56,7 @@ class TrayIcon(Gtk.StatusIcon):
         _menu.append(menuitem_quit)
 
         _menu.show_all()
-        _menu.popup(None, None, lambda w,x: self.position_menu(_menu, self), self, 3, time)
+        # _menu.popup(None, None, lambda w, x: self.position_menu(_menu, self), self, 3, time)
 
 
     def do_deactivate(self):
@@ -119,5 +118,5 @@ if __name__ == '__main__':
         Keybinder.init()
         load_plugins(root)
 
-    tray = TrayIcon(root)
+    # tray = TrayIcon(root)
     Gtk.main()
