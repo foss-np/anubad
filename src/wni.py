@@ -14,8 +14,9 @@ from nltk.corpus import wordnet as wn
 def search_wordnet(view, relatives, query):
     end = view.textbuffer.get_end_iter()
     view.textbuffer.insert_with_tags(end, query + '\n', view.tag_bold)
-    synonyms = []
+    synonyms = [ query ]
     count = 0
+    relatives.pages['Synonyms'].treemodel.clear()
     for i, syn in enumerate(wn.synsets(query), 1):
         #print(syn.hypernyms(), syn.root_hypernyms())
         for lemmas in syn.lemmas():

@@ -45,9 +45,9 @@ class Settings(Gtk.Window):
     def makeWidgets_behavious(self):
         bar = Gtk.Toolbar()
         ## Auto Transliterate Button
-        bar.t_Trans = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_CONVERT)
-        bar.add(bar.t_Trans)
-        bar.t_Trans.set_active(True)
+        # bar.t_Trans = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_CONVERT)
+        # bar.add(bar.t_Trans)
+        # bar.t_Trans.set_active(True)
         ##
         ## Spell-check Toggle Button
         bar.t_Spell = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_SPELL_CHECK)

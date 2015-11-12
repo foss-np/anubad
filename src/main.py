@@ -90,9 +90,9 @@ class GUI(Gtk.Window):
         self.copy_BUFFER = ""
 
         self.engines = {
-            'r:': lambda query: self._view_results({ query: core.Glossary.search(query[2:]) }),
-            'w:': lambda query: wni.search_wordnet(self.viewer, self.relations, query[2:]),
-            # s:
+            'r:': lambda query: self._view_results({ query: core.Glossary.search(query) }),
+            'w:': lambda query: wni.search_wordnet(self.viewer, self.relations, query),
+            # s
         }
 
         # accelerators
@@ -184,7 +184,7 @@ class GUI(Gtk.Window):
         bar.t_Copy.set_active(True)
         ##
         ## Search Show Toggle Button
-        bar.t_WordNet = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_DIALOG_INFO)
+        bar.t_WordNet = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_CONVERT)
         bar.t_WordNet.set_active(False)
         bar.t_WordNet.set_tooltip_markup("Dictionary Mode (WordNet)")
         bar.add(bar.t_WordNet)
@@ -376,12 +376,20 @@ class GUI(Gtk.Window):
     def search_and_reflect(self, query=None):
         if query is None:
             query = self.search_entry.get_text()
+
             if not query: return
 
+            # choosing alternative engines
             for key, func in self.engines.items():
-                if key == query[:2]: # raw mode
-                    func(query)
+                if key == query[0:2]:
+                    func(query[2:])
                     return
+
+            # wordnet mode
+            if self.toolbar.t_WordNet.get_active():
+                self.engines['w:'](query)
+                return
+
 
         ## Ordered Dict use for undo/redo history
         query_RESULTS = OrderedDict()
