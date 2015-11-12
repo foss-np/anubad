@@ -4,9 +4,7 @@ import argparse
 
 import gi
 gi.require_version('Gtk', '3.0')
-gi.require_version('Keybinder', '3.0')
 from gi.repository import Gtk
-from gi.repository import Keybinder
 
 from main import *
 
@@ -115,8 +113,7 @@ if __name__ == '__main__':
     root.toolbar.b_About.connect("clicked", about_dialog)
 
     if not args.quick:
-        Keybinder.init()
         load_plugins(root)
 
-    # tray = TrayIcon(root)
+    tray = TrayIcon(root)
     Gtk.main()
