@@ -9,7 +9,7 @@ if [[ -e $FILE ]]; then
     read reply
     if [[ ${reply,,} == 'y' || ${reply} == "" ]]; then
         echo "Re-configuring..."
-        mv $FILE $(mktmp -up "$WD")
+        mv $FILE $(mktemp -up "$WD")
     fi
 fi
 
