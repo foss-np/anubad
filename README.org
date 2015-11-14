@@ -61,7 +61,7 @@ Copyright © 2013 - 2015 to the anubad Authors.
     3. Extract the downloaded file.
     4. Rename extracted =np-l10n-glossary-current= to =foss=
     5. Copy =/path/to/anubad/src/gsettings.conf= to
-       =/path/to/anubad/src/gsettings.conf=.
+       =/path/to/anubad/src/mysettings.conf=.
 
 * Usage
 ** quick-demo

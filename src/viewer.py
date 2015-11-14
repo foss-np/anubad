@@ -91,7 +91,6 @@ class Display(Gtk.Overlay):
     def append_result(self, word, parsed_info, src='\n'):
         """
         >>> obj.append_result('hello', [('unknown', 'नमस्कार')], 'gloss/demo')
-        >>> obj.append_result('gray', [('unknown', 'नमस्कार')], 'gloss/demo')
         >>> obj.append_result('hello',\
         [('_transliterate', 'हेल्\u200dलो'),\
         ('noun', 'नमस्कार'), ('noun', 'नमस्ते'),\
@@ -101,12 +100,15 @@ class Display(Gtk.Overlay):
         [('_transliterate', 'वीट्'),\
         ('noun', 'गहूँ'),\
         ('_#', 'crop'), ('_#', 'food'),\
-        ('wiki', 'Wheat')],\
+        ('_wiki', 'Wheat')],\
         'gloss/demo')
         >>> obj.append_result('black mustard',\
         [('_note', 'plant'), ('note', 'तोरी'), ('_#', 'spice'), ('noun', ''),\
         ('_note', 'leaves'), ('noun', 'तोरीको साग'), ('_#', 'vegetable'),\
         ('_sci', 'Brassica nigra L')],\
+        'gloss/demo')
+        >>> obj.append_result('creation',\
+        [('unknown', 'सृजना'), ('_note', 'कीर्ति')],\
         'gloss/demo')
         """
         end = self.textbuffer.get_end_iter()

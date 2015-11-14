@@ -110,9 +110,12 @@ class Glossary():
     @staticmethod
     def format_parser(raw):
         """
+        >>> print("Test 08"); Glossary.format_parser('सृजना <कीर्ति>')
+        Test 08
+        [('unknown', 'सृजना'), ('_note', 'कीर्ति')]
         >>> print("Test 07"); Glossary.format_parser('[मस्टर्ड] n(<leaves>रायोको साग), #vegetable')
         Test 07
-        [('_transliterate', 'मस्टर्ड'), ('_note', 'leaves'), ('noun', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', 'vegetable')]
+        [('_transliterate', 'मस्टर्ड'), ('noun', ''), ('_note', 'leaves'), ('noun', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', 'vegetable')]
         >>> print("Test 06"); Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}')
         Test 06
         [('_transliterate', 'वीट्'), ('noun', 'गहूँ'), ('unknown', ''), ('_#', 'crop'), ('_wiki', 'Wheat')]
@@ -124,7 +127,7 @@ class Glossary():
         [('_transliterate', 'हेल्\u200dलो'), ('noun', 'नमस्कार'), ('noun', 'नमस्ते'), ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')]
         >>> print("Test 03"); Glossary.format_parser('n(<thin> तुवाँलो ~fog)')
         Test 03
-        [('_note', 'thin'), ('noun', 'तुवाँलो ~fog')]
+        [('noun', ''), ('_note', 'thin'), ('noun', 'तुवाँलो ~fog')]
         >>> print("Test 02"); Glossary.format_parser('कर')
         Test 02
         [('unknown', 'कर')]
@@ -146,8 +149,10 @@ class Glossary():
                 pos = '_transliterate'
                 fbreak = i + 1
                 buffer = ""
-            elif c == '<' and buffer == "":
+            elif c == '<':
                 note = True
+                output.append((pos, buffer.strip()))
+                buffer = ""
             elif c == '{':
                 operator.append(('}', i));
                 pos = '_' + buffer # '_' prefix for meta tags
@@ -166,7 +171,6 @@ class Glossary():
             elif c in '>':
                 output.append(("_note", buffer.strip()))
                 buffer = ""
-                note = False
             elif c == '#':
                 hashtag = True;
                 output.append((pos, buffer.strip()))

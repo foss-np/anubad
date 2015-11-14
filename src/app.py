@@ -54,7 +54,7 @@ class TrayIcon(Gtk.StatusIcon):
         _menu.append(menuitem_quit)
 
         _menu.show_all()
-        # _menu.popup(None, None, lambda w, x: self.position_menu(_menu, self), self, 3, time)
+        _menu.popup(None, None, lambda w, x: self.position_menu(_menu, self), self, 3, time)
 
 
     def do_deactivate(self):
