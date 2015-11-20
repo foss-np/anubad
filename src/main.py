@@ -437,8 +437,9 @@ class GUI(Gtk.Window):
         self.clips.clear()
         treeselection = self.sidebar.treeview.get_selection()
 
-        end = self.viewer.textbuffer.get_end_iter()
-        begin = end.get_offset()
+        begin = self.viewer.textbuffer.get_start_iter()
+        self.viewer.textbuffer.place_cursor(begin)
+        self.viewer.textbuffer.insert_at_cursor("\n")
 
         all_FUZZ = []
         for word, (FULL, FUZZ) in query_RESULTS.items():
@@ -453,9 +454,10 @@ class GUI(Gtk.Window):
                 treeselection.select_path(self.sidebar.count - 1)
 
 
-        end = self.viewer.textbuffer.get_end_iter()
-        self.mark_CURRENT = (begin, end.get_offset())
-        self.viewer.jump_to_end()
+        self.viewer.textbuffer.insert_at_cursor("\n")
+        # end = self.viewer.textbuffer.get_cursor
+        # self.mark_CURRENT = (begin, end.get_offset())
+        # self.viewer.jump_to_top()
 
         for item in sorted(all_FUZZ, key=lambda k: k[2][1]):
             self.sidebar.add_suggestion(*item)
@@ -509,10 +511,9 @@ class GUI(Gtk.Window):
         end = self.viewer.textbuffer.get_end_iter()
 
         self.viewer.textbuffer.remove_tag(self.viewer.tag_found, begin, end)
-        position = self.viewer.mark_found(text, begin)
-        m = self.viewer.textbuffer.create_mark("tmp", position)
-        self.viewer.textview.scroll_mark_onscreen(m)
-        self.viewer.textbuffer.delete_mark(m)
+        # TODO, search in CURRENT_VIEW ONLY
+        position = self.viewer.find_and_highlight(text, begin)
+        self.viewer.jump_to(position)
         self.copy_BUFFER = text
 
 
