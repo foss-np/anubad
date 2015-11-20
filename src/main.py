@@ -407,6 +407,11 @@ class GUI(Gtk.Window):
 
 
     def _view_item(self, instance, category, row):
+        """
+        >>> root._view_item(instance, src, [1, "sunday" "[सन्डे] n(आइतबार) #time"])
+        >>> print(GUI.clips)
+        ['आइतबार', 'सन्डे'],
+        """
         ID, word, info = row
         meta = (instance, category, ID)
         parsed_info = core.Glossary.format_parser(info)
@@ -414,8 +419,8 @@ class GUI(Gtk.Window):
         ## put trasliteration copy at last
         transliterate = []
         for pos, val in parsed_info:
-            if   pos[0] == "_" or val == "": continue
-            elif pos == "_transliterate": transliterate.append(val); continue
+            if pos == "_transliterate": transliterate.append(val); continue
+            elif   pos[0] == "_" or val == "": continue
             self.clips.append(val)
 
         self.clips += transliterate

@@ -61,11 +61,11 @@ class Glossary():
                 word, defination = line.split('; ')
             except Exception as e:
                 print("fatal:", e)
-                print("wrong format %s: %d"%(src, i))
+                print("wrong format %s: %d"%(path, i))
                 # NOTE: we need something to hang on till we edit
                 ## print("pid:", Popen(["leafpad", arg, self.SRC]).pid)
                 ## DONT USES Popen ^^^^
-                os.system("setsid leafpad --jump=%d %s"%(i, src))
+                os.system("setsid leafpad --jump=%d %s"%(i, path))
                 exit(1)
             liststore.append((i, word, defination))
             parsed_info = self.format_parser(defination)
