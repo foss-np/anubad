@@ -247,7 +247,7 @@ class GUI(Gtk.Window):
         label.set_markup("<b>Query</b>")
         layout.pack_start(label, expand=False, fill=False, padding=60)
 
-        tool_tip = "<b>Search:</b>\n\t- Normal,\t⌨ [<i>Enter</i>]\n\t- Show All,\t⌨ [<i>Shift + Enter</i>]\nUse Toolbar Toggler to Switch"
+        tool_tip = "<b>Search:</b> \t⌨ [<i>Enter</i>]"
 
         self.search_entry = Gtk.SearchEntry()
         layout.pack_start(self.search_entry, expand=True, fill=True, padding=2)
@@ -336,6 +336,7 @@ class GUI(Gtk.Window):
         begin = end.copy()
         if not begin.backward_word_start(): return
         word = self.viewer.textbuffer.get_text(begin, end, True)
+
         ## validate selectection
         if char not in word: return
         BEGIN = self.viewer.textbuffer.get_start_iter()
@@ -406,27 +407,27 @@ class GUI(Gtk.Window):
         self.toolbar.b_Forward.set_sensitive(False)
 
 
-    def _view_item(self, instance, category, row):
+    def _view_item(self, instance, src, row):
         """
         >>> root._view_item(instance, src, [1, "sunday" "[सन्डे] n(आइतबार) #time"])
         >>> print(GUI.clips)
         ['आइतबार', 'सन्डे'],
         """
         ID, word, info = row
-        meta = (instance, category, ID)
+        meta = (instance, src, ID)
         parsed_info = core.Glossary.format_parser(info)
         print(parsed_info, file=fp4)
         ## put trasliteration copy at last
         transliterate = []
         for pos, val in parsed_info:
-            if pos == "_transliterate": transliterate.append(val); continue
-            elif   pos[0] == "_" or val == "": continue
+            if   pos == "_transliterate": transliterate.append(val); continue
+            elif pos[0] == "_" or val == "": continue
             self.clips.append(val)
 
         self.clips += transliterate
 
         if meta in self.view_CURRENT: return
-        self.viewer.append_result(word, parsed_info, category)
+        self.viewer.insert_result(word, parsed_info, src)
         self.view_CURRENT.add(meta)
 
 

@@ -88,7 +88,7 @@ class Display(Gtk.Overlay):
         self.textview.scroll_mark_onscreen(m)
 
 
-    def append_result(self, word, parsed_info, src='\n'):
+    def insert_result(self, word, parsed_info, src='\n'):
         """
         >>> obj.append_result('hello', [('unknown', 'नमस्कार')], 'gloss/demo')
         >>> obj.append_result('hello',\
