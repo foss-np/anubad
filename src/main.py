@@ -321,6 +321,7 @@ class GUI(Gtk.Window):
 
     def viewer_clean(self, widget=None):
         self.copy_BUFFER = ""
+        self.clips_CYCLE = None
         self.view_CURRENT.clear()
         self.viewer.textbuffer.set_text("")
         selection = self.sidebar.treeview.get_selection()
@@ -328,23 +329,20 @@ class GUI(Gtk.Window):
 
 
     def viewer_after_click(self, textview, eventbutton):
-        mark = self.viewer.textbuffer.get_insert()
-        end = self.viewer.textbuffer.get_iter_at_mark(mark)
-        char = end.get_char()
-        # print(end.get_offset())
-        if not end.forward_word_end(): return
-        begin = end.copy()
-        if not begin.backward_word_start(): return
-        word = self.viewer.textbuffer.get_text(begin, end, True)
+        bound = self.viewer.textbuffer.get_selection_bounds()
+        if bound:
+            begin, end = bound
+            text = self.viewer.textbuffer.get_text(begin, end, True)
+        else:
+            word_obj = self.viewer.get_wordObj_at_cursor()
+            if word_obj is None: return
+            text, begin, end = word_obj
 
-        ## validate selectection
-        if char not in word: return
-        BEGIN = self.viewer.textbuffer.get_start_iter()
-        END = self.viewer.textbuffer.get_end_iter()
-        self.viewer.textbuffer.remove_tag(self.viewer.tag_found, BEGIN, END)
+        ## highlight
+        self.viewer.clean_highlights()
         self.viewer.textbuffer.apply_tag(self.viewer.tag_found, begin, end)
         self.toolbar.t_Copy.set_active(True)
-        self.copy_BUFFER = word
+        self.copy_BUFFER = text
 
 
     def viewer_on_activity(self, textview, event):
@@ -417,13 +415,16 @@ class GUI(Gtk.Window):
         meta = (instance, src, ID)
         parsed_info = core.Glossary.format_parser(info)
         print(parsed_info, file=fp4)
-        ## put trasliteration copy at last
-        transliterate = []
+
+        ## put trasliteration at last
+        transliterate = [] # collect trasliterations
+
         for pos, val in parsed_info:
             if   pos == "_transliterate": transliterate.append(val); continue
             elif pos[0] == "_" or val == "": continue
             self.clips.append(val)
 
+        ## adding transliteration
         self.clips += transliterate
 
         if meta in self.view_CURRENT: return
@@ -457,7 +458,7 @@ class GUI(Gtk.Window):
         self.viewer.textbuffer.insert_at_cursor("\n")
         # end = self.viewer.textbuffer.get_cursor
         # self.mark_CURRENT = (begin, end.get_offset())
-        # self.viewer.jump_to_top()
+        self.viewer.jump_to_top()
 
         for item in sorted(all_FUZZ, key=lambda k: k[2][1]):
             self.sidebar.add_suggestion(*item)
@@ -507,13 +508,10 @@ class GUI(Gtk.Window):
         utils.diff = d
         text = next(self.clips_CYCLE)
 
-        begin = self.viewer.textbuffer.get_start_iter()
-        end = self.viewer.textbuffer.get_end_iter()
-
-        self.viewer.textbuffer.remove_tag(self.viewer.tag_found, begin, end)
-        # TODO, search in CURRENT_VIEW ONLY
-        position = self.viewer.find_and_highlight(text, begin)
-        self.viewer.jump_to(position)
+        ## highlight current clip
+        begin, end = self.viewer.clean_highlights()
+        start, stop = self.viewer.find_and_highlight(text, begin)
+        self.viewer.jump_to(start)
         self.copy_BUFFER = text
 
 

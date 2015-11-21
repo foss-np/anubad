@@ -67,6 +67,28 @@ class Display(Gtk.Overlay):
         self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD)
 
 
+    def get_wordObj_at_cursor(self):
+        mark = self.textbuffer.get_insert()
+        end  = self.textbuffer.get_iter_at_mark(mark)
+        char = end.get_char()
+
+        if not end.forward_word_end(): return
+        begin = end.copy()
+        if not begin.backward_word_start(): return
+        word = self.textbuffer.get_text(begin, end, True)
+
+        ## validate the word
+        if char not in word: return
+        return word, begin, end
+
+
+    def clean_highlights(self):
+        begin = self.textbuffer.get_start_iter()
+        end = self.textbuffer.get_end_iter()
+        self.textbuffer.remove_tag(self.tag_found, begin, end)
+        return begin, end
+
+
     def find_and_highlight(self, text, point, n=1, reverse=False):
         """
         n - number of match to repeat
@@ -75,13 +97,17 @@ class Display(Gtk.Overlay):
         if reverse: match = point.backward_search(text, 0)
         else:       match = point.forward_search(text, 0)
 
-        if match != None:
-            match_start, match_end = match
-            self.textbuffer.apply_tag(self.tag_found, match_start, match_end)
-            if n > 1:
-                self.find_and_highlight(text, match_end, n - 1)
-            return match_start
-        return None
+        if match == None: return
+        match_start, match_stop = match
+
+        self.textbuffer.apply_tag(self.tag_found, match_start, match_stop)
+
+        if n < 1: return match
+
+        if reverse: self.find_and_highlight(text, match_start, n - 1, reverse)
+        else:       self.find_and_highlight(text, match_stop, n - 1)
+
+        return match
 
 
     def jump_to(self, textIter):
@@ -98,9 +124,13 @@ class Display(Gtk.Overlay):
         self.jump_to(self.textbuffer.get_end_iter())
 
 
-    def get_cursor_textIter(self):
-        mark = self.textbuffer.get_mark('insert')
-        return self.textbuffer.get_iter_at_mark(mark)
+    def insert_at_cursor(self, text, tag=None):
+        if tag == None:
+            self.textbuffer.insert_at_cursor(text)
+            return
+        mark = self.textbuffer.get_insert()
+        end =  self.textbuffer.get_iter_at_mark(mark)
+        self.textbuffer.insert_with_tags(end, text, tag)
 
 
     def insert_result(self, word, parsed_info, src='\n'):
@@ -126,21 +156,16 @@ class Display(Gtk.Overlay):
         [('unknown', 'सृजना'), ('_note', 'कीर्ति')],\
         'gloss/demo')
         """
-        end = self.get_cursor_textIter()
-        self.textbuffer.insert_with_tags(end, word, self.tag_bold)
+        self.insert_at_cursor(word, self.tag_bold)
 
         info = iter(parsed_info)
         pos, val = next(info)
-        if pos == "_transliterate":
-            end = self.get_cursor_textIter()
-            self.textbuffer.insert_with_tags(end, '  [%s]'%val, self.tag_trans)
-        else:
-            info = parsed_info
+        if pos != "_transliterate": info = parsed_info
+        else: self.insert_at_cursor('  [%s]'%val, self.tag_trans)
 
         if src != '\n':
             *a, tmp = src.split('gloss/')
-            end = self.get_cursor_textIter()
-            self.textbuffer.insert_with_tags(end, "\nsource: "+tmp, self.tag_source)
+            self.insert_at_cursor("\nsource: "+tmp, self.tag_source)
 
         _pos = ""
         c = 0
@@ -148,48 +173,38 @@ class Display(Gtk.Overlay):
         pre = ""
         for pos, val in info:
             if pos == "_transliterate":
-                end = self.get_cursor_textIter()
-                self.textbuffer.insert_with_tags(end, '  [%s]'%val, self.tag_trans)
-                continue;
-            if pos == "_#":
-                self.textbuffer.insert_at_cursor(' ')
-                end = self.get_cursor_textIter()
-                self.textbuffer.insert_with_tags(end, "#"+val, self.tag_hashtag)
+                self.insert_at_cursor('  [%s]'%val, self.tag_trans)
                 continue
+
+            if pos == "_#":
+                self.insert_at_cursor(" #"+val, self.tag_hashtag)
+                continue
+
             if pos == "_note": pre = "<%s>"%val; continue
             if pos == "_wiki": self.link_wiki(val); continue
             if val == "": _pos = ""; continue
             if pos == "_sci": pos = "scientific name"
             if pos != _pos:
                 c += 1
-                end = self.get_cursor_textIter()
-                self.textbuffer.insert_with_tags(end, "\n%4d. "%c, self.tag_li)
-
-                end = self.get_cursor_textIter()
-                self.textbuffer.insert_with_tags(end, pos, self.tag_pos)
-                self.textbuffer.insert_at_cursor(" » ")
+                self.insert_at_cursor("\n%4d. "%c, self.tag_li)
+                self.insert_at_cursor(pos, self.tag_pos)
+                self.insert_at_cursor(" » ")
             else:
-                self.textbuffer.insert_at_cursor(", ")
+                self.insert_at_cursor(", ")
 
             if pre != "":
-                self.textbuffer.insert_at_cursor(pre)
+                self.insert_at_cursor(pre)
                 pre = ""
 
-            self.textbuffer.insert_at_cursor(val)
+            self.insert_at_cursor(val)
             _pos = pos
         else:
-            self.textbuffer.insert_at_cursor("\n")
+            self.insert_at_cursor("\n")
 
 
-    def _autoscroll(self, *args):
-        adj = self.scroll.get_vadjustment()
-        adj.set_value(adj.get_upper() - adj.get_page_size())
-
-
-    def not_found(self, word, msg=""):
-        end = self.get_cursor_textIter()
-        self.textbuffer.insert_with_tags(end, "%s"%word, self.tag_bold)
-        self.textbuffer.insert_at_cursor(" Not Found %s\n"%msg)
+    def not_found(self, text, msg=""):
+        self.insert_at_cursor(text, self.tag_bold)
+        self.insert_at_cursor(" Not Found %s\n"%msg)
         self.jump_to_top()
 
 
