@@ -18,6 +18,8 @@ class Display(Gtk.Overlay):
     Display is charged Gtk.TextView
     # TODO: Viewer object access TextView members
     """
+    hand_cursor = Gdk.Cursor(Gdk.CursorType.HAND2)
+    regular_cursor = Gdk.Cursor(Gdk.CursorType.XTERM)
 
     def __init__(self, parent=None):
         Gtk.Overlay.__init__(self)
@@ -28,6 +30,10 @@ class Display(Gtk.Overlay):
 
         self.set_hexpand(True)
         self.set_vexpand(True)
+
+        # self.textview.connect("event-after", self.event_after)
+        self.textview.connect("motion-notify-event", self._on_hover)
+        # self.textview.connect("visibility-notify-event", self.visibility_notify_event)
 
         # self.textview.connect('enter-notify-event', self._enter)
         # self.textview.connect('leave-notify-event', self._leave)
@@ -67,19 +73,28 @@ class Display(Gtk.Overlay):
         self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD)
 
 
-    def get_wordObj_at_cursor(self):
+    def jump_to(self, textIter):
+        mark = self.textbuffer.create_mark(None, textIter)
+        self.textview.scroll_mark_onscreen(mark)
+        self.textbuffer.delete_mark(mark)
+
+
+    def jump_to_top(self):
+        self.jump_to(self.textbuffer.get_start_iter())
+
+
+    def jump_to_bottom(self):
+        self.jump_to(self.textbuffer.get_end_iter())
+
+
+    def insert_at_cursor(self, text, tag=None):
+        if tag == None:
+            self.textbuffer.insert_at_cursor(text)
+            return
+
         mark = self.textbuffer.get_insert()
-        end  = self.textbuffer.get_iter_at_mark(mark)
-        char = end.get_char()
-
-        if not end.forward_word_end(): return
-        begin = end.copy()
-        if not begin.backward_word_start(): return
-        word = self.textbuffer.get_text(begin, end, True)
-
-        ## validate the word
-        if char not in word: return
-        return word, begin, end
+        end =  self.textbuffer.get_iter_at_mark(mark)
+        self.textbuffer.insert_with_tags(end, text, tag)
 
 
     def clean_highlights(self):
@@ -110,27 +125,43 @@ class Display(Gtk.Overlay):
         return match
 
 
-    def jump_to(self, textIter):
-        mark = self.textbuffer.create_mark(None, textIter)
-        self.textview.scroll_mark_onscreen(mark)
-        self.textbuffer.delete_mark(mark)
-
-
-    def jump_to_top(self):
-        self.jump_to(self.textbuffer.get_start_iter())
-
-
-    def jump_to_bottom(self):
-        self.jump_to(self.textbuffer.get_end_iter())
-
-
-    def insert_at_cursor(self, text, tag=None):
-        if tag == None:
-            self.textbuffer.insert_at_cursor(text)
-            return
+    def get_wordObj_at_cursor(self):
         mark = self.textbuffer.get_insert()
-        end =  self.textbuffer.get_iter_at_mark(mark)
-        self.textbuffer.insert_with_tags(end, text, tag)
+        end  = self.textbuffer.get_iter_at_mark(mark)
+        char = end.get_char()
+
+        if not end.forward_word_end(): return
+        begin = end.copy()
+        if not begin.backward_word_start(): return
+        word = self.textbuffer.get_text(begin, end, True)
+
+        ## validate the word
+        if char not in word: return
+        return word, begin, end
+
+
+    def _on_hover(self, textview, event):
+        hovering = False
+        x, y = textview.window_to_buffer_coords(Gtk.TextWindowType.WIDGET, int(event.x), int(event.y))
+        point = textview.get_iter_at_location(x, y)
+
+        for tag in point.get_tags():
+            if tag.get_property('name') in ['source']:
+                hovering = True
+                break
+
+        cursor = self.hand_cursor if hovering else self.regular_cursor
+
+        window = textview.get_window(Gtk.TextWindowType.WIDGET)
+        window.set_cursor(cursor)
+
+
+    def _on_clicked(self, event):
+        if event.button != 1: return
+        if event.type != Gdk.EventType.BUTTON_RELEASE: return
+        line = -1
+        command = "leafpad --jump=%d %s"%(line, path)
+        print("pid:", path, Popen(command.split()).pid)
 
 
     def insert_result(self, word, parsed_info, src='\n'):
@@ -165,7 +196,10 @@ class Display(Gtk.Overlay):
 
         if src != '\n':
             *a, tmp = src.split('gloss/')
-            self.insert_at_cursor("\nsource: "+tmp, self.tag_source)
+            # tag = self.textbuffer.create_tag(None, foreground="gray", scale=.65)
+            # tag.set_data("src", src)
+            self.insert_at_cursor("\n")
+            self.insert_at_cursor("source: "+tmp, self.tag_source)
 
         _pos = ""
         c = 0
@@ -208,17 +242,8 @@ class Display(Gtk.Overlay):
         self.jump_to_top()
 
 
-    # def _leave(self, *args):
-    #     self.parent.set_cursor(None)
-
-
-    # def _enter(self, *args):
-    #     self.parent.set_cursor(Gdk.Cursor(Gdk.HAND2))
-
-
     def link_wiki(self, key):
-        end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert(end, " ")
+        self.insert_at_cursor(" ")
 
         def url_clicked(textag, textview, event, textiter):
             if event.type == Gdk.EventType.BUTTON_RELEASE: #and event.button == 1:
@@ -229,41 +254,54 @@ class Display(Gtk.Overlay):
         tag.connect("event", url_clicked )
         # tag.connect("enter-notify-event", self._enter)
 
-        end = self.textbuffer.get_end_iter()
-        offset = end.get_offset()
+        ## get start offset
+        mark  = self.textbuffer.get_insert()
+        start = self.textbuffer.get_iter_at_mark(mark)
+        start_offset = start.get_offset()
         # print(offset)
-        self.insert_image('../assets/globe.svg')
-        end = self.textbuffer.get_end_iter()
-        begin = self.textbuffer.get_iter_at_offset(offset)
-        self.textbuffer.apply_tag(tag, begin, end)
-        # self.textbuffer.insert_with_tags(end, "wiki", tag)
+
+        self.insert_image(start, '../assets/globe.svg')
+
+        ## get stop offset
+        start = self.textbuffer.get_iter_at_offset(start_offset)
+        mark  = self.textbuffer.get_insert()
+        stop  = self.textbuffer.get_iter_at_mark(mark)
+
+        self.textbuffer.apply_tag(tag, start, stop)
 
 
-    def link_button(self):
-        link = Gtk.LinkButton(uri="https://en.wikipedia.org/wiki/", label="wiki")
-        link.show()
-        # link.set_size_request(30, 40)
-        anchor = Gtk.TextChildAnchor()
-        end = self.textbuffer.get_end_iter()
-        self.textbuffer.insert_child_anchor(end, anchor)
-        self.textview.add_child_at_anchor(link, anchor)
+    def insert_image(self, textIter, file):
+        # TODO: fall back if image does'nt exist
+        # self.insert_at_cursor(file)
+
+        if file not in self.pixbuf_cache:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file(PWD + file)
+            new = pixbuf.scale_simple(16, 16, GdkPixbuf.InterpType.BILINEAR)
+            self.pixbuf_cache[file] = new
+
+        self.textbuffer.insert_pixbuf(textIter, self.pixbuf_cache[file])
 
 
-    def insert_image(self, file):
-        end = self.textbuffer.get_end_iter()
-        if file in self.pixbuf_cache:
-            self.textbuffer.insert_pixbuf(end, self.pixbuf_cache[file])
-            return
-
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file(PWD + file)
-        new = pixbuf.scale_simple(16, 16, GdkPixbuf.InterpType.BILINEAR)
-        self.pixbuf_cache[file] = new
-        self.textbuffer.insert_pixbuf(end, new)
+    # def insert_link(self, text, href):
+    #     tag = self.textbuffer.create_tag(None, foreground="blue", underline=Pango.UNDERLINE_SINGLE)
+    #     tag.set_data("href", href)
+    #     self.insert_at_cursor(text, href)
 
 
-    def add_pic(self):
-        pixbuf = GdkPixbuf('')
-        self.viewer.insert_pixbuf()
+    # def url_clicked(self, textag, textview, event, textiter):
+    #     if event.type == Gdk.EventType.BUTTON_RELEASE: #and event.button == 1:
+    #         print("pid:", Popen(['setsid', BROWSER, "https://en.wikipedia.org/wiki/%s"%key]).pid)
+    #         # webbrowser.open("https://en.wikipedia.org/wiki/"+key)
+
+
+    # def link_button(self):
+    #     link = Gtk.LinkButton(uri="https://en.wikipedia.org/wiki/", label="wiki")
+    #     link.show()
+    #     # link.set_size_request(30, 40)
+    #     anchor = Gtk.TextChildAnchor()
+    #     end = self.textbuffer.get_end_iter()
+    #     self.textbuffer.insert_child_anchor(end, anchor)
+    #     self.textview.add_child_at_anchor(link, anchor)
 
 
 def root_binds(widget, event):
@@ -280,7 +318,7 @@ def main():
 
     global obj
     obj = Display(root)
-    obj.textbuffer.insert_at_cursor("\n")
+    obj.textbuffer.set_text("\n")
     obj.tb_clean.connect("clicked", lambda *a: obj.textbuffer.set_text(""))
     root.add(obj)
     return root

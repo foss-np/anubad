@@ -83,7 +83,6 @@ class GUI(Gtk.Window):
         self.clips_CYCLE = None
 
         self.view_CURRENT = set()
-        self.mark_CURRENT = (None, None)
 
         self.hist_LIST = []
         self.hist_CURSOR = 0
@@ -323,7 +322,7 @@ class GUI(Gtk.Window):
         self.copy_BUFFER = ""
         self.clips_CYCLE = None
         self.view_CURRENT.clear()
-        self.viewer.textbuffer.set_text("")
+        self.viewer.textbuffer.set_text("\n")
         selection = self.sidebar.treeview.get_selection()
         selection.unselect_all()
 
@@ -346,13 +345,13 @@ class GUI(Gtk.Window):
 
 
     def viewer_on_activity(self, textview, event):
-        if event.type == Gdk.EventType._2BUTTON_PRESS:
-            bounds = self.viewer.textbuffer.get_selection_bounds()
-            if not bounds: return
-            begin, end = bounds
-            query = self.viewer.textbuffer.get_text(begin, end, True)
-            self.search_entry.set_text(query)
-            self.search_and_reflect(query)
+        if event.type != Gdk.EventType._2BUTTON_PRESS: return
+        bounds = self.viewer.textbuffer.get_selection_bounds()
+        if not bounds: return
+        begin, end = bounds
+        query = self.viewer.textbuffer.get_text(begin, end, True)
+        self.search_entry.set_text(query)
+        self.search_and_reflect(query)
 
 
     def makeWidgets_relations(self):
@@ -427,7 +426,9 @@ class GUI(Gtk.Window):
         ## adding transliteration
         self.clips += transliterate
 
-        if meta in self.view_CURRENT: return
+        if meta in self.view_CURRENT:
+            print("already in view:", meta, file=fp3)
+            return
         self.viewer.insert_result(word, parsed_info, src)
         self.view_CURRENT.add(meta)
 
@@ -454,10 +455,7 @@ class GUI(Gtk.Window):
                 self._view_item(*item)
                 treeselection.select_path(self.sidebar.count - 1)
 
-
         self.viewer.textbuffer.insert_at_cursor("\n")
-        # end = self.viewer.textbuffer.get_cursor
-        # self.mark_CURRENT = (begin, end.get_offset())
         self.viewer.jump_to_top()
 
         for item in sorted(all_FUZZ, key=lambda k: k[2][1]):
