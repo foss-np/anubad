@@ -78,7 +78,7 @@ class Glossary():
 
                 if pos == "transliterate": continue
                 # TODO make list of words connected
-                invert[val] = word
+                invert[val] = (i, word)
 
         self.entries += i
         return (liststore, invert, path)
@@ -210,16 +210,17 @@ class Glossary():
         FULL, FUZZ = [], []
         for instance in __class__.instances:
             for liststore, invert, path in instance.categories.values():
-                for row in liststore:
-                    if query not in row[1]: continue
-                    match = (instance, path, tuple(row))
-                    if query == row[1]: FULL.append(match)
+                for ID, word, info in liststore:
+                    if query not in word: continue
+                    match = (instance, path, (ID, word, info))
+                    if query == word: FULL.append(match)
                     else: FUZZ.append(match)
 
-                if query in invert.keys():
-                    # TODO get location
-                    match = (instance, path, (1, query, invert[query]))
-                    FULL.append(match)
+                for word, (ID, info) in invert.items():
+                    if query not in word: continue
+                    match = (instance, path, (ID, word, info))
+                    if query == word: FULL.append(match)
+                    else: FUZZ.append(match)
 
         return FULL, FUZZ
 
