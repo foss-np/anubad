@@ -51,3 +51,6 @@ relations:
 
 wordnet:
 	./wni.py ${WORD}
+
+distance:
+	./distance.py

@@ -6,6 +6,8 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
+import distance
+
 fp3 = sys.stderr
 fp4 = sys.stderr
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
@@ -213,16 +215,18 @@ class Glossary():
         for instance in __class__.instances:
             for liststore, invert, path in instance.categories.values():
                 for ID, word, info in liststore:
-                    if query not in word: continue
+                    d = distance.edit(query, word)
+                    if d > 1 and query not in word: continue
                     match = (instance, path, (ID, word, info))
-                    if query == word: FULL.append(match)
-                    else: FUZZ.append(match)
+                    if d: FUZZ.append(match)
+                    else: FULL.append(match)
 
                 for word, (ID, info) in invert.items():
-                    if query not in word: continue
+                    d = distance.edit(query, word)
+                    if d > 1 and query not in word: continue
                     match = (instance, path, (ID, word, info))
-                    if query == word: FULL.append(match)
-                    else: FUZZ.append(match)
+                    if d: FUZZ.append(match)
+                    else: FULL.append(match)
 
         return FULL, FUZZ
 
