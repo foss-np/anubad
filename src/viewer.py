@@ -117,7 +117,7 @@ class Display(Gtk.Overlay):
 
         self.textbuffer.apply_tag(self.tag_found, match_start, match_stop)
 
-        if n < 1: return match
+        if n <= 1: return match
 
         if reverse: self.find_and_highlight(text, match_start, n - 1, reverse)
         else:       self.find_and_highlight(text, match_stop, n - 1)

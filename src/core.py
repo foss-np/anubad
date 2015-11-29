@@ -77,8 +77,10 @@ class Glossary():
                     exit()
 
                 if pos == "transliterate": continue
-                # TODO make list of words connected
-                invert[val] = (i, word)
+                # inverted list
+                ID, info = invert.get(val, (tuple(), ''))
+                if ID: info += ', '
+                invert[val] = (ID + tuple([i]), info + "%s(%s)"%(pos, word))
 
         self.entries += i
         return (liststore, invert, path)

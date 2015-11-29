@@ -479,6 +479,9 @@ class GUI(Gtk.Window):
         else:
             instance, path, row = self.sidebar.get_suggestion(pathlst[0])
             line = row[0]
+            ## handel invert map
+            if type(line) == tuple:
+                line = line[self.clips.index(self.copy_BUFFER)]
 
         if EDITOR == "": return
 
