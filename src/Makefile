@@ -54,3 +54,6 @@ wordnet:
 
 distance:
 	./distance.py
+
+config-test:
+	./config.py

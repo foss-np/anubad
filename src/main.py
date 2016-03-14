@@ -5,36 +5,33 @@ import os, sys
 __filepath__ = os.path.abspath(__file__)
 PWD = os.path.dirname(__filepath__) + '/'
 
-exec(open(PWD + "gsettings.conf", encoding="UTF-8").read())
-exec(open(PWD + "mysettings.conf", encoding="UTF-8").read())
-
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, Pango
+from gi.repository import Gtk, Gdk, Gio, Pango
 
 import importlib
 from collections import OrderedDict
 from subprocess import Popen
 from itertools import count
 
+import config
 import core
-import preferences as Pre
-import sidebar as Side
+import preferences
+import sidebar
 import browser
 import viewer
 import relations
-import add as Ad
+import add
 import utils
+
+# import wni
 import wni
+
+ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
 
 fp_dev_null = open(os.devnull, 'w')
 
-DEBUG = 0
-if "DEBUG" in os.environ:
-    try:
-        DEBUG = int(os.environ["DEBUG"])
-    except:
-        DEBUG = 1
+DEBUG = int(os.environ.get("DEBUG", 0))
 
 if 'DEBUGLY' in globals() and os.path.isdir(DEBUGLY) and DEBUG:
     sys.path.append(DEBUGLY)
@@ -65,18 +62,18 @@ def treeview_signal_safe_toggler(func):
         return func_return
     return wrapper
 
-#   ____ _   _ ___
-#  / ___| | | |_ _|
-# | |  _| | | || |
-# | |_| | |_| || |
-#  \____|\___/|___|
-#
 class GUI(Gtk.Window):
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    def __init__(self, parent=None):
+    def __init__(self, rc, parent=None):
         Gtk.Window.__init__(self)
+        self.rc = rc
         self.parent = parent
+
+        self.fonts = {
+            'viewer': Pango.font_description_from_string(rc.fonts['viewer'])
+        }
+
         self.track_FONT = set()
 
         self.clips = []
@@ -103,7 +100,9 @@ class GUI(Gtk.Window):
 
         self.search_entry.grab_focus()
         self.set_default_size(600, 550)
+        self.set_position(Gtk.WindowPosition.CENTER)
         self.show_all()
+        self.parse_geometry(rc.ui['geometry'])
 
 
     def turn_off_auto_copy(func):
@@ -254,7 +253,7 @@ class GUI(Gtk.Window):
         self.search_entry.set_tooltip_markup(tool_tip)
         self.search_entry.set_max_length(80)
         ### Font stuff
-        self.search_entry.modify_font(FONT_obj)
+        self.search_entry.modify_font(self.fonts['viewer'])
         self.track_FONT.add(self.search_entry)
 
         accel = Gtk.AccelGroup()
@@ -286,12 +285,12 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets_sidebar(self):
-        self.sidebar = Side.Sidebar(self)
+        self.sidebar = sidebar.Sidebar(self)
         treeselection = self.sidebar.treeview.get_selection()
         self.sidebar.select_signal = treeselection.connect("changed", self.sidebar_on_row_changed)
 
         for obj in self.sidebar.track_FONT:
-            obj.modify_font(FONT_obj)
+            obj.modify_font(self.fonts['viewer'])
         return self.sidebar
 
 
@@ -308,8 +307,8 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets_viewer(self):
-        self.viewer = viewer.Display(self)
-        self.viewer.textview.modify_font(FONT_obj)
+        self.viewer = viewer.Display(self, PWD)
+        self.viewer.textview.modify_font(self.fonts['viewer'])
         self.track_FONT.add(self.viewer.textview)
 
         self.viewer.tb_clean.connect("clicked", self.viewer_clean)
@@ -473,9 +472,9 @@ class GUI(Gtk.Window):
         treeselection = self.sidebar.treeview.get_selection()
         model, pathlst = treeselection.get_selected_rows()
 
-        line = -1
         if len(pathlst) == 0:
             path = core.Glossary.instances[0].categories['main'][-1]
+            line = core.Glossary.instances[0].entries
         else:
             instance, path, row = self.sidebar.get_suggestion(pathlst[0])
             line = row[0]
@@ -483,21 +482,15 @@ class GUI(Gtk.Window):
             if type(line) == tuple:
                 line = line[self.clips.index(self.copy_BUFFER)]
 
-        if EDITOR == "": return
-
-        if EDITOR == "leafpad": command = EDITOR + " --jump=%d "%line
-        elif EDITOR == "gedit": command = EDITOR + " +%d "%line
-        else: command = EDITOR + " "
-
-        command += path
-
-        print("pid:", command, Popen(command.split()).pid, file=fp5)
+        cmd = self.rc.editor_goto_line_uri(path, line)
+        print("pid:", path, Popen(cmd).pid, file=fp5)
 
 
     @turn_off_auto_copy
     def _open_dir(self):
         path = core.Glossary.instances[0].fullpath
-        print("pid:", Popen(["nemo", path]).pid, file=fp5)
+        explorer = self.rc.apps['file-manager']
+        print("pid:", Popen([explorer, path]).pid, file=fp5)
 
 
     def _circular_search(self, d):
@@ -518,11 +511,11 @@ class GUI(Gtk.Window):
 
     @turn_off_auto_copy
     def add_to_gloss(self, query=""):
-        add = Ad.Add(self, l1=query, l2="")
-        for obj in add.track_FONT:
+        widget = add.Add(self, l1=query, l2="")
+        for obj in widget.track_FONT:
             obj.modify_font(FONT_obj)
         # TODO: connection
-        add.connect('destroy', self._add_to_gloss_reflect)
+        widget.connect('destroy', self._add_to_gloss_reflect)
 
 
     def _add_to_gloss_reflect(self, *args):
@@ -530,8 +523,7 @@ class GUI(Gtk.Window):
 
 
     def preference(self, query=""):
-        Pre.def_FONT = def_FONT
-        s = Pre.Settings(self)
+        s = preferences.Settings(self.rc)
 
 
     def key_binds(self, widget, event):
@@ -570,36 +562,34 @@ class GUI(Gtk.Window):
         self.search_entry_binds(widget, event)
 
 
-def init():
-    # import __main__
-    # TODO where to add __main__function
+def main():
     core.fp3 = fp5
     core.fp4 = fp6
-    viewer.PWD = PWD
 
-    global PATH_GLOSS
-    core.PATH_GLOSS = PATH_GLOSS = PWD + PATH_GLOSS
+    rc = config.main(PWD)
 
-    global FONT_obj
-    FONT_obj = Pango.font_description_from_string(def_FONT)
-    browser.FONT_obj = FONT_obj
-    browser.fp3 = fp4
+    # verify app
+    for name, _type in rc.type_list:
+        if not rc.preferences['use-system-defaults']:
+            if rc.apps[name]: continue
+        desktopAppInfo = Gio.app_info_get_default_for_type(_type, 0)
+        rc.apps[name] = desktopAppInfo.get_executable()
 
-    # MAYBE do __main__ import here
+    for gloss in sorted(rc.glossary_list, key=lambda k: k['priority']):
+        n = 0
+        while n < len(gloss['pairs']):
+            try:
+                core.Glossary(gloss['pairs'][n])
+            except Exception as e:
+                cmd = rc.editor_goto_line_uri(*e.meta_info)
+                os.system(' '.join(cmd))
+                # NOTE: we need something to hang on till we edit
+                ## DONT USES Popen ^^^^
+                print('RELOAD')
+                continue
+            n += 1
 
-    global BROWSER
-    viewer.BROWSER = BROWSER
-
-    global ignore_keys
-    ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
-
-    for path in LIST_GLOSS:
-        core.Glossary(path)
-
-
-def main():
-    init()
-    root = GUI()
+    root = GUI(rc=rc)
     return root
     notebook = browser.Notebook(core.Glossary.instances[0], root)
     root.layout.attach(notebook, 0, 7, 5, 2)

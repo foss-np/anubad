@@ -77,12 +77,11 @@ def about_dialog(widget):
 
 
 def load_plugins(parent):
-    global PATH_PLUGINS
-    PATH_PLUGINS = PWD + PATH_PLUGINS
+    PATH_PLUGINS = PWD + root.rc.plugin['path']
+
     if not os.path.isdir(PATH_PLUGINS): return
     if PATH_PLUGINS == PWD: return
     sys.path.append(PATH_PLUGINS)
-
 
     parent.plugins = dict()
     for file_name in os.listdir(PATH_PLUGINS):

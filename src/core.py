@@ -8,15 +8,15 @@ from gi.repository import Gtk
 
 import distance
 
-fp3 = sys.stderr
-fp4 = sys.stderr
+fp3 = fp4 = sys.stderr
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
 pos_map = {
-    'n': "noun",
-    'noun': "noun",
-    'j': "adjective",
-    'adj': "adjective",
-    'v': "verb",
+    'n'    : "noun",
+    'noun' : "noun",
+    'j'    : "adjective",
+    'adj'  : "adjective",
+    'v'    : "verb",
+    'm'    : "meaning"
 }
 
 class Glossary():
@@ -26,9 +26,8 @@ class Glossary():
     def __init__(self, path):
         self.entries = 0
         self.categories = dict()
-        self.fullpath = PATH_GLOSS + path
-
-        self.load_glossary(self.fullpath)
+        self.fullpath = path
+        self.load_glossary(path)
         print("glossary:", path, self.entries, file=sys.stderr)
 
         __class__.instances.append(self)
@@ -40,10 +39,10 @@ class Glossary():
             print("error: invalid glossary path ", file=sys.stderr)
             return
 
-        for file in os.listdir(path):
-            name, dot, ext = file.rpartition('.')
+        for _file in os.listdir(path):
+            name, dot, ext = _file.rpartition('.')
             if ext not in FILE_TYPES: continue
-            category = self.load_entries(self.fullpath + file)
+            category = self.load_entries(self.fullpath + _file)
             self.categories[name] = category
 
 
@@ -64,11 +63,9 @@ class Glossary():
             except Exception as e:
                 print("fatal:", e)
                 print("wrong format %s: %d"%(path, i))
-                # NOTE: we need something to hang on till we edit
-                ## print("pid:", Popen(["leafpad", arg, self.SRC]).pid)
-                ## DONT USES Popen ^^^^
-                os.system("setsid leafpad --jump=%d %s"%(i, path))
-                exit(1)
+                e.meta_info = (path, i)
+                raise
+
             liststore.append((i, word, defination))
             parsed_info = self.format_parser(defination)
             for pos, val in parsed_info:
@@ -86,29 +83,6 @@ class Glossary():
 
         self.entries += i
         return (liststore, invert, path)
-
-
-    # def reload(self, gloss):
-    #     GLOSS = PATH_GLOSS + gloss
-    #     if self.notebook.GLOSS == GLOSS: return
-
-    #     self.layout.remove(self.notebook)
-    #     for obj in GUI.notebook_OBJS:
-    #         if obj.GLOSS == GLOSS:
-    #             self.notebook = obj
-    #             break
-    #     else:
-    #         self.notebook = self.makeWidgets_browser(gloss)
-
-    #     self.layout.attach(self.notebook, 0, 5, 5, 2)
-    #     self.show_all()
-    #     self.notebook.set_current_page(self.notebook.MAIN_TAB)
-
-
-    # def _reload_gloss(self):
-    #     current_tab = self.notebook.get_current_page()
-    #     obj = self.notebook.get_nth_page(current_tab)
-    #     obj.reload()
 
 
     @staticmethod
@@ -232,8 +206,12 @@ class Glossary():
 
 
 if __name__ == '__main__':
-    exec(open("gsettings.conf", encoding="UTF-8").read())
-    foss_gloss = Glossary(LIST_GLOSS[0])
+    import config
+    rc = config.RC()
+    gloss = next(rc.get_gloss())
+    path = gloss.get('path')
+    pairs = gloss.get('pairs').split()
+    Glossary(path + pairs[0] +'/')
     FULL, FUZZ = Glossary.search('hello')
     if FULL:
         print(FULL[0][2][:])

@@ -147,9 +147,6 @@ def main():
     global PATH_GLOSS
     core.PATH_GLOSS = PATH_GLOSS = PATH_GLOSS
 
-    # global ignore_keys
-    # ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
-
     for path in LIST_GLOSS:
         core.Glossary(path)
 
@@ -168,7 +165,6 @@ def main():
 
 if __name__ == '__main__':
     exec(open("gsettings.conf", encoding="UTF-8").read())
-    # import utils
     fp3 = sys.stdout
     core.fp3 = fp3
 

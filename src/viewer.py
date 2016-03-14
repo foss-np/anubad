@@ -21,9 +21,11 @@ class Display(Gtk.Overlay):
     hand_cursor = Gdk.Cursor(Gdk.CursorType.HAND2)
     regular_cursor = Gdk.Cursor(Gdk.CursorType.XTERM)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, pwd=""):
         Gtk.Overlay.__init__(self)
         self._parent = parent # overlay has the parent field
+        global PWD
+        PWD = pwd
         self.pixbuf_cache = dict()
 
         self.makeWidgets()
@@ -247,7 +249,12 @@ class Display(Gtk.Overlay):
 
         def url_clicked(textag, textview, event, textiter):
             if event.type == Gdk.EventType.BUTTON_RELEASE: #and event.button == 1:
-                print("pid:", Popen(['setsid', BROWSER, "https://en.wikipedia.org/wiki/%s"%key]).pid)
+                cmd = [
+                    'setsid',
+                    self._parent.rc.apps['browser'],
+                    "https://en.wikipedia.org/wiki/%s"%key
+                ]
+                print("pid:", Popen(cmd).pid)
                 # webbrowser.open("https://en.wikipedia.org/wiki/"+key)
 
         tag = self.textbuffer.create_tag(None)
@@ -260,7 +267,7 @@ class Display(Gtk.Overlay):
         start_offset = start.get_offset()
         # print(offset)
 
-        self.insert_image(start, '../assets/globe.svg')
+        self.insert_image(start, PWD + '../assets/globe.svg')
 
         ## get stop offset
         start = self.textbuffer.get_iter_at_offset(start_offset)
@@ -275,7 +282,7 @@ class Display(Gtk.Overlay):
         # self.insert_at_cursor(file)
 
         if file not in self.pixbuf_cache:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file(PWD + file)
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file(file)
             new = pixbuf.scale_simple(16, 16, GdkPixbuf.InterpType.BILINEAR)
             self.pixbuf_cache[file] = new
 

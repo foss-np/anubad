@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 
+import os
+
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
 class Settings(Gtk.Window):
     # TODO: Singleton
-    def __init__(self, parent=None):
+    def __init__(self, rc, parent=None):
         Gtk.Window.__init__(self, title="Settings")
         self.parent = parent
+        self.rc = rc
 
         self.makeWidgets()
 
         self.connect('key_press_event', lambda w, e: self.key_binds(w, e))
+        self.set_border_width(10)
+        self.set_default_size(250, 200)
         self.show_all()
+
 
     def makeWidgets(self):
         layout = Gtk.Grid()
@@ -22,18 +28,17 @@ class Settings(Gtk.Window):
         layout.set_column_spacing(5)
 
         label = Gtk.Label()
-        layout.attach(label, 0, 1, 1, 1)
+        layout.attach(label, left=0, top=1, width=1, height=1)
         label.set_markup("<b>Font</b>")
 
         self.font_button = Gtk.FontButton()
-        layout.attach(self.font_button, 1, 1, 1, 1)
-        self.font_button.set_font_name(def_FONT)
+        layout.attach(self.font_button, left=1, top=1, width=1, height=1)
+        self.font_button.set_font_name(self.rc.fonts['viewer'])
         self.font_button.connect('font-set', self._change_font)
 
-        layout.attach(self.makeWidgets_behavious(), 0, 2, 2, 1)
-        layout.attach(self.makeWidgets_buttons(), 0, 3, 2, 1)
-
-        return layout
+        layout.attach(self.makeWidgets_behavious(), left=0, top=2, width=2, height=1)
+        layout.attach(self.makeWidgets_default_apps(), left=0, top=3, width=2, height=1)
+        layout.attach(self.makeWidgets_buttons(), left=0, top=4, width=2, height=1)
 
 
     def _change_font(self, widget):
@@ -41,6 +46,73 @@ class Settings(Gtk.Window):
         for obj in self.parent.track_FONT:
             obj.modify_font(f_obj)
             # obj.override_font(f_obj)
+
+
+    def makeWidgets_default_apps(self):
+        layout = Gtk.VBox()
+        # layout.set_hexpand(True)
+
+        switch = Gtk.CheckButton(label="use system default")
+        layout.add(switch)
+        switch.set_active(self.rc.preferences['use-system-defaults'])
+        switch.connect("toggled", self.toggle_system_default)
+
+        grid = Gtk.Grid()
+        layout.add(grid)
+        grid.set_column_spacing(5)
+        grid.set_row_spacing(5)
+
+        self.appchooser_widget = []
+        self.appchooser_block = grid
+        rc_app = self.rc['apps'] if 'apps' in self.rc.sections() else {}
+        for i, (name, _type) in enumerate(self.rc.type_list):
+            label = Gtk.Label(label=name, xalign=1)
+            grid.attach(label, left=0, top=i, width=1, height=1)
+
+            chooser = Gtk.AppChooserButton(content_type=_type)
+            grid.attach(chooser, left=1, top=i, width=1, height=1)
+            chooser.set_show_dialog_item(True)
+            chooser.set_heading(name) # heading for show_dialog_item
+            chooser.set_show_default_item(True)
+
+
+            cfg = os.path.basename(rc_app.get(name, ''))
+            index = 0
+            for n, row in enumerate(chooser.get_model()):
+                desktopAppInfo = row[0]
+                if desktopAppInfo is None: continue
+                exe = desktopAppInfo.get_executable()
+                if cfg == os.path.basename(exe):
+                    index = n
+                    break
+
+            chooser.signal = None
+            if not self.rc.preferences['use-system-defaults']:
+                chooser.set_active(index)
+                chooser.signal = chooser.connect("changed", self._chooser_changed)
+
+            chooser.selected_item = index
+            self.appchooser_widget.append(chooser)
+
+        if self.rc.preferences['use-system-defaults']:
+            grid.set_sensitive(False)
+        return layout
+
+
+    def toggle_system_default(self, checkButton):
+        state = checkButton.get_active()
+        self.appchooser_block.set_sensitive(not state)
+        for i, w in enumerate(self.appchooser_widget):
+            if w.signal: w.disconnect(w.signal)
+            if state: w.refresh()
+            else: w.set_active(w.selected_item)
+            w.signal = w.connect("changed", self._chooser_changed)
+
+
+    def _chooser_changed(self, appchooserbutton):
+        i = appchooserbutton.get_active()
+        appchooserbutton.selected_item = i
+
 
     def makeWidgets_behavious(self):
         bar = Gtk.Toolbar()
@@ -55,6 +127,7 @@ class Settings(Gtk.Window):
         bar.t_Spell.set_active(True)
         ##
         return bar
+
 
     def makeWidgets_buttons(self):
         layout = Gtk.HBox()
@@ -92,10 +165,7 @@ class Settings(Gtk.Window):
 
 
     def _apply_click(self, widget):
-        f_obj = widget.get_font_desc()
-        self.viewer.textview.modify_font(f_obj)
-        ff, fs = f_obj.get_family(), int(f_obj.get_size()/1000)
-        font = ff + ' ' + str(fs)
+        pass
         # conf = open("mysettings.conf").read()
         # global def_FONT
         # nconf = conf.replace(def_FONT, font)
@@ -121,14 +191,16 @@ class Settings(Gtk.Window):
 
 
 def main():
-    root = Settings()
+    root = Settings(rc)
     root.connect('delete-event', Gtk.main_quit)
     return root
 
 
 if __name__ == '__main__':
+    import config
     from gi.repository import Pango
-    exec(open("gsettings.conf").read())
-    FONT_obj = Pango.font_description_from_string(def_FONT)
+
+    rc = config.main()
+
     main().destroy = Gtk.main_quit
     Gtk.main()

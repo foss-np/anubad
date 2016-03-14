@@ -14,6 +14,6 @@ def plugin_main(root, fullpath):
     bar.b_espeak = Gtk.ToolButton(icon_name=Gtk.STOCK_MEDIA_PLAY)
     bar.b_espeak.show()
     bar.insert(bar.b_espeak, 8)
-    bar.b_espeak.connect("clicked", lambda w: espeak(root.copy_BUFFER))
     bar.b_espeak.set_tooltip_markup("Say it")
+    bar.b_espeak.connect("clicked", lambda w: espeak(root.copy_BUFFER))
     return True
