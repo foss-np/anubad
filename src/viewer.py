@@ -161,9 +161,8 @@ class Display(Gtk.Overlay):
     def _on_clicked(self, event):
         if event.button != 1: return
         if event.type != Gdk.EventType.BUTTON_RELEASE: return
-        line = -1
-        command = "leafpad --jump=%d %s"%(line, path)
-        print("pid:", path, Popen(command.split()).pid)
+        cmd = self._parent.rc.editor_goto_line_uri(path, line)
+        print("pid:", path, Popen(cmd).pid)
 
 
     def insert_result(self, word, parsed_info, src='\n'):

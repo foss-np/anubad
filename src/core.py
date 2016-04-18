@@ -54,15 +54,15 @@ class Glossary():
         try:
             data = open(path, encoding="UTF-8").read()
         except:
-            print("error: in file", path)
+            print("error: in file", path, file=sys.stderr)
             return
 
         for i, line in enumerate(data.splitlines(), 1):
             try:
                 word, defination = line.split('; ')
             except Exception as e:
-                print("fatal:", e)
-                print("wrong format %s: %d"%(path, i))
+                print("fatal:", e, file=sys.stderr)
+                print("wrong format %s: %d"%(path, i), file=sys.stderr)
                 e.meta_info = (path, i)
                 raise
 
@@ -70,9 +70,9 @@ class Glossary():
             parsed_info = self.format_parser(defination)
             for pos, val in parsed_info:
                 try:
-                    if   pos[0] == "_" or val == "": continue
+                    if pos[0] == "_" or val == "": continue
                 except:
-                    print(i, pos, val)
+                    print(i, pos, val, file=sys.stderr)
                     exit()
 
                 if pos == "transliterate": continue
@@ -203,6 +203,22 @@ class Glossary():
                     else: FULL.append(match)
 
         return FULL, FUZZ
+
+
+def load_from_config(rc):
+    for gloss in sorted(rc.glossary_list, key=lambda k: k['priority']):
+        n = 0
+        while n < len(gloss['pairs']):
+            try:
+                Glossary(gloss['pairs'][n])
+            except Exception as e:
+                cmd = rc.editor_goto_line_uri(*e.meta_info)
+                os.system(' '.join(cmd))
+                # NOTE: we need something to hang on till we edit
+                ## DONT USES Popen ^^^^
+                print('RELOAD')
+                continue
+            n += 1
 
 
 if __name__ == '__main__':

@@ -21,58 +21,39 @@ class RC(configparser.ConfigParser):
     def __init__(self):
         configparser.ConfigParser.__init__(self)
 
+        self.core = {}
         self.glossary_list = []
-        self.plugin = {}
         self.preferences = {}
         self.fonts = {}
-        self.ui = {}
+        self.gui = {}
         self.apps = {}
 
 
     def load(self):
+        self.core = self.extract_core()
+        self.preferences = self.extract_preferences()
+
         for section in self.sections():
             if 'gloss' in section:
-                self.list_gloss(self[section])
+                obj = self.extract_gloss(self[section])
+                self.glossary_list.append(obj)
 
-        self.list_preference()
-        self.list_font()
-        self.list_gui_states()
-        self.list_default_app()
+        self.fonts = self.extract_fonts()
+        self.gui = self.extract_gui()
+        self.apps = self.extract_apps()
 
-        self.plugin = self['plugins'] if 'plugins' in self.sections() else {
-            'path': ''
+
+    def extract_core(self):
+        core = self['core'] if 'core' in self.sections() else {}
+        return {
+            'debugly' : core.get('debugly', ''),
+            'plugins' : core.get('plugins', '')
         }
 
 
-    def list_gloss(self, obj):
-        path = obj.get('path')
-        self.glossary_list.append({
-            'pairs'       : [ path + p + '/' for p in obj.get('pairs').split() ],
-            'description' : obj.get('description', ''),
-            'priority'    : obj.getboolean('priority', 5),
-            'read-only'   : obj.getboolean('read-only', True),
-            'fetch'       : obj.get('fetch', True)
-        })
-
-
-    def list_font(self):
-        font = self['fonts'] if 'fonts' in self.sections() else {}
-        self.fonts = {
-            'viewer' : font.get('viewer', 'DejaVu Sans Mono 13')
-        }
-
-
-    def list_gui_states(self):
-        ui = self['gui'] if 'gui' in self.sections() else {}
-        self.ui = {
-            'state'    : ui.get('wm-state', 'normal'),
-            'geometry' : ui.get('geometry', '600x550')
-        }
-
-
-    def list_preference(self):
+    def extract_preferences(self):
         pref = self['preferences'] if 'preferences' in self.sections() else {}
-        self.preferences = {
+        return {
             'use-system-defaults' : pref.getboolean('use-system-defaults', True),
             'append-at-end'       : pref.getboolean('append-at-end', False),
             'regex-search'        : pref.getboolean('regex-search', True),
@@ -80,10 +61,35 @@ class RC(configparser.ConfigParser):
         }
 
 
-    def list_default_app(self):
-        apps = self['apps'] if 'apps' in self.sections() else {}
+    def extract_gloss(self, obj):
+        path = obj.get('path')
+        return {
+            'pairs'       : [ path + p + '/' for p in obj.get('pairs').split() ],
+            'description' : obj.get('description', ''),
+            'priority'    : obj.getboolean('priority', 5),
+            'read-only'   : obj.getboolean('read-only', True),
+            'fetch'       : obj.get('fetch', True)
+        }
 
-        self.apps = {
+
+    def extract_fonts(self):
+        font = self['fonts'] if 'fonts' in self.sections() else {}
+        return {
+            'viewer' : font.get('viewer', 'DejaVu Sans Mono 13')
+        }
+
+
+    def extract_gui(self):
+        ui = self['gui'] if 'gui' in self.sections() else {}
+        return {
+            'state'    : ui.get('wm-state', 'normal'),
+            'geometry' : ui.get('geometry', '600x550')
+        }
+
+
+    def extract_apps(self):
+        apps = self['apps'] if 'apps' in self.sections() else {}
+        return {
             'file-manager' : apps.get('file-manager'),
             'editor'       : apps.get('editor'),
             'browser'      : apps.get('browser')

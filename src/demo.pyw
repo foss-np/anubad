@@ -4,24 +4,26 @@
 
 import os, sys
 
-filepath = os.path.abspath(__file__)
-fullpath = os.path.dirname(filepath) + '/'
-
-exec(open(fullpath+"/gsettings.conf").read())
-exec(open(fullpath + "mysettings.conf").read())
+__filepath__ = os.path.abspath(__file__)
+PWD = os.path.dirname(__filepath__) + '/'
 
 try: # py2/3 compatibility
     import tkinter as tk
     from tkinter.ttk import *
+    from configparser import ConfigParser
 except:
     import Tkinter as tk
     from ttk import *
+    from ConfigParser import ConfigParser
 
+rc = ConfigParser()
+rc.read(PWD + 'config')
+PATH_GLOSS = os.path.expanduser(rc.get('gloss "foss"', 'path') + 'en2np/')
 
-tmp = def_FONT.split()
-def_FONT = [ ' '.join(tmp[:-1]), tmp[-1] ]
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
-PATH_GLOSS = fullpath + PATH_GLOSS + LIST_GLOSS[0]
+
+tmp = rc.get('fonts', 'viewer').split()
+def_FONT = [ ' '.join(tmp[:-1]), tmp[-1] ]
 
 #  ____
 # | __ ) _ __ _____      _____  ___ _ __
@@ -258,7 +260,7 @@ class GUI(tk.Frame):
         # viewer
         self.viewer = Viewer(self)
         self.viewer.pack(expand=1, fill="both")
-        self.viewer.bind('<Control-l>', lambda e: self.viewer.clear_viewer())
+        self.parent.bind('<Control-l>', lambda e: self.viewer.clear_viewer())
 
         # notebook
         self.tabar = Notebook(self, takefocus=0)

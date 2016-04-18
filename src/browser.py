@@ -100,7 +100,7 @@ class Notebook(Gtk.Notebook):
             if "main" == name: self.MAIN_TAB = i
             obj = Table(self.parent, lstore)
             obj.treeview.connect("row-activated", self.browser_row_double_click)
-            obj.treeview.modify_font(FONT_obj)
+            obj.treeview.modify_font(fonts['browser'])
             self.track_FONT.add(obj.treeview)
             self.append_page(obj, Gtk.Label(label=name))
 
@@ -124,9 +124,9 @@ class Notebook(Gtk.Notebook):
         ID, word, info = model[treeiter]
 
         # self.viewer.parse(row, obj.SRC)
-        parsed_info = core.Glossary.format_parser(info)
-        self.parent.viewer.append_result(word, parsed_info, "gloss/demo")
-        self.parent.viewer.jump_to_end()
+        # parsed_info = core.Glossary.format_parser(info)
+        # self.parent.viewer.append_result(word, parsed_info, "gloss/demo")
+        # self.parent.viewer.jump_to_end()
 
 
     def key_binds(self, widget, event):

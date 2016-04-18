@@ -77,7 +77,7 @@ def about_dialog(widget):
 
 
 def load_plugins(parent):
-    PATH_PLUGINS = PWD + root.rc.plugin['path']
+    PATH_PLUGINS = PWD + root.rc.core['plugins']
 
     if not os.path.isdir(PATH_PLUGINS): return
     if PATH_PLUGINS == PWD: return
@@ -87,12 +87,21 @@ def load_plugins(parent):
     for file_name in os.listdir(PATH_PLUGINS):
         if file_name[-3:] not in ".py": continue
         namespace = importlib.__import__(file_name[:-3])
-        if namespace.plugin_main(parent, PWD):
-            print("plugin:", file_name, file=sys.stderr)
-            parent.plugins[file_name[:-3]] = namespace
+        try:
+            if namespace.plugin_main(parent, PWD):
+                print("plugin:", file_name, file=sys.stderr)
+                parent.plugins[file_name[:-3]] = namespace
+        except Exception as e:
+            print(e, file=sys.stderr)
 
 
 def argparser():
+    """
+    anubad [OPTIONS] [SOURCE]:[TARGETS] [TEXT]
+    $ anubad en:np test
+    $ anubad :np test
+    $ anubad -q
+    """
     parser = argparse.ArgumentParser(description="anubad")
     parser.add_argument(
         "-q", "--quick",
