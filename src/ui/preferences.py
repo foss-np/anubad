@@ -4,12 +4,17 @@ import os
 
 import gi
 gi.require_version('Gtk', '3.0')
+
 from gi.repository import Gtk
 
 class Settings(Gtk.Window):
     # TODO: Singleton
     def __init__(self, rc, parent=None):
-        Gtk.Window.__init__(self, title="Settings")
+        Gtk.Window.__init__(
+            self,
+            parent=parent,
+            title="Settings"
+        )
         self.parent = parent
         self.rc = rc
 
@@ -18,7 +23,6 @@ class Settings(Gtk.Window):
         self.connect('key_press_event', lambda w, e: self.key_binds(w, e))
         self.set_border_width(10)
         self.set_default_size(250, 200)
-        self.show_all()
 
 
     def makeWidgets(self):
@@ -96,6 +100,17 @@ class Settings(Gtk.Window):
 
         if self.rc.preferences['use-system-defaults']:
             grid.set_sensitive(False)
+
+        # print(selected.get_id())
+        # print(selected.get_name())
+        # print(selected.get_display_name())
+        # print(selected.get_filename())
+        # print(dir(selected))
+        # treeIter = model.get_iter(0)
+        # selected = model.get_value(treeIter, 0)
+        # print(selected.get_display_name())
+        # print(selected.get_description())
+        # print(selected.get_executable())
         return layout
 
 
@@ -166,6 +181,11 @@ class Settings(Gtk.Window):
 
     def _apply_click(self, widget):
         pass
+        # f_obj = widget.get_font_desc()
+        # self.viewer.textview.modify_font(f_obj)
+        # ff, fs = f_obj.get_family(), int(f_obj.get_size()/1000)
+        # font = ff + ' ' + str(fs)
+
         # conf = open("mysettings.conf").read()
         # global def_FONT
         # nconf = conf.replace(def_FONT, font)
@@ -190,9 +210,9 @@ class Settings(Gtk.Window):
         if event.keyval == 65307: self.destroy() # Esc
 
 
-def main():
+def main(rc):
     root = Settings(rc)
-    root.connect('delete-event', Gtk.main_quit)
+    root.show_all()
     return root
 
 
@@ -200,7 +220,10 @@ if __name__ == '__main__':
     import config
     from gi.repository import Pango
 
-    rc = config.main()
+    root = main(config.main())
+    root.connect('delete-event', Gtk.main_quit)
+    root.set_position(Gtk.WindowPosition.CENTER)
 
-    main().destroy = Gtk.main_quit
+    # in isolation testing, make Esc quit Gtk mainloop
+    root.destroy = Gtk.main_quit
     Gtk.main()
