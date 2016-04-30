@@ -3,7 +3,9 @@
 import os, sys
 
 __filepath__ = os.path.abspath(__file__)
-PWD = os.path.dirname(__filepath__) + '/'
+PWD = os.path.dirname(__filepath__) + '/../'
+
+sys.path.append(PWD)
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -16,16 +18,11 @@ from itertools import count
 
 import config
 import core
-import preferences
-import sidebar
-import browser
-import viewer
-import relations
-import add
 import utils
-
-# import wni
-import wni
+import ui.preferences
+import ui.sidebar
+import ui.view
+import ui.relations
 
 ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
 
@@ -62,16 +59,19 @@ def treeview_signal_safe_toggler(func):
         return func_return
     return wrapper
 
-class GUI(Gtk.Window):
+
+class Home(Gtk.Window):
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    def __init__(self, rc, parent=None):
-        Gtk.Window.__init__(self)
+    def __init__(self, rc, parent=None, app=None):
+        Gtk.Window.__init__(self, type=Gtk.WindowType.TOPLEVEL, application=app)
         self.rc = rc
         self.parent = parent
 
         self.fonts = {
-            'viewer': Pango.font_description_from_string(rc.fonts['viewer'])
+            'viewer': Pango.font_description_from_string(rc.fonts['viewer']),
+            'search': Pango.font_description_from_string(rc.fonts['viewer']),
+            'search': Pango.font_description_from_string(rc.fonts['viewer']),
         }
 
         self.track_FONT = set()
@@ -93,16 +93,16 @@ class GUI(Gtk.Window):
 
         # accelerators
         self.makeWidgets()
-        self.connect('key_release_event', self.key_binds)
-        self.connect('delete-event', Gtk.main_quit)
+        self.connect('key_release_event', self.key_release_binds)
+        # self.connect('key_press_event', self.key_press_binds)
         self.connect('focus-in-event', lambda *e: self.search_entry.grab_focus())
         self.connect('focus-out-event', lambda *e: self._on_focus_out_event())
 
         self.search_entry.grab_focus()
+        # gdk_window = self.get_root_window()
+        # gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.WATCH))
         self.set_default_size(600, 550)
         self.set_position(Gtk.WindowPosition.CENTER)
-        self.show_all()
-        self.parse_geometry(rc.ui['geometry'])
 
 
     def turn_off_auto_copy(func):
@@ -160,12 +160,11 @@ class GUI(Gtk.Window):
         ##
         #
         bar.add(Gtk.SeparatorToolItem())
-        #
-        ## Open Gloss
-        bar.b_Open = Gtk.ToolButton(icon_name=Gtk.STOCK_OPEN)
-        bar.add(bar.b_Open)
-        bar.b_Open.connect("clicked", lambda w: self._open_dir())
-        bar.b_Open.set_tooltip_markup("Load New Glossary")
+        ##
+        ## Smart Copy Toggle Button
+        bar.t_Copy = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_COPY)
+        bar.add(bar.t_Copy)
+        bar.t_Copy.set_active(True)
         ##
         ## Add Button
         bar.b_Add = Gtk.ToolButton(icon_name=Gtk.STOCK_ADD)
@@ -174,13 +173,15 @@ class GUI(Gtk.Window):
         bar.b_Add.set_tooltip_markup("Add new word to Glossary, <u>Ctrl+i</u>")
         ##
         #
+        ##  Preference
+        bar.b_Preference = Gtk.ToolButton(icon_name=Gtk.STOCK_PREFERENCES)
+        bar.add(bar.b_Preference)
+        bar.b_Preference.connect("clicked", lambda w: self.preference())
+        bar.b_Preference.set_tooltip_markup("Change Stuffs, Fonts, default gloss")
+        ##
+        #
         bar.add(Gtk.SeparatorToolItem())
         #
-        ## Smart Copy Toggle Button
-        bar.t_Copy = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_COPY)
-        bar.add(bar.t_Copy)
-        bar.t_Copy.set_active(True)
-        ##
         ## Search Show Toggle Button
         bar.t_WordNet = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_CONVERT)
         bar.t_WordNet.set_active(False)
@@ -189,18 +190,7 @@ class GUI(Gtk.Window):
         ##
         #
         bar.add(Gtk.SeparatorToolItem())
-        #
-        ##  Preference
-        bar.b_Preference = Gtk.ToolButton(icon_name=Gtk.STOCK_PREFERENCES)
-        bar.add(bar.b_Preference)
-        bar.b_Preference.connect("clicked", lambda w: self.preference())
-        bar.b_Preference.set_tooltip_markup("Change Stuffs, Fonts, default gloss")
 
-        ##
-        ## About
-        bar.b_About = Gtk.ToolButton(icon_name=Gtk.STOCK_ABOUT)
-        bar.add(bar.b_About)
-        bar.b_About.set_tooltip_markup("More About Anubad")
         return bar
 
 
@@ -252,8 +242,9 @@ class GUI(Gtk.Window):
         self.search_entry.connect('key_release_event', self.search_entry_binds)
         self.search_entry.set_tooltip_markup(tool_tip)
         self.search_entry.set_max_length(80)
+
         ### Font stuff
-        self.search_entry.modify_font(self.fonts['viewer'])
+        self.search_entry.modify_font(self.fonts['search'])
         self.track_FONT.add(self.search_entry)
 
         accel = Gtk.AccelGroup()
@@ -285,7 +276,7 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets_sidebar(self):
-        self.sidebar = sidebar.Sidebar(self)
+        self.sidebar = ui.sidebar.Bar(self)
         treeselection = self.sidebar.treeview.get_selection()
         self.sidebar.select_signal = treeselection.connect("changed", self.sidebar_on_row_changed)
 
@@ -302,12 +293,12 @@ class GUI(Gtk.Window):
             self._view_item(*self.sidebar.get_suggestion(path))
 
         if len(self.clips) == 0: return
-        self.clips_CYCLE = utils.circle(self.clips)
+        self.clips_CIRCLE = utils.circle(self.clips)
         self._circular_search(+1)
 
 
     def makeWidgets_viewer(self):
-        self.viewer = viewer.Display(self, PWD)
+        self.viewer = ui.view.Display(self, PWD)
         self.viewer.textview.modify_font(self.fonts['viewer'])
         self.track_FONT.add(self.viewer.textview)
 
@@ -319,7 +310,7 @@ class GUI(Gtk.Window):
 
     def viewer_clean(self, widget=None):
         self.copy_BUFFER = ""
-        self.clips_CYCLE = None
+        self.clips_CIRCLE = None
         self.view_CURRENT.clear()
         self.viewer.textbuffer.set_text("\n")
         selection = self.sidebar.treeview.get_selection()
@@ -354,7 +345,7 @@ class GUI(Gtk.Window):
 
 
     def makeWidgets_relations(self):
-        self.relatives = relations.Relatives()
+        self.relatives = ui.relations.Relatives()
         return self.relatives
 
 
@@ -387,12 +378,18 @@ class GUI(Gtk.Window):
                 self.engines['w:'](query)
                 return
 
-
         ## Ordered Dict use for undo/redo history
         query_RESULTS = OrderedDict()
 
         for w in set(query.split()):
             word = w.strip().lower()
+            # TODO: check if its in view && the glossary is changed
+            for history in self.hist_LIST:
+                if word in history.keys():
+                    # print("found in hist cache")
+                    query_RESULTS[word] = history[word]
+                    continue
+
             query_RESULTS[word] = core.Glossary.search(word)
 
         self._view_results(query_RESULTS)
@@ -462,7 +459,7 @@ class GUI(Gtk.Window):
 
         print("clip:", self.clips, file=fp3)
         if len(self.clips) == 0: return
-        self.clips_CYCLE = utils.circle(self.clips)
+        self.clips_CIRCLE = utils.circle(self.clips)
         self._circular_search(+1)
         self.search_entry.grab_focus()
 
@@ -477,10 +474,18 @@ class GUI(Gtk.Window):
             line = core.Glossary.instances[0].entries
         else:
             instance, path, row = self.sidebar.get_suggestion(pathlst[0])
-            line = row[0]
+            print(row, file=fp6)
+
             ## handel invert map
-            if type(line) == tuple:
-                line = line[self.clips.index(self.copy_BUFFER)]
+            if type(row[0]) == int: line = row[0]
+            else: # else tuple
+                try:
+                    i = self.clips.index(self.copy_BUFFER)
+                    print(i)
+                    print(dir(self.clips_CIRCLE))
+                    line = row[0][i]
+                except ValueError:
+                    line = None
 
         cmd = self.rc.editor_goto_line_uri(path, line)
         print("pid:", path, Popen(cmd).pid, file=fp5)
@@ -494,13 +499,13 @@ class GUI(Gtk.Window):
 
 
     def _circular_search(self, d):
-        if not self.clips_CYCLE:
+        if not self.clips_CIRCLE:
             self.search_entry.grab_focus()
             return
 
         self.toolbar.t_Copy.set_active(True)
         utils.diff = d
-        text = next(self.clips_CYCLE)
+        text = next(self.clips_CIRCLE)
 
         ## highlight current clip
         begin, end = self.viewer.clean_highlights()
@@ -523,12 +528,39 @@ class GUI(Gtk.Window):
 
 
     def preference(self, query=""):
-        s = preferences.Settings(self.rc)
+        s = preferences.Settings(self.rc, parent=self)
+        s.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
+        s.show_all()
 
 
-    def key_binds(self, widget, event):
+    def do_delete_event(self, event):
+        """Override the default handler for the delete-event signal"""
+        # Show our message dialog
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            modal=True,
+            buttons=Gtk.ButtonsType.OK_CANCEL
+        )
+
+        dialog.props.text = 'Are you sure you want to quit?'
+        response = dialog.run()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.OK:
+            return False
+
+        return True
+
+
+    def handel_esc(self):
+        # root.is_active()
+        self.hide()
+
+
+    def key_release_binds(self, widget, event):
         keyval, state = event.keyval, event.state
-        if   keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
+        if   keyval == 65307: self.handel_esc() # Esc
+        elif keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('e'): self._open_src()
@@ -562,10 +594,7 @@ class GUI(Gtk.Window):
         self.search_entry_binds(widget, event)
 
 
-def main():
-    core.fp3 = fp5
-    core.fp4 = fp6
-
+def main(app=None):
     rc = config.main(PWD)
 
     # verify app
@@ -575,27 +604,21 @@ def main():
         desktopAppInfo = Gio.app_info_get_default_for_type(_type, 0)
         rc.apps[name] = desktopAppInfo.get_executable()
 
-    for gloss in sorted(rc.glossary_list, key=lambda k: k['priority']):
-        n = 0
-        while n < len(gloss['pairs']):
-            try:
-                core.Glossary(gloss['pairs'][n])
-            except Exception as e:
-                cmd = rc.editor_goto_line_uri(*e.meta_info)
-                os.system(' '.join(cmd))
-                # NOTE: we need something to hang on till we edit
-                ## DONT USES Popen ^^^^
-                print('RELOAD')
-                continue
-            n += 1
+    core.fp3 = fp5
+    core.fp4 = fp6
+    core.load_from_config(rc)
 
-    root = GUI(rc=rc)
-    return root
-    notebook = browser.Notebook(core.Glossary.instances[0], root)
-    root.layout.attach(notebook, 0, 7, 5, 2)
+    root = Home(rc, app=app)
+    root.connect('delete-event', Gtk.main_quit)
     return root
 
 
 if __name__ == '__main__':
-    main()
+    root = main()
+
+    # in isolation testing, make Esc quit Gtk mainloop
+    root.handel_esc = Gtk.main_quit
+    root.show_all()
+
+    root.parse_geometry(rc.gui['geometry'])
     Gtk.main()
