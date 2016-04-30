@@ -1,5 +1,15 @@
-run:
+PKG_NAME = anubad
+
+default: app
+
+app:
 	cd src; make
+
+unlink:
+	rm -f /usr/local/bin/${PKG_NAME}
+
+link: unlink
+	ln -s "$(PWD)/main.py" /usr/local/bin/${PKG_NAME}
 
 demo: tk-py3
 
