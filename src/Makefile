@@ -1,25 +1,12 @@
 NAME=`basename $(PWD)`
 
-default: gtk3
+default: all
 
-demo: tk-py3
-
-tk-py3: mysettings.conf
-	python3 ./demo.pyw
-
-tk-py2: mysettings.conf
-	python2 demo.pyw
-
-gtk3: mysettings.conf
-	./app.py
+all:
+	./main.py
 
 debug:
-	DEBUG=3 ./app.py
-
-wine: mysettings.conf
-	# note should load from same directory
-	# and please set the python path in wine
-	wine python demo.pyw
+	DEBUG=3 ./main.py
 
 dist:
 	rm -f "$(NAME).7z"
@@ -30,27 +17,6 @@ mysettings.conf:
 
 core:
 	./core.py
-
-browser:
-	./browser.py
-
-viewer:
-	./viewer.py
-
-sidebar:
-	./sidebar.py
-
-add:
-	./add.py
-
-preference:
-	./preferences.py
-
-relations:
-	./relations.py
-
-wordnet:
-	./wni.py ${WORD}
 
 distance:
 	./distance.py

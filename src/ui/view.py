@@ -143,6 +143,8 @@ class Display(Gtk.Overlay):
 
 
     def _on_hover(self, textview, event):
+        # broken due to Gtk 3.0
+        return
         hovering = False
         x, y = textview.window_to_buffer_coords(Gtk.TextWindowType.WIDGET, int(event.x), int(event.y))
         point = textview.get_iter_at_location(x, y)

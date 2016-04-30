@@ -9,7 +9,7 @@ unlink:
 	rm -f /usr/local/bin/${PKG_NAME}
 
 link: unlink
-	ln -s "$(PWD)/main.py" /usr/local/bin/${PKG_NAME}
+	ln -s "$(PWD)/src/main.py" /usr/local/bin/${PKG_NAME}
 
 demo: tk-py3
 

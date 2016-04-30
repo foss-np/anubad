@@ -217,6 +217,9 @@ def main(rc):
 
 
 if __name__ == '__main__':
+    import sys
+    sys.path.append(sys.path[0]+'/../')
+
     import config
     from gi.repository import Pango
 

@@ -143,31 +143,70 @@ class Notebook(Gtk.Notebook):
         # if event.keyval in ignore_keys: return
 
 
+class Explorer(Gtk.Window):
+    def __init__(self, rc, parent=None):
+        Gtk.Window.__init__(self, title="Explorer")
+        self.parent = parent
+        self.rc = rc
+
+        self.track_FONT = set()
+
+        self.makeWidgets()
+
+        self.set_default_size(600, 500)
+        self.show_all()
+
+
+    def makeWidgets(self):
+        self.layout = Gtk.Grid()
+        self.add(self.layout)
+
+        treeview = self.makeWidgets_treeview()
+        self.layout.attach(treeview, 0, 0, 5, 1)
+        # self.track_FONT.add(self.treeview)
+        # treeselection = self.treeview.get_selection()
+        # treeselection.set_mode(Gtk.SelectionMode.MULTIPLE)
+
+        notebook = Notebook(core.Glossary.instances[0])
+        self.layout.attach(notebook, 0, 1, 5, 2)
+        self.connect('key_release_event', notebook.key_binds)
+
+
+    def makeWidgets_treeview(self):
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_hexpand(True)
+        scroll.set_vexpand(True)
+
+        self.treemodel = Gtk.ListStore(int, str)
+
+        self.treeview = Gtk.TreeView(self.treemodel)
+        scroll.add(self.treeview)
+
+        self.treeview.set_headers_visible(False)
+        self.treeview.set_rubber_banding(True)
+
+        renderer_text = Gtk.CellRendererText()
+        self.treeview.append_column(Gtk.TreeViewColumn("#", renderer_text, text=0))
+        self.treeview.append_column(Gtk.TreeViewColumn("w", renderer_text, text=1))
+        return scroll
+
+
 def main():
-    global PATH_GLOSS
-    core.PATH_GLOSS = PATH_GLOSS = PATH_GLOSS
+    import config
+    rc = config.main()
 
-    for path in LIST_GLOSS:
-        core.Glossary(path)
+    core.load_from_config(rc)
 
-    root = Gtk.Window()
-    root.connect('delete-event', Gtk.main_quit)
-    root.set_default_size(600, 300)
+    global fonts
+    fonts = {
+        'browser': Pango.font_description_from_string(rc.fonts['viewer'])
+    }
 
-    global FONT_obj
-    FONT_obj = Pango.font_description_from_string(def_FONT)
-
-    notebook = Notebook(core.Glossary.instances[0])
-    root.add(notebook)
-    root.connect('key_release_event', notebook.key_binds)
+    root = Explorer(rc=rc)
     return root
 
 
 if __name__ == '__main__':
-    exec(open("gsettings.conf", encoding="UTF-8").read())
-    fp3 = sys.stdout
-    core.fp3 = fp3
-
     root = main()
-    root.show_all()
+    root.connect('delete-event', Gtk.main_quit)
     Gtk.main()

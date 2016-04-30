@@ -9,8 +9,6 @@ import configparser
 FILE_CONF_DEFAULTS = '../config'
 FILE_CONF = os.path.expanduser('~/.config/anubad/config')
 
-from pprint import pprint
-
 class RC(configparser.ConfigParser):
     type_list = (
         ("file-manager", "inode/directory"),
@@ -96,8 +94,10 @@ class RC(configparser.ConfigParser):
         }
 
 
-    def editor_goto_line_uri(self, path, line):
+    def editor_goto_line_uri(self, path, line=None):
         ed = self.apps['editor']
+        if line is None: return [ ed, path ]
+
         if   ed == "leafpad" : cmd = [ ed, "--jump=%d"%line, path ]
         elif ed == "gedit"   : cmd = [ ed, "+%d "%line, path ]
         elif ed == "emacs"   : cmd = [ ed, "+%d "%line, path ]

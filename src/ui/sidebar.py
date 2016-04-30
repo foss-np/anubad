@@ -4,13 +4,13 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
-class Sidebar(Gtk.VBox):
+class Bar(Gtk.VBox):
     def __init__(self, parent=None):
         Gtk.HBox.__init__(self)
         self.parent = parent
         self.track_FONT = set()
         self.count = 0
-        self.dictstore = {}
+        self.dictstore = dict()
         self.makeWidgets()
 
 
