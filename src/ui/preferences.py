@@ -12,9 +12,12 @@ class Settings(Gtk.Window):
     def __init__(self, rc, parent=None):
         Gtk.Window.__init__(
             self,
+            # type=Gtk.WindowType.TOPLEVEL,
             parent=parent,
+            application=parent.app if parent else None,
             title="Settings"
         )
+
         self.parent = parent
         self.rc = rc
 

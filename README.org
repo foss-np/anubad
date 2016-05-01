@@ -2,7 +2,7 @@
 #+DATE: Sunday, Apr 19 2015
 #+STARTUP: showall
 
-Graphical Interface for glossary browsing.
+A Graphical Interface for glossary browsing.
 
 [[http://i.creativecommons.org/l/by/3.0/88x31.png]]
 
@@ -21,9 +21,9 @@ Copyright © 2013 - 2016 to the anubad Authors.
 
    |                       | linux          | ms-windows** |
    |-----------------------+----------------+--------------|
-   | python                | python 3.xx    | [[https://www.python.org/downloads/][python 3.xx]]  |
+   | python                | python >= 3.00 | [[https://www.python.org/downloads/][python 3.xx]]  |
    | gobject-introspection | python-gobject | pygi/base    |
-   | GTK                   | GTK+ 3         | pygi/        |
+   | GTK                   | Gtk+ >= 3      | pygi/        |
    | Pango                 |                |              |
    | Keybinder             | libkeybinder3  | pygi/GIR     |
 

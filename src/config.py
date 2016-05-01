@@ -13,7 +13,7 @@ class RC(configparser.ConfigParser):
     type_list = (
         ("file-manager", "inode/directory"),
         ("editor", "text/plain"),
-        ("browser", "x-scheme-handler/https")
+        ("browser", "x-scheme-handler/https"),
     )
 
     def __init__(self):
@@ -44,18 +44,22 @@ class RC(configparser.ConfigParser):
     def extract_core(self):
         core = self['core'] if 'core' in self.sections() else {}
         return {
-            'debugly' : core.get('debugly', ''),
-            'plugins' : core.get('plugins', '')
+            'debugly'   : core.get('debugly', ''),
+            'plugins'   : core.get('plugins', ''),
+            'interrupt' : core.getboolean('signals', False),
         }
 
 
     def extract_preferences(self):
         pref = self['preferences'] if 'preferences' in self.sections() else {}
         return {
+            'show-in-system-tray' : pref.getboolean('show-in-system-tray', True),
             'use-system-defaults' : pref.getboolean('use-system-defaults', True),
+            'remember-gui-state'  : pref.getboolean('remember-gui-state', False),
+            'enable-plugins'      : pref.getboolean('enable-plugins', True),
             'append-at-end'       : pref.getboolean('append-at-end', False),
             'regex-search'        : pref.getboolean('regex-search', True),
-            'word-net'            : pref.getboolean('word-net', False)
+            'word-net'            : pref.getboolean('word-net', False),
         }
 
 
@@ -66,14 +70,14 @@ class RC(configparser.ConfigParser):
             'description' : obj.get('description', ''),
             'priority'    : obj.getboolean('priority', 5),
             'read-only'   : obj.getboolean('read-only', True),
-            'fetch'       : obj.get('fetch', True)
+            'fetch'       : obj.get('fetch', True),
         }
 
 
     def extract_fonts(self):
         font = self['fonts'] if 'fonts' in self.sections() else {}
         return {
-            'viewer' : font.get('viewer', 'DejaVu Sans Mono 13')
+            'viewer' : font.get('viewer', 'DejaVu Sans Mono 13'),
         }
 
 
@@ -81,7 +85,7 @@ class RC(configparser.ConfigParser):
         ui = self['gui'] if 'gui' in self.sections() else {}
         return {
             'state'    : ui.get('wm-state', 'normal'),
-            'geometry' : ui.get('geometry', '600x550')
+            'geometry' : ui.get('geometry', '600x550'),
         }
 
 
@@ -90,7 +94,7 @@ class RC(configparser.ConfigParser):
         return {
             'file-manager' : apps.get('file-manager'),
             'editor'       : apps.get('editor'),
-            'browser'      : apps.get('browser')
+            'browser'      : apps.get('browser'),
         }
 
 

@@ -1,6 +1,6 @@
 [core]
 plugins = ../plugins/
-  
+
 [gloss "foss"]
 name = foss
 description = glossary maintain by foss-np community

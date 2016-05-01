@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 
 import os, sys
-
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
-
 import distance
 
 fp3 = fp4 = sys.stderr
@@ -48,7 +43,7 @@ class Glossary():
 
     def load_entries(self, path):
         print("loading: *" + path[-40:], file=fp4)
-        liststore = Gtk.ListStore(int, str, str)
+        liststore = [] # Gtk.ListStore(int, str, str)
         invert = dict()
 
         try:
@@ -223,11 +218,10 @@ def load_from_config(rc):
 
 if __name__ == '__main__':
     import config
-    rc = config.RC()
-    gloss = next(rc.get_gloss())
-    path = gloss.get('path')
-    pairs = gloss.get('pairs').split()
-    Glossary(path + pairs[0] +'/')
+    rc = config.main()
+
+    load_from_config(rc)
+
     FULL, FUZZ = Glossary.search('hello')
     if FULL:
         print(FULL[0][2][:])

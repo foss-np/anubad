@@ -11,20 +11,54 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Gio, Pango
 
-import importlib
 from collections import OrderedDict
 from subprocess import Popen
 from itertools import count
 
-import config
-import core
 import utils
 import ui.preferences
 import ui.sidebar
 import ui.view
 import ui.relations
 
-ignore_keys = [ v for k, v in utils.key_codes.items() if v != utils.key_codes["RETURN"]]
+key_codes = {
+    "BACKSPACE"     : 65288,
+    "RETURN"        : 65293,
+    "ESCAPE"        : 65307,
+
+    "LEFT_ARROW"    : 65361,
+    "UP_ARROW"      : 65362,
+    "RIGHT_ARROW"   : 65363,
+    "DOWN_ARROW"    : 65364,
+
+    "MENU"          : 65383,
+    "PAGE_UP"       : 65365,
+    "PAGE_UP"       : 65366,
+
+    "F1"            : 65470,
+    "F2"            : 65471,
+    "F3"            : 65472,
+    "F3"            : 65473,
+    "F5"            : 65474,
+    "F6"            : 65475,
+    "F7"            : 65476,
+    "F8"            : 65477,
+    "F9"            : 65478,
+    "F10"           : 65479,
+    "F11"           : 65480,
+    "F12"           : 65481,
+
+    "SHIFT_LEFT"    : 65505,
+    "SHIFT_RIGHT"   : 65506,
+    "CONTROL_LEFT"  : 65507,
+    "CONTROL_RIGHT" : 65508,
+    "ALT_LEFT"      : 65513,
+    "ALT_RIGHT"     : 65514,
+    "META"          : 65515,
+    "DELETE"        : 65535,
+}
+
+ignore_keys = [ v for k, v in key_codes.items() if v != key_codes["RETURN"]]
 
 fp_dev_null = open(os.devnull, 'w')
 
@@ -63,10 +97,16 @@ def treeview_signal_safe_toggler(func):
 class Home(Gtk.Window):
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    def __init__(self, rc, parent=None, app=None):
-        Gtk.Window.__init__(self, type=Gtk.WindowType.TOPLEVEL, application=app)
+    def __init__(self, core, rc, app=None):
+        Gtk.Window.__init__(
+            self,
+            type=Gtk.WindowType.TOPLEVEL,
+            application=app
+        )
+
+        self.core = core
         self.rc = rc
-        self.parent = parent
+        self.app = app
 
         self.fonts = {
             'viewer': Pango.font_description_from_string(rc.fonts['viewer']),
@@ -86,7 +126,7 @@ class Home(Gtk.Window):
         self.copy_BUFFER = ""
 
         self.engines = {
-            'r:': lambda query: self._view_results({ query: core.Glossary.search(query) }),
+            'r:': lambda query: self._view_results({ query: self.core.Glossary.search(query) }),
             'w:': lambda query: wni.search_wordnet(self.viewer, self.relations, query),
             # s
         }
@@ -390,7 +430,7 @@ class Home(Gtk.Window):
                     query_RESULTS[word] = history[word]
                     continue
 
-            query_RESULTS[word] = core.Glossary.search(word)
+            query_RESULTS[word] = self.core.Glossary.search(word)
 
         self._view_results(query_RESULTS)
 
@@ -408,7 +448,7 @@ class Home(Gtk.Window):
         """
         ID, word, info = row
         meta = (instance, src, ID)
-        parsed_info = core.Glossary.format_parser(info)
+        parsed_info = self.core.Glossary.format_parser(info)
         print(parsed_info, file=fp4)
 
         ## put trasliteration at last
@@ -470,8 +510,8 @@ class Home(Gtk.Window):
         model, pathlst = treeselection.get_selected_rows()
 
         if len(pathlst) == 0:
-            path = core.Glossary.instances[0].categories['main'][-1]
-            line = core.Glossary.instances[0].entries
+            path = self.core.Glossary.instances[0].categories['main'][-1]
+            line = self.core.Glossary.instances[0].entries
         else:
             instance, path, row = self.sidebar.get_suggestion(pathlst[0])
             print(row, file=fp6)
@@ -493,7 +533,7 @@ class Home(Gtk.Window):
 
     @turn_off_auto_copy
     def _open_dir(self):
-        path = core.Glossary.instances[0].fullpath
+        path = self.core.Glossary.instances[0].fullpath
         explorer = self.rc.apps['file-manager']
         print("pid:", Popen([explorer, path]).pid, file=fp5)
 
@@ -528,7 +568,7 @@ class Home(Gtk.Window):
 
 
     def preference(self, query=""):
-        s = preferences.Settings(self.rc, parent=self)
+        s = ui.preferences.Settings(self.rc, parent=self)
         s.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
         s.show_all()
 
@@ -552,14 +592,17 @@ class Home(Gtk.Window):
         return True
 
 
-    def handel_esc(self):
-        # root.is_active()
-        self.hide()
+    def handle_esc(self):
+        if self.rc.preferences['show-in-system-tray']:
+            self.hide()
+            return
+
+        self.iconify()
 
 
     def key_release_binds(self, widget, event):
         keyval, state = event.keyval, event.state
-        if   keyval == 65307: self.handel_esc() # Esc
+        if   keyval == 65307: self.handle_esc() # Esc
         elif keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
@@ -594,31 +637,24 @@ class Home(Gtk.Window):
         self.search_entry_binds(widget, event)
 
 
-def main(app=None):
-    rc = config.main(PWD)
-
-    # verify app
-    for name, _type in rc.type_list:
-        if not rc.preferences['use-system-defaults']:
-            if rc.apps[name]: continue
-        desktopAppInfo = Gio.app_info_get_default_for_type(_type, 0)
-        rc.apps[name] = desktopAppInfo.get_executable()
-
+def main(core, rc, app=None):
     core.fp3 = fp5
     core.fp4 = fp6
     core.load_from_config(rc)
 
-    root = Home(rc, app=app)
-    root.connect('delete-event', Gtk.main_quit)
-    return root
+    return Home(core, rc, app)
 
 
 if __name__ == '__main__':
-    root = main()
+    import core
+
+    import config
+    rc = config.main(PWD)
+
+    root = main(core, rc)
+    root.connect('delete-event', Gtk.main_quit)
 
     # in isolation testing, make Esc quit Gtk mainloop
-    root.handel_esc = Gtk.main_quit
+    root.handle_esc = Gtk.main_quit
     root.show_all()
-
-    root.parse_geometry(rc.gui['geometry'])
     Gtk.main()
