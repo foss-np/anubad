@@ -15,6 +15,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 
 from gi.repository import Gtk, GLib, Gio
+from gi.repository import GdkPixbuf
 
 import config
 import core
@@ -55,20 +56,33 @@ class App(Gtk.Application):
             desktopAppInfo = Gio.app_info_get_default_for_type(_type, 0)
             rc.apps[name] = desktopAppInfo.get_executable()
 
+        # logo
+        self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.ico')
+
+        # scan plugins
+        self.plugins = dict()
+        rc.preferences['enable-plugins'] *= not self.argv.noplugins
+        if rc.preferences['enable-plugins']:
+            self.scan_plugins(rc)
+
+        ## home window
         self.root = ui.home.main(core, rc, app=self)
         self.add_window(self.root)
+        self.root.set_icon(self.pixbuf_logo)
         self.root.set_title(__PKG_NAME__)
         self.root.visible = True
         self.root.connect('delete-event', lambda *a: self.quit())
         self.add_about_to_toolbar(self.root.toolbar)
 
-        ## load plugins
-        self.plugins = dict()
-        rc.preferences['enable-plugins'] *= not self.argv.noplugins
-        if rc.preferences['enable-plugins']:
-            self.load_plugins()
+        # load plugins
+        for name, plug in self.plugins.items():
+            try:
+                if plug.plugin_main(self, PWD):
+                    print("plugin:", name, file=sys.stderr)
+            except Exception as e:
+                print(e, file=sys.stderr)
 
-        ## load system tray
+        # load system tray
         rc.preferences['show-in-system-tray'] *= not self.argv.notray
         if rc.preferences['show-in-system-tray']:
             self.tray = TrayIcon(self)
@@ -96,6 +110,7 @@ class App(Gtk.Application):
         self.root.show_all()
         self.root.parse_geometry(self.root.rc.gui['geometry'])
         self.root.present()
+        self.root.grab_focus()
 
 
     def on_shutdown(self, app_obj):
@@ -111,8 +126,8 @@ class App(Gtk.Application):
         bar.b_About.show()
 
 
-    def load_plugins(self):
-        PATH_PLUGINS = PWD + self.root.rc.core['plugins']
+    def scan_plugins(self, rc):
+        PATH_PLUGINS = PWD + rc.core['plugins']
         if not os.path.isdir(PATH_PLUGINS): return
         if PATH_PLUGINS == PWD: return
         sys.path.append(PATH_PLUGINS)
@@ -120,18 +135,13 @@ class App(Gtk.Application):
         for file_name in os.listdir(PATH_PLUGINS):
             if file_name[-3:] not in ".py": continue
             namespace = importlib.__import__(file_name[:-3])
-            try:
-                if namespace.plugin_main(self.root, PWD):
-                    print("plugin:", file_name, file=sys.stderr)
-                    self.plugins[file_name[:-3]] = namespace
-            except Exception as e:
-                print(e, file=sys.stderr)
+            self.plugins[file_name[:-3]] = namespace
 
 
     def about_dialog(self, widget):
         self.about = Gtk.AboutDialog(title="anubad", parent=self.root)
         self.about.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
-        self.about.set_logo_icon_name(Gtk.STOCK_ABOUT)
+        self.about.set_logo(self.pixbuf_logo)
         self.about.set_program_name(__PKG_NAME__)
         self.about.set_comments("\nTranslation Glossary\n")
         self.about.set_website("https://foss-np.github.io/anubad/")
@@ -159,7 +169,7 @@ class TrayIcon(Gtk.StatusIcon):
 
 
     def makeWidget(self):
-        self.set_from_stock(Gtk.STOCK_HOME)
+        self.set_from_pixbuf(self.app.pixbuf_logo)
         self.set_title(__PKG_NAME__)
         self.set_name("anubad.tray")
         self.set_tooltip_text(__PKG_DESC__)
@@ -181,9 +191,13 @@ class TrayIcon(Gtk.StatusIcon):
     def on_secondary_click(self, widget, button, time):
         self.menu = Gtk.Menu()
 
-        menuitem_toggle = Gtk.MenuItem("Show / Hide")
-        menuitem_toggle.connect("activate", self.toggle_visibility)
-        self.menu.append(menuitem_toggle)
+        menuitem_visibility = Gtk.MenuItem("Show / Hide")
+        menuitem_visibility.connect("activate", self.toggle_visibility)
+        self.menu.append(menuitem_visibility)
+
+        menuitem_notify = Gtk.MenuItem("Disable Notification")
+        # menuitem_toggle.connect("activate", self.toggle_notify)
+        self.menu.append(menuitem_notify)
 
         menuitem_quit = Gtk.MenuItem("Quit")
         menuitem_quit.connect("activate", lambda *a: self.app.quit())
@@ -217,7 +231,6 @@ def argparser():
         action  = "store_true",
         default = False,
         help    = "Disable interrupt")
-
 
     argv = parser.parse_args()
     return argv

@@ -8,22 +8,34 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
 class Settings(Gtk.Window):
-    # TODO: Singleton
-    def __init__(self, rc, parent=None):
+    __instance__ = None
+
+    def __new__(cls, *args, **kargs):
+        """Override the __new__ method to make singleton"""
+        if cls.__instance__ is None:
+            cls.__instance__ = Gtk.Window.__new__(cls)
+            cls.__instance__.singleton_init(*args, **kargs)
+        return cls.__instance__
+
+
+    def singleton_init(self, rc, parent=None):
         Gtk.Window.__init__(
             self,
-            # type=Gtk.WindowType.TOPLEVEL,
-            parent=parent,
-            application=parent.app if parent else None,
+            # parent=parent, # creates the warning
+            application=parent.app if hasattr(parent, "app") else None,
             title="Settings"
         )
 
         self.parent = parent
         self.rc = rc
 
+        self.set_transient_for(parent)
+
         self.makeWidgets()
 
-        self.connect('key_press_event', lambda w, e: self.key_binds(w, e))
+        self.connect('key_release_event', self.key_binds)
+        self.connect('delete-event', lambda *a: self.on_destroy(*a))
+
         self.set_border_width(10)
         self.set_default_size(250, 200)
 
@@ -81,7 +93,6 @@ class Settings(Gtk.Window):
             chooser.set_show_dialog_item(True)
             chooser.set_heading(name) # heading for show_dialog_item
             chooser.set_show_default_item(True)
-
 
             cfg = os.path.basename(rc_app.get(name, ''))
             index = 0
@@ -154,11 +165,11 @@ class Settings(Gtk.Window):
 
         self.b_cancel = Gtk.Button.new_from_stock(Gtk.STOCK_CANCEL)
         layout.add(self.b_cancel)
-        self.b_cancel.connect("clicked", lambda e: self.destroy())
+        self.b_cancel.connect("clicked", lambda *a: self.on_destroy(*a))
 
         self.b_apply = Gtk.Button.new_from_stock(Gtk.STOCK_APPLY)
         layout.add(self.b_apply)
-        self.b_apply.connect("clicked", lambda e: self.destroy())
+        self.b_apply.connect("clicked", lambda *a: self.on_destroy(*a))
 
         self.b_ok = Gtk.Button.new_from_stock(Gtk.STOCK_REFRESH)
         layout.add(self.b_ok)
@@ -208,13 +219,20 @@ class Settings(Gtk.Window):
         pass
 
 
+    def on_destroy(self, event, *args):
+        """Override the default handler for the delete-event signal"""
+        self.hide()
+        return True
+
+
     def key_binds(self, widget, event):
         # print(event.keyval)
-        if event.keyval == 65307: self.destroy() # Esc
+        if event.keyval == 65307: self.on_destroy(event) # Esc
 
 
 def main(rc):
     root = Settings(rc)
+    root.set_position(Gtk.WindowPosition.CENTER)
     root.show_all()
     return root
 
@@ -227,9 +245,7 @@ if __name__ == '__main__':
     from gi.repository import Pango
 
     root = main(config.main())
-    root.connect('delete-event', Gtk.main_quit)
-    root.set_position(Gtk.WindowPosition.CENTER)
 
     # in isolation testing, make Esc quit Gtk mainloop
-    root.destroy = Gtk.main_quit
+    root.on_destroy = Gtk.main_quit
     Gtk.main()

@@ -127,16 +127,15 @@ class Home(Gtk.Window):
 
         self.engines = {
             'r:': lambda query: self._view_results({ query: self.core.Glossary.search(query) }),
-            'w:': lambda query: wni.search_wordnet(self.viewer, self.relations, query),
-            # s
         }
 
         # accelerators
         self.makeWidgets()
+        self.connect('key_press_event', self.key_press_binds)
         self.connect('key_release_event', self.key_release_binds)
-        # self.connect('key_press_event', self.key_press_binds)
         self.connect('focus-in-event', lambda *e: self.search_entry.grab_focus())
         self.connect('focus-out-event', lambda *e: self._on_focus_out_event())
+        self.connect('delete-event', self.on_destroy)
 
         self.search_entry.grab_focus()
         # gdk_window = self.get_root_window()
@@ -216,21 +215,13 @@ class Home(Gtk.Window):
         ##  Preference
         bar.b_Preference = Gtk.ToolButton(icon_name=Gtk.STOCK_PREFERENCES)
         bar.add(bar.b_Preference)
-        bar.b_Preference.connect("clicked", lambda w: self.preference())
+        bar.b_Preference.connect("clicked", self.preference)
         bar.b_Preference.set_tooltip_markup("Change Stuffs, Fonts, default gloss")
         ##
         #
+        bar.s_plugins = Gtk.SeparatorToolItem()
+        bar.add(bar.s_plugins)
         bar.add(Gtk.SeparatorToolItem())
-        #
-        ## Search Show Toggle Button
-        bar.t_WordNet = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_CONVERT)
-        bar.t_WordNet.set_active(False)
-        bar.t_WordNet.set_tooltip_markup("Dictionary Mode (WordNet)")
-        bar.add(bar.t_WordNet)
-        ##
-        #
-        bar.add(Gtk.SeparatorToolItem())
-
         return bar
 
 
@@ -305,13 +296,6 @@ class Home(Gtk.Window):
         if   event is None: self.search_and_reflect()
         elif Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == ord('c'): self.search_entry.set_text("")
-        elif Gdk.ModifierType.SHIFT_MASK & event.state:
-            if event.keyval == 65293: # <enter> return
-                print("action: shift enter", file=fp3)
-                state = self.toolbar.t_ShowAll.get_active()
-                self.toolbar.t_ShowAll.set_active(not state)
-                self.search_and_reflect()
-                self.toolbar.t_ShowAll.set_active(not state)
         elif event.keyval == 65293: self.search_and_reflect() # <enter> return
 
 
@@ -514,15 +498,14 @@ class Home(Gtk.Window):
             line = self.core.Glossary.instances[0].entries
         else:
             instance, path, row = self.sidebar.get_suggestion(pathlst[0])
-            print(row, file=fp6)
+            # print(row, file=fp6)
 
             ## handel invert map
             if type(row[0]) == int: line = row[0]
             else: # else tuple
                 try:
                     i = self.clips.index(self.copy_BUFFER)
-                    print(i)
-                    print(dir(self.clips_CIRCLE))
+                    # print(i, file=fp6)
                     line = row[0][i]
                 except ValueError:
                     line = None
@@ -567,13 +550,14 @@ class Home(Gtk.Window):
         print("hello i'm back", file=fp5)
 
 
-    def preference(self, query=""):
+    def preference(self, widget):
         s = ui.preferences.Settings(self.rc, parent=self)
         s.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
         s.show_all()
 
 
-    def do_delete_event(self, event):
+    # def do_delete_event(self, event):
+    def on_destroy(self, event, *args):
         """Override the default handler for the delete-event signal"""
         # Show our message dialog
         dialog = Gtk.MessageDialog(
@@ -600,10 +584,14 @@ class Home(Gtk.Window):
         self.iconify()
 
 
+    def key_press_binds(self, widget, event):
+        if event.keyval == 65307: # Esc
+            self.handle_esc()
+
+
     def key_release_binds(self, widget, event):
         keyval, state = event.keyval, event.state
-        if   keyval == 65307: self.handle_esc() # Esc
-        elif keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
+        if   keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('e'): self._open_src()

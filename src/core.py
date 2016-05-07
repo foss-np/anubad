@@ -14,7 +14,7 @@ pos_map = {
     'm'    : "meaning"
 }
 
-class Glossary():
+class Glossary:
     instances = []
     total_entries = 0
 
@@ -223,7 +223,7 @@ if __name__ == '__main__':
     load_from_config(rc)
 
     FULL, FUZZ = Glossary.search('hello')
-    if FULL:
-        print(FULL[0][2][:])
+    if FULL: print(FULL[0][2][:])
+
     import doctest
     doctest.testmod()
