@@ -7,16 +7,16 @@ fp3 = fp4 = sys.stderr
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
 pos_map = {
     'n'    : "noun",
-    'noun' : "noun",
     'j'    : "adjective",
     'adj'  : "adjective",
     'v'    : "verb",
-    'm'    : "meaning"
+    'm'    : "meaning",
 }
 
 class Glossary:
     instances = []
-    total_entries = 0
+    hashtag = set() # for auto-complete
+    num = []
 
     def __init__(self, path):
         self.entries = 0
@@ -26,7 +26,6 @@ class Glossary:
         print("glossary:", path, self.entries, file=sys.stderr)
 
         __class__.instances.append(self)
-        __class__.total_entries += self.entries
 
 
     def load_glossary(self, path):
@@ -43,7 +42,7 @@ class Glossary:
 
     def load_entries(self, path):
         print("loading: *" + path[-40:], file=fp4)
-        liststore = [] # Gtk.ListStore(int, str, str)
+        liststore = dict()
         invert = dict()
 
         try:
@@ -61,20 +60,37 @@ class Glossary:
                 e.meta_info = (path, i)
                 raise
 
-            liststore.append((i, word, defination))
             parsed_info = self.format_parser(defination)
-            for pos, val in parsed_info:
-                try:
-                    if pos[0] == "_" or val == "": continue
-                except:
-                    print(i, pos, val, file=sys.stderr)
-                    exit()
 
-                if pos == "transliterate": continue
+            has_hashtag = False
+            for pos, val in parsed_info:
+                if pos == '_#':
+                    __class__.hashtag.add(val)
+                    has_hashtag = True
+                    continue
+                elif pos == '_num':
+                    __class__.num.append(val)
+                    continue
+
+                if   pos[0] == '_': continue
+                elif val    == '': continue
+
                 # inverted list
-                ID, info = invert.get(val, (tuple(), ''))
-                if ID: info += ', '
-                invert[val] = (ID + tuple([i]), info + "%s(%s)"%(pos, word))
+                ID, info = invert.get(val, (tuple(), tuple()))
+                invert[val] = (
+                    ID + tuple([i]),
+                    info + (tuple([pos, word]), ),
+                )
+
+            duplicate = liststore.get(word)
+            if duplicate:
+                print("repeated entry:", word, file=sys.stderr)
+                print("%s: %d == %d"%(path, i, duplicate[0]), file=sys.stderr)
+                e = Exception('Repeated entries')
+                e.meta_info = (path, i)
+                raise e
+
+            liststore[word] = (i, has_hashtag, parsed_info)
 
         self.entries += i
         return (liststore, invert, path)
@@ -88,13 +104,13 @@ class Glossary:
         [('unknown', 'सृजना'), ('_note', 'कीर्ति')]
         >>> print("Test 07"); Glossary.format_parser('[मस्टर्ड] n(<leaves>रायोको साग), #vegetable')
         Test 07
-        [('_transliterate', 'मस्टर्ड'), ('noun', ''), ('_note', 'leaves'), ('noun', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', 'vegetable')]
+        [('_transliterate', 'मस्टर्ड'), ('noun', ''), ('_note', 'leaves'), ('noun', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', '#vegetable')]
         >>> print("Test 06"); Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}')
         Test 06
-        [('_transliterate', 'वीट्'), ('noun', 'गहूँ'), ('unknown', ''), ('_#', 'crop'), ('_wiki', 'Wheat')]
+        [('_transliterate', 'वीट्'), ('noun', 'गहूँ'), ('unknown', ''), ('_#', '#crop'), ('_wiki', 'Wheat')]
         >>> print("Test 05"); Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)')
         Test 05
-        [('_transliterate', 'शेल'), ('noun', 'शंख किरो'), ('_#', 'animal'), ('noun', ''), ('noun', 'छिल्का'), ('noun', 'खोल'), ('noun', 'बोक्रा')]
+        [('_transliterate', 'शेल'), ('noun', 'शंख किरो'), ('_#', '#animal'), ('noun', ''), ('noun', 'छिल्का'), ('noun', 'खोल'), ('noun', 'बोक्रा')]
         >>> print("Test 04"); Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
         Test 04
         [('_transliterate', 'हेल्\u200dलो'), ('noun', 'नमस्कार'), ('noun', 'नमस्ते'), ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')]
@@ -116,6 +132,7 @@ class Glossary:
         hashtag = False
         note = False
         # TODO: refacator, reduce repeted segements
+        # TODO: don't separte segment by unknown
         for i, c in enumerate(raw.strip()): # bored strip!
             if   c == '[':
                 operator.append((']', i));
@@ -147,7 +164,7 @@ class Glossary:
             elif c == '#':
                 hashtag = True;
                 output.append((pos, buffer.strip()))
-                buffer = ""
+                buffer = "#"
             elif c == ',':
                 # print(buffer, file=fp3)
                 output.append((pos, buffer.strip()))
@@ -175,27 +192,41 @@ class Glossary:
             if hashtag: pos = '_#'
             output.append((pos, buffer.strip()))
 
-        return output
+        return tuple(output)
+
+
+    @staticmethod
+    def search_hashtag(query):
+        FULL, FUZZ = [], []
+        for instance in __class__.instances:
+            for liststore, invert, path in instance.categories.values():
+                for word, (ID, *has_hashtag, info) in liststore.items():
+                    if len(has_hashtag) == 0: continue
+                    if has_hashtag[0] is False: continue
+                    for pos, val in info:
+                        if "_#" != pos: continue
+                        if query not in val: continue
+                        match = (instance, path, (ID, word, info))
+                        FUZZ.append(match)
+
+        return FULL, FUZZ
 
 
     @staticmethod
     def search(query):
         FULL, FUZZ = [], []
+        def traverse_dict(iterable):
+            for word, (ID, *has_hashtag, info) in iterable.items():
+                d = distance.edit(query, word)
+                if d > 1 and query not in word: continue
+                match = (instance, path, (ID, word, info))
+                if d: FUZZ.append(match)
+                else: FULL.append(match)
+
         for instance in __class__.instances:
             for liststore, invert, path in instance.categories.values():
-                for ID, word, info in liststore:
-                    d = distance.edit(query, word)
-                    if d > 1 and query not in word: continue
-                    match = (instance, path, (ID, word, info))
-                    if d: FUZZ.append(match)
-                    else: FULL.append(match)
-
-                for word, (ID, info) in invert.items():
-                    d = distance.edit(query, word)
-                    if d > 1 and query not in word: continue
-                    match = (instance, path, (ID, word, info))
-                    if d: FUZZ.append(match)
-                    else: FULL.append(match)
+                traverse_dict(liststore)
+                traverse_dict(invert)
 
         return FULL, FUZZ
 
@@ -222,8 +253,9 @@ if __name__ == '__main__':
 
     load_from_config(rc)
 
-    FULL, FUZZ = Glossary.search('hello')
-    if FULL: print(FULL[0][2][:])
+    from pprint import pprint
+    pprint(Glossary.search('hello'))
+    pprint(Glossary.search_hashtag('#color'))
 
     import doctest
     doctest.testmod()

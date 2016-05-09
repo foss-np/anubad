@@ -214,7 +214,7 @@ class Display(Gtk.Overlay):
                 continue
 
             if pos == "_#":
-                self.insert_at_cursor(" #"+val, self.tag_hashtag)
+                self.insert_at_cursor(' '+val, self.tag_hashtag)
                 continue
 
             if pos == "_note": pre = "<%s>"%val; continue

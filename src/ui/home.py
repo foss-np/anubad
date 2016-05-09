@@ -105,12 +105,11 @@ class Home(Gtk.Window):
         )
 
         self.core = core
-        self.rc = rc
-        self.app = app
+        self.rc   = rc
+        self.app  = app
 
         self.fonts = {
             'viewer': Pango.font_description_from_string(rc.fonts['viewer']),
-            'search': Pango.font_description_from_string(rc.fonts['viewer']),
             'search': Pango.font_description_from_string(rc.fonts['viewer']),
         }
 
@@ -125,9 +124,11 @@ class Home(Gtk.Window):
         self.hist_CURSOR = 0
         self.copy_BUFFER = ""
 
-        self.engines = {
-            'r:': lambda query: self._view_results({ query: self.core.Glossary.search(query) }),
-        }
+        self.engines = [ # not using dict() since we are traversing it
+            ('#' , lambda q: self.core.Glossary.search_hashtag(q)),
+            ('r:', lambda q: self.core.Glossary.search(q[2:])),
+            (':' , lambda q: self.core.Glossary.search(q[1:])),
+        ]
 
         # accelerators
         self.makeWidgets()
@@ -262,22 +263,44 @@ class Home(Gtk.Window):
     def makeWidgets_searchbar(self):
         layout = Gtk.HBox()
 
+        ## Label
         label = Gtk.Label()
         label.set_markup("<b>Query</b>")
         layout.pack_start(label, expand=False, fill=False, padding=60)
 
+        ## Entry
         tool_tip = "<b>Search:</b> \t⌨ [<i>Enter</i>]"
-
         self.search_entry = Gtk.SearchEntry()
         layout.pack_start(self.search_entry, expand=True, fill=True, padding=2)
+        ### liststore
+        liststore = Gtk.ListStore(str, str)
+        # NOTE: second variable to do the split match, and optimization
+        for item in sorted(self.core.Glossary.hashtag):
+            liststore.append([item, item.replace('.', '#')])
+        ### entrycomplete
+        entrycompletion = Gtk.EntryCompletion()
+        self.search_entry.set_completion(entrycompletion)
+        entrycompletion.set_model(liststore)
+        entrycompletion.set_text_column(0)
+        # entrycompletion.insert_action_markup(0, "<b><i>#Hashtag</i> Search</b>")
+        # NOTE: func only for exact match, but we have fuzzy
+        ## entrycompletion.set_inline_completion(False) # default:0
+        ## entrycompletion.set_popup_single_match(True) # default:1
+
+        def _match_func(gobj_completion, query, treeiter, liststore):
+            if not query[0] == '#': return False
+            model = entrycompletion.get_model()[treeiter][1]
+            return query in model
+
+        entrycompletion.set_match_func(_match_func, liststore)
+        ### options
         self.search_entry.connect('key_release_event', self.search_entry_binds)
         self.search_entry.set_tooltip_markup(tool_tip)
         self.search_entry.set_max_length(80)
-
-        ### Font stuff
+        ### font
         self.search_entry.modify_font(self.fonts['search'])
         self.track_FONT.add(self.search_entry)
-
+        ### acceleration
         accel = Gtk.AccelGroup()
         self.add_accel_group(accel)
         self.search_entry.add_accelerator("grab_focus", accel, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
@@ -309,7 +332,6 @@ class Home(Gtk.Window):
         return self.sidebar
 
 
-    @debug
     def sidebar_on_row_changed(self, treeselection):
         model, pathlist = treeselection.get_selected_rows()
         self.clips.clear()
@@ -389,22 +411,17 @@ class Home(Gtk.Window):
         if query is None:
             query = self.search_entry.get_text()
 
-            if not query: return
+        if not query: return
 
-            # choosing alternative engines
-            for key, func in self.engines.items():
-                if key == query[0:2]:
-                    func(query[2:])
-                    return
-
-            # wordnet mode
-            if self.toolbar.t_WordNet.get_active():
-                self.engines['w:'](query)
+        # choosing alternative engines
+        for key, func in self.engines:
+            if query.startswith(key):
+                print("engine:", key)
+                self._view_results({ query: func(query) })
                 return
 
         ## Ordered Dict use for undo/redo history
         query_RESULTS = OrderedDict()
-
         for w in set(query.split()):
             word = w.strip().lower()
             # TODO: check if its in view && the glossary is changed
@@ -430,10 +447,10 @@ class Home(Gtk.Window):
         >>> print(GUI.clips)
         ['आइतबार', 'सन्डे'],
         """
-        ID, word, info = row
-        meta = (instance, src, ID)
-        parsed_info = self.core.Glossary.format_parser(info)
+        # TODO: move it to viewer
+        ID, word, parsed_info = row
         print(parsed_info, file=fp4)
+        meta = (instance, src, ID)
 
         ## put trasliteration at last
         transliterate = [] # collect trasliterations
@@ -514,13 +531,6 @@ class Home(Gtk.Window):
         print("pid:", path, Popen(cmd).pid, file=fp5)
 
 
-    @turn_off_auto_copy
-    def _open_dir(self):
-        path = self.core.Glossary.instances[0].fullpath
-        explorer = self.rc.apps['file-manager']
-        print("pid:", Popen([explorer, path]).pid, file=fp5)
-
-
     def _circular_search(self, d):
         if not self.clips_CIRCLE:
             self.search_entry.grab_focus()
@@ -595,7 +605,6 @@ class Home(Gtk.Window):
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('e'): self._open_src()
-            # elif keyval == ord('i'): self.add_to_gloss()
             elif keyval == ord('l'): self.viewer_clean()
             elif keyval == ord('r'): self._circular_search(-1)
             elif keyval == ord('s'): self._circular_search(+1)
@@ -604,7 +613,7 @@ class Home(Gtk.Window):
                 if clip is None: return
                 query = clip.strip().lower()
                 self.search_entry.set_text(clip)
-                self.search_and_reflect()
+                self.search_and_reflect(clip)
             return
         elif Gdk.ModifierType.MOD1_MASK & state:
             if   keyval == 65361: self._jump_history(-1) # Left-arrow
