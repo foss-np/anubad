@@ -61,20 +61,15 @@ key_codes = {
 ignore_keys = [ v for k, v in key_codes.items() if v != key_codes["RETURN"]]
 
 fp_dev_null = open(os.devnull, 'w')
-
-DEBUG = int(os.environ.get("DEBUG", 0))
-
-if 'DEBUGLY' in globals() and os.path.isdir(DEBUGLY) and DEBUG:
-    sys.path.append(DEBUGLY)
-    from debugly import *
-else:
-    debug = lambda func: func
-
+VERBOSE = int(os.environ.get("VERBOSE", 0))
 for i in range(3, 7):
-    if DEBUG > 0:
-        print("DEBUG: %d fp%d enabled"%(DEBUG, i), file=sys.stderr)
+    if VERBOSE > 0:
+        print(
+            "VERBOSE: %d fp%d enabled"%(VERBOSE, i),
+            file=sys.stderr
+        )
         stream = "sys.stderr"
-        DEBUG -= 1
+        VERBOSE -= 1
     else:
         stream = "fp_dev_null"
     exec("fp%d = %s"%(i, stream))
@@ -220,9 +215,8 @@ class Home(Gtk.Window):
         bar.b_Preference.set_tooltip_markup("Change Stuffs, Fonts, default gloss")
         ##
         #
-        bar.s_plugins = Gtk.SeparatorToolItem()
-        bar.add(bar.s_plugins)
-        bar.add(Gtk.SeparatorToolItem())
+        bar.s_end = Gtk.SeparatorToolItem()
+        bar.add(bar.s_end)
         return bar
 
 

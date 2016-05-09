@@ -5,8 +5,11 @@ default: all
 all:
 	./main.py
 
-debug:
-	DEBUG=3 ./main.py
+verbose3:
+	VERBOSE=3 ./main.py
+
+verbose4:
+	VERBOSE=4 ./main.py
 
 dist:
 	rm -f "$(NAME).7z"

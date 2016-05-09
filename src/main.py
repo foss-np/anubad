@@ -75,7 +75,13 @@ class App(Gtk.Application):
         self.add_about_to_toolbar(self.root.toolbar)
 
         # load plugins
-        for name, plug in self.plugins.items():
+        for i, (name, plug) in enumerate(self.plugins.items()):
+            if i == 0:
+                bar = self.root.toolbar
+                bar.s_plugins = Gtk.SeparatorToolItem()
+                p = bar.get_item_index(bar.s_end)
+                bar.insert(bar.s_plugins, p)
+
             try:
                 if plug.plugin_main(self, PWD):
                     print("plugin:", name, file=sys.stderr)
