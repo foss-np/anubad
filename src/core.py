@@ -20,8 +20,8 @@ class Glossary:
     def __init__(self, path):
         self.entries = 0
         self.categories = dict()
-        self.fullpath = path
-        self.load_glossary(path)
+        self.fullpath = os.path.expanduser(path)
+        self.load_glossary(self.fullpath)
         print("glossary:", path, self.entries, file=sys.stderr)
 
         __class__.instances.append(self)

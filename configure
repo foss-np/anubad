@@ -1,13 +1,13 @@
 #!/bin/bash
 
-WD="$(dirname $(readlink $0 || echo $0))"
-
 GLOSS="$HOME/.cache/anubad/gloss/"
 mkdir -p "$GLOSS"
 cd "$GLOSS"
 
 rm -f current.tar.gz
+
 echo "Downloading glossary"
 wget https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz
 tar xvzf current.tar.gz
+rm -rf foss
 mv np-l10n-glossary-current foss

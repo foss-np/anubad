@@ -7,7 +7,7 @@ import os
 import configparser
 
 FILE_CONF_DEFAULTS = '../config'
-FILE_CONF = os.path.expanduser('~/.config/anubad/config')
+FILE_CONF = '~/.config/anubad/config'
 
 class RC(configparser.ConfigParser):
     type_list = (
@@ -18,13 +18,18 @@ class RC(configparser.ConfigParser):
 
     def __init__(self):
         configparser.ConfigParser.__init__(self)
-
-        self.core = {}
         self.glossary_list = []
-        self.preferences = {}
-        self.fonts = {}
-        self.gui = {}
-        self.apps = {}
+        self.apps,        self['apps']        = dict(), dict()
+        self.core,        self['core']        = dict(), dict()
+        self.fonts,       self['fonts']       = dict(), dict()
+        self.gui,         self['gui']         = dict(), dict()
+        self.preferences, self['preferences'] = dict(), dict()
+
+
+    def read(self, conf_file):
+        path = os.path.expanduser(conf_file)
+        if not os.path.isfile(path): return
+        configparser.ConfigParser.read(self, path)
 
 
     def load(self):
@@ -42,7 +47,7 @@ class RC(configparser.ConfigParser):
 
 
     def extract_core(self):
-        core = self['core'] if 'core' in self.sections() else {}
+        core = self['core']
         return {
             'debugly'   : core.get('debugly', ''),
             'plugins'   : core.get('plugins', ''),
@@ -51,7 +56,8 @@ class RC(configparser.ConfigParser):
 
 
     def extract_preferences(self):
-        pref = self['preferences'] if 'preferences' in self.sections() else {}
+        pref = self['preferences']
+
         return {
             'show-in-system-tray' : pref.getboolean('show-in-system-tray', True),
             'use-system-defaults' : pref.getboolean('use-system-defaults', True),
@@ -75,14 +81,14 @@ class RC(configparser.ConfigParser):
 
 
     def extract_fonts(self):
-        font = self['fonts'] if 'fonts' in self.sections() else {}
+        font = self['fonts']
         return {
             'viewer' : font.get('viewer', 'DejaVu Sans Mono 13'),
         }
 
 
     def extract_gui(self):
-        ui = self['gui'] if 'gui' in self.sections() else {}
+        ui = self['gui']
         return {
             'state'    : ui.get('wm-state', 'normal'),
             'geometry' : ui.get('geometry', '600x550'),
@@ -90,7 +96,7 @@ class RC(configparser.ConfigParser):
 
 
     def extract_apps(self):
-        apps = self['apps'] if 'apps' in self.sections() else {}
+        apps = self['apps']
         return {
             'file-manager' : apps.get('file-manager'),
             'editor'       : apps.get('editor'),
@@ -121,5 +127,11 @@ def main(PWD=""):
 if __name__ == '__main__':
     rc = main()
     from pprint import pprint
+
+    pprint(rc.apps)
+    pprint(rc.core)
     pprint(rc.fonts)
+    pprint(rc.gui)
+    pprint(rc.preferences)
+
     pprint(rc.glossary_list)
