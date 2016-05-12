@@ -57,7 +57,7 @@ class App(Gtk.Application):
             rc.apps[name] = desktopAppInfo.get_executable()
 
         # logo
-        self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.ico')
+        self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.png')
 
         # scan plugins
         self.plugins = dict()
