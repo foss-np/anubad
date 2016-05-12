@@ -1,32 +1,13 @@
 #!/bin/bash
 
 WD="$(dirname $(readlink $0 || echo $0))"
-FILE="$WD/src/mysettings.conf"
 
-if [[ -e $FILE ]]; then
-    echo "$FILE file already exists!"
-    echo -n "Do you still want to continue? [y/n] "
-    read reply
-    if [[ ${reply,,} == 'y' || ${reply} == "" ]]; then
-        echo "Re-configuring..."
-        mv $FILE $(mktemp -up "$WD")
-    fi
-fi
+GLOSS="$HOME/.cache/anubad/gloss/"
+mkdir -p "$GLOSS"
+cd "$GLOSS"
 
-mkdir -p "$WD/gloss/"
-cd "$WD/gloss"
-
-if [[ -d 'foss' ]]; then
-    # TODO: run updates if its git repo
-    exit
-    rm -f current.tar.gz
-fi
-
+rm -f current.tar.gz
 echo "Downloading glossary"
-
 wget https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz
 tar xvzf current.tar.gz
 mv np-l10n-glossary-current foss
-
-# TODO generate myconfig
-# xdg-tools

@@ -16,7 +16,6 @@ pos_map = {
 class Glossary:
     instances = []
     hashtag = set() # for auto-complete
-    num = []
 
     def __init__(self, path):
         self.entries = 0
@@ -68,9 +67,6 @@ class Glossary:
                     __class__.hashtag.add(val)
                     has_hashtag = True
                     continue
-                elif pos == '_num':
-                    __class__.num.append(val)
-                    continue
 
                 if   pos[0] == '_': continue
                 elif val    == '': continue
@@ -101,28 +97,28 @@ class Glossary:
         """
         >>> print("Test 08"); Glossary.format_parser('सृजना <कीर्ति>')
         Test 08
-        [('unknown', 'सृजना'), ('_note', 'कीर्ति')]
+        (('unknown', 'सृजना'), ('_note', 'कीर्ति'))
         >>> print("Test 07"); Glossary.format_parser('[मस्टर्ड] n(<leaves>रायोको साग), #vegetable')
         Test 07
-        [('_transliterate', 'मस्टर्ड'), ('noun', ''), ('_note', 'leaves'), ('noun', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', '#vegetable')]
+        (('_transliterate', 'मस्टर्ड'), ('noun', ''), ('_note', 'leaves'), ('noun', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', '#vegetable'))
         >>> print("Test 06"); Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}')
         Test 06
-        [('_transliterate', 'वीट्'), ('noun', 'गहूँ'), ('unknown', ''), ('_#', '#crop'), ('_wiki', 'Wheat')]
+        (('_transliterate', 'वीट्'), ('noun', 'गहूँ'), ('unknown', ''), ('_#', '#crop'), ('_wiki', 'Wheat'))
         >>> print("Test 05"); Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)')
         Test 05
-        [('_transliterate', 'शेल'), ('noun', 'शंख किरो'), ('_#', '#animal'), ('noun', ''), ('noun', 'छिल्का'), ('noun', 'खोल'), ('noun', 'बोक्रा')]
+        (('_transliterate', 'शेल'), ('noun', 'शंख किरो'), ('_#', '#animal'), ('noun', ''), ('noun', 'छिल्का'), ('noun', 'खोल'), ('noun', 'बोक्रा'))
         >>> print("Test 04"); Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
         Test 04
-        [('_transliterate', 'हेल्\u200dलो'), ('noun', 'नमस्कार'), ('noun', 'नमस्ते'), ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')]
+        (('_transliterate', 'हेल्\u200dलो'), ('noun', 'नमस्कार'), ('noun', 'नमस्ते'), ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ'))
         >>> print("Test 03"); Glossary.format_parser('n(<thin> तुवाँलो ~fog)')
         Test 03
-        [('noun', ''), ('_note', 'thin'), ('noun', 'तुवाँलो ~fog')]
+        (('noun', ''), ('_note', 'thin'), ('noun', 'तुवाँलो ~fog'))
         >>> print("Test 02"); Glossary.format_parser('कर')
         Test 02
-        [('unknown', 'कर')]
+        (('unknown', 'कर'),)
         >>> print("Test 01"); Glossary.format_parser('n:v(मस्त)')
         Test 01
-        [('noun:verb', 'मस्त')]
+        (('noun:verb', 'मस्त'),)
         """
 
         operator, output = [], []

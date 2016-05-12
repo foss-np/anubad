@@ -120,9 +120,9 @@ class Home(Gtk.Window):
         self.copy_BUFFER = ""
 
         self.engines = [ # not using dict() since we are traversing it
-            ('#' , lambda q: self.core.Glossary.search_hashtag(q)),
-            ('r:', lambda q: self.core.Glossary.search(q[2:])),
-            (':' , lambda q: self.core.Glossary.search(q[1:])),
+            (lambda q: q[0]  == '#' , core.Glossary.search_hashtag),
+            (lambda q: q[0]  == ':' , lambda q: core.Glossary.search(q[1:])),
+            (lambda q: q[:2] == 'r:', lambda q: core.Glossary.search(q[2:])),
         ]
 
         # accelerators
@@ -290,7 +290,7 @@ class Home(Gtk.Window):
         ### options
         self.search_entry.connect('key_release_event', self.search_entry_binds)
         self.search_entry.set_tooltip_markup(tool_tip)
-        self.search_entry.set_max_length(80)
+        self.search_entry.set_max_length(32)
         ### font
         self.search_entry.modify_font(self.fonts['search'])
         self.track_FONT.add(self.search_entry)
@@ -408,9 +408,9 @@ class Home(Gtk.Window):
         if not query: return
 
         # choosing alternative engines
-        for key, func in self.engines:
-            if query.startswith(key):
-                print("engine:", key)
+        for test, func in self.engines:
+            if test(query):
+                print("engine called", file=fp3)
                 self._view_results({ query: func(query) })
                 return
 
@@ -492,8 +492,8 @@ class Home(Gtk.Window):
         for item in sorted(all_FUZZ, key=lambda k: k[2][1]):
             self.sidebar.add_suggestion(*item)
 
-        print("clip:", self.clips, file=fp3)
         if len(self.clips) == 0: return
+        print("clip:", self.clips, file=fp3)
         self.clips_CIRCLE = utils.circle(self.clips)
         self._circular_search(+1)
         self.search_entry.grab_focus()
