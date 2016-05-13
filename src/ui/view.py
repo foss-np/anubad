@@ -21,11 +21,10 @@ class Display(Gtk.Overlay):
     hand_cursor = Gdk.Cursor(Gdk.CursorType.HAND2)
     regular_cursor = Gdk.Cursor(Gdk.CursorType.XTERM)
 
-    def __init__(self, parent=None, pwd=""):
+    def __init__(self, parent=None, PWD=""):
         Gtk.Overlay.__init__(self)
         self._parent = parent # overlay has the parent field
-        global PWD
-        PWD = pwd
+        self.PWD = PWD
         self.pixbuf_cache = dict()
 
         self.makeWidgets()
@@ -169,6 +168,7 @@ class Display(Gtk.Overlay):
 
     def insert_result(self, word, parsed_info, src='\n'):
         """
+        >>> obj = root.get_children()[0]
         >>> obj.insert_result('hello', [('unknown', 'नमस्कार')], 'gloss/demo')
         >>> obj.insert_result('hello',\
         [('_transliterate', 'हेल्\u200dलो'),\
@@ -268,7 +268,7 @@ class Display(Gtk.Overlay):
         start_offset = start.get_offset()
         # print(offset)
 
-        self.insert_image(start, PWD + '../assets/globe.svg')
+        self.insert_image(start, self.PWD + '../assets/globe.svg')
 
         ## get stop offset
         start = self.textbuffer.get_iter_at_offset(start_offset)
@@ -318,14 +318,13 @@ def root_binds(widget, event):
         Gtk.main_quit()
 
 
-def main():
+def main(PWD=""):
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
     root.set_default_size(500, 300)
 
-    global obj
-    obj = Display(root)
+    obj = Display(root, PWD)
     obj.textbuffer.set_text("\n")
     obj.tb_clean.connect("clicked", lambda *a: obj.textbuffer.set_text(""))
     root.add(obj)
@@ -334,9 +333,9 @@ def main():
 
 if __name__ == '__main__':
     __filepath__ = os.path.abspath(__file__)
-    PWD = os.path.dirname(__filepath__) + '/'
+    PWD = os.path.dirname(__filepath__) + '/../'
 
-    root = main()
+    root = main(PWD)
 
     import doctest
     doctest.testmod()
