@@ -19,13 +19,8 @@ tk-py3:
 tk-py2:
 	python2 demo.pyw
 
-ms-win:
-	git stash
-	sed -i 's/(icon_name=/.new_from_stock(/' src/*.py
-	touch mswin
-	cd src; make
-
-restore: mswin
-	rm mswin
-	git reset --hard HEAD
-	cd src; make
+old-gtk-fixes:
+	sed -i 'd/self.textview.set_.*_margin/' src/ui/view.py
+	# sed -i 's/(icon_name=/.new_from_stock(/' src/*.py
+	# touch mswin
+	# cd src; make
