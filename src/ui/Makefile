@@ -6,8 +6,8 @@ verbose3:
 verbose4:
 	VERBOSE=4 ./home.py
 
-browser:
-	./browser.py
+explorer:
+	./explorer.py
 
 display:
 	./view.py

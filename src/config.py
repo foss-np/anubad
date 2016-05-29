@@ -18,7 +18,7 @@ class RC(configparser.ConfigParser):
 
     def __init__(self):
         configparser.ConfigParser.__init__(self)
-        self.glossary_list = []
+        self.glossary_list = dict()
         self.apps,        self['apps']        = dict(), dict()
         self.core,        self['core']        = dict(), dict()
         self.fonts,       self['fonts']       = dict(), dict()
@@ -38,8 +38,9 @@ class RC(configparser.ConfigParser):
 
         for section in self.sections():
             if 'gloss' in section:
-                obj = self.extract_gloss(self[section])
-                self.glossary_list.append(obj)
+                name = section.split('"')[1]
+                obj  = self.extract_gloss(self[section])
+                self.glossary_list[name] = obj
 
         self.fonts = self.extract_fonts()
         self.gui = self.extract_gui()

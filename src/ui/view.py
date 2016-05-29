@@ -57,6 +57,7 @@ class Display(Gtk.Overlay):
         self.textview.set_editable(False)
         self.textview.set_cursor_visible(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
+        # NOTE: vvv problem with old gtk
         self.textview.set_top_margin(-15) # hack for next search separation '\n'
         self.textview.set_left_margin(10)
         self.textview.set_right_margin(20)
@@ -318,7 +319,10 @@ def root_binds(widget, event):
         Gtk.main_quit()
 
 
-def main(PWD=""):
+def sample():
+    filepath = os.path.abspath(__file__)
+    PWD = os.path.dirname(filepath) + '/../'
+
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
@@ -328,16 +332,14 @@ def main(PWD=""):
     obj.textbuffer.set_text("\n")
     obj.tb_clean.connect("clicked", lambda *a: obj.textbuffer.set_text(""))
     root.add(obj)
+    root.show_all()
     return root
 
 
 if __name__ == '__main__':
-    __filepath__ = os.path.abspath(__file__)
-    PWD = os.path.dirname(__filepath__) + '/../'
-
-    root = main(PWD)
+    root = sample()
 
     import doctest
     doctest.testmod()
-    root.show_all()
+
     Gtk.main()

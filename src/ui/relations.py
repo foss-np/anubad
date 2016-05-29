@@ -66,11 +66,10 @@ def root_binds(widget, event):
         Gtk.main_quit()
 
 
-def main():
+def sample():
     global clipboard
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    global root
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
@@ -78,14 +77,14 @@ def main():
 
     root.layout = Gtk.VBox(root)
     root.add(root.layout)
-    return root
-
-
-if __name__ == '__main__':
-    root = main()
 
     relatives = Relatives(root.layout)
     root.layout.add(relatives)
 
     root.show_all()
+    return root
+
+
+if __name__ == '__main__':
+    root = sample()
     Gtk.main()

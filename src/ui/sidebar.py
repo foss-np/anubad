@@ -26,12 +26,11 @@ class Bar(Gtk.VBox):
         self.cb_filter.set_active(0)
 
 
-    def add_suggestion(self, instance, category, row):
-        meta = (instance, category, row)
-        if meta in self.dictstore.values(): return
+    def add_suggestion(self, key, value):
+        # if key in self.dictstore.values(): return
         self.count += 1
-        self.treemodel.append((self.count, row[1]))
-        self.dictstore[self.count] = meta
+        self.treemodel.append((self.count, key[0]))
+        self.dictstore[self.count] = (*key, value)
 
 
     def get_suggestion(self, index):
@@ -70,18 +69,17 @@ def root_binds(widget, event):
         Gtk.main_quit()
 
 
-def main():
-    global root
+def sample():
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
     root.connect('key_release_event', root_binds)
     root.set_default_size(300, 200)
 
-    sidebar = Sidebar(root)
+    sidebar = Bar(root)
     root.add(sidebar)
-
+    root.show_all()
     return root
 
 if __name__ == '__main__':
-    main().show_all()
+    root = sample()
     Gtk.main()

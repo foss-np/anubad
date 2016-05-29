@@ -16,7 +16,6 @@ class Add(Gtk.Window):
         if parent: self.cb_file_add()
 
         self.connect('key_press_event', lambda w, e: self.key_binds(w, e))
-        self.show_all()
 
 
     def makeWidgets(self):
@@ -120,12 +119,16 @@ class Add(Gtk.Window):
         if event.keyval == 65307: self.destroy() # Esc
 
 
-def main():
+def sample():
     root = Add()
-    root.connect('delete-event', Gtk.main_quit)
+    root.show_all()
     return root
 
 
 if __name__ == '__main__':
-    main().destroy = Gtk.main_quit
+    root = sample()
+    root.connect('delete-event', Gtk.main_quit)
+
+    # in isolation testing, make Esc quit Gtk mainloop
+    root.destroy = Gtk.main_quit
     Gtk.main()

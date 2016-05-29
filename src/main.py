@@ -139,6 +139,7 @@ class App(Gtk.Application):
         sys.path.append(PATH_PLUGINS)
 
         for file_name in os.listdir(PATH_PLUGINS):
+            if '#' in file_name: continue # just for ignoring backup files
             if file_name[-3:] not in ".py": continue
             namespace = importlib.__import__(file_name[:-3])
             self.plugins[file_name[:-3]] = namespace
@@ -150,7 +151,7 @@ class App(Gtk.Application):
         self.about.set_logo(self.pixbuf_logo)
         self.about.set_program_name(__PKG_NAME__)
         self.about.set_comments("\nTranslation Glossary\n")
-        self.about.set_website("https://foss-np.github.io/anubad/")
+        self.about.set_website("http://anubad.herokuapp.com")
         self.about.set_website_label("Web Version")
         self.about.set_authors(open(PWD + '../AUTHORS').read().splitlines())
         self.about.set_license(open(PWD + '../LICENSE').read())

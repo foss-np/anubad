@@ -120,9 +120,8 @@ class Home(Gtk.Window):
         self.copy_BUFFER = ""
 
         self.engines = [ # not using dict() since we are traversing it
-            (lambda q: q[0]  == '#' , core.Glossary.search_hashtag),
-            (lambda q: q[0]  == ':' , lambda q: core.Glossary.search(q[1:])),
-            (lambda q: q[:2] == 'r:', lambda q: core.Glossary.search(q[2:])),
+            (lambda q: q[0] == '#',  core.Glossary.search_hashtag),
+            (lambda q: q[0] == '\\', lambda q: core.Glossary.search(q[1:])),
         ]
 
         # accelerators
@@ -435,16 +434,15 @@ class Home(Gtk.Window):
         self.toolbar.b_Forward.set_sensitive(False)
 
 
-    def _view_item(self, instance, src, row):
+    def _view_item(self, word, ID, path, parsed_info):
         """
         >>> root._view_item(instance, src, [1, "sunday" "[सन्डे] n(आइतबार) #time"])
         >>> print(GUI.clips)
         ['आइतबार', 'सन्डे'],
         """
         # TODO: move it to viewer
-        ID, word, parsed_info = row
         print(parsed_info, file=fp4)
-        meta = (instance, src, ID)
+        meta = (word, ID, path)
 
         ## put trasliteration at last
         transliterate = [] # collect trasliterations
@@ -460,7 +458,7 @@ class Home(Gtk.Window):
         if meta in self.view_CURRENT:
             print("already in view:", meta, file=fp3)
             return
-        self.viewer.insert_result(word, parsed_info, src)
+        self.viewer.insert_result(word, parsed_info, path)
         self.view_CURRENT.add(meta)
 
 
@@ -474,23 +472,23 @@ class Home(Gtk.Window):
         self.viewer.textbuffer.place_cursor(begin)
         self.viewer.textbuffer.insert_at_cursor("\n")
 
-        all_FUZZ = []
+        all_FUZZ = dict()
         for word, (FULL, FUZZ) in query_RESULTS.items():
-            all_FUZZ += FUZZ
+            all_FUZZ.update(FUZZ)
             if not FULL:
                 self.viewer.not_found(word)
                 continue
 
-            for item in FULL:
-                self.sidebar.add_suggestion(*item)
-                self._view_item(*item)
+            for key, val in FULL.items():
+                self.sidebar.add_suggestion(key, val)
+                self._view_item(*key, val)
                 treeselection.select_path(self.sidebar.count - 1)
 
         self.viewer.textbuffer.insert_at_cursor("\n")
         self.viewer.jump_to_top()
 
-        for item in sorted(all_FUZZ, key=lambda k: k[2][1]):
-            self.sidebar.add_suggestion(*item)
+        for key in sorted(all_FUZZ, key=lambda k: k[0]):
+            self.sidebar.add_suggestion(key, all_FUZZ[key])
 
         if len(self.clips) == 0: return
         print("clip:", self.clips, file=fp3)
@@ -594,12 +592,14 @@ class Home(Gtk.Window):
 
 
     def key_release_binds(self, widget, event):
+        # TODO reload restart key
         keyval, state = event.keyval, event.state
         if   keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
         elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
         elif Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('e'): self._open_src()
             elif keyval == ord('l'): self.viewer_clean()
+            elif keyval == ord('q'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
             elif keyval == ord('r'): self._circular_search(-1)
             elif keyval == ord('s'): self._circular_search(+1)
             elif keyval == ord('g'): # grab clipboard
@@ -633,7 +633,9 @@ def main(core, rc, app=None):
     core.fp4 = fp6
     core.load_from_config(rc)
 
-    return Home(core, rc, app)
+    root = Home(core, rc, app)
+    root.show_all()
+    return root
 
 
 if __name__ == '__main__':
@@ -647,5 +649,4 @@ if __name__ == '__main__':
 
     # in isolation testing, make Esc quit Gtk mainloop
     root.handle_esc = Gtk.main_quit
-    root.show_all()
     Gtk.main()

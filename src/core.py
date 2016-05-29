@@ -13,16 +13,15 @@ pos_map = {
     'm'    : "meaning",
 }
 
-class Glossary:
+class Glossary(dict):
     instances = []
     hashtag = set() # for auto-complete
 
     def __init__(self, path):
-        self.entries = 0
-        self.categories = dict()
+        self.count = 0
         self.fullpath = os.path.expanduser(path)
         self.load_glossary(self.fullpath)
-        print("glossary:", path, self.entries, file=sys.stderr)
+        print("glossary:", path, self.count, file=sys.stderr)
 
         __class__.instances.append(self)
 
@@ -35,12 +34,12 @@ class Glossary:
         for _file in os.listdir(path):
             name, dot, ext = _file.rpartition('.')
             if ext not in FILE_TYPES: continue
-            category = self.load_entries(self.fullpath + _file)
-            self.categories[name] = category
+            path = self.fullpath + _file
+            print("loading: *" + path[-40:], file=fp4)
+            self[path] = self.load_entries(path)
 
 
     def load_entries(self, path):
-        print("loading: *" + path[-40:], file=fp4)
         liststore = dict()
         invert = dict()
 
@@ -59,11 +58,21 @@ class Glossary:
                 e.meta_info = (path, i)
                 raise
 
-            parsed_info = self.format_parser(defination)
+            try:
+                parsed_info = self.format_parser(defination)
+            except Exception as e:
+                e.meta_info = (path, i)
+                raise
 
             has_hashtag = False
             for pos, val in parsed_info:
+                if pos == '':
+                    e = Exception("pos tag empty")
+                    e.meta_info = (path, i)
+                    raise e
+
                 if pos == '_#':
+                    # if len(val) < 3: print(val, i, parsed_info)
                     __class__.hashtag.add(val)
                     has_hashtag = True
                     continue
@@ -88,8 +97,9 @@ class Glossary:
 
             liststore[word] = (i, has_hashtag, parsed_info)
 
-        self.entries += i
-        return (liststore, invert, path)
+        print(i, file=fp4)
+        self.count += i
+        return (liststore, invert)
 
 
     @staticmethod
@@ -175,8 +185,7 @@ class Glossary:
                     exit()
                 if c != symbol:
                     print('buffer: "%s"'%buffer, 'got: "%s"'%c, 'expected: "%s"'%symbol)
-                    print("error: unbalanced paranthesis", file=sys.stderr)
-                    return # TODO error handling
+                    raise Exception("error: unbalanced paranthesis")
                 output.append((pos, buffer.strip()))
                 buffer = ""
                 fbreak = i + 1
@@ -193,34 +202,32 @@ class Glossary:
 
     @staticmethod
     def search_hashtag(query):
-        FULL, FUZZ = [], []
+        FUZZ = dict()
         for instance in __class__.instances:
-            for liststore, invert, path in instance.categories.values():
+            for path, (liststore, invert) in instance.items():
                 for word, (ID, *has_hashtag, info) in liststore.items():
                     if len(has_hashtag) == 0: continue
                     if has_hashtag[0] is False: continue
                     for pos, val in info:
                         if "_#" != pos: continue
                         if query not in val: continue
-                        match = (instance, path, (ID, word, info))
-                        FUZZ.append(match)
+                        FUZZ[(word, ID, path)] = info
 
-        return FULL, FUZZ
+        return dict(), FUZZ
 
 
     @staticmethod
     def search(query):
-        FULL, FUZZ = [], []
+        FULL, FUZZ = dict(), dict()
         def traverse_dict(iterable):
             for word, (ID, *has_hashtag, info) in iterable.items():
                 d = distance.edit(query, word)
                 if d > 1 and query not in word: continue
-                match = (instance, path, (ID, word, info))
-                if d: FUZZ.append(match)
-                else: FULL.append(match)
+                if d: FUZZ[(word, ID, path)] = info
+                else: FULL[(word, ID, path)] = info
 
         for instance in __class__.instances:
-            for liststore, invert, path in instance.categories.values():
+            for path, (liststore, invert) in instance.items():
                 traverse_dict(liststore)
                 traverse_dict(invert)
 
@@ -228,16 +235,19 @@ class Glossary:
 
 
 def load_from_config(rc):
-    for gloss in sorted(rc.glossary_list, key=lambda k: k['priority']):
+    for gloss in sorted(rc.glossary_list.values(), key=lambda v: v['priority']):
+        # while loop for reloading
         n = 0
         while n < len(gloss['pairs']):
             try:
                 Glossary(gloss['pairs'][n])
             except Exception as e:
+                print(e)
+                # if not hasattr(e, 'meta_info'):
                 cmd = rc.editor_goto_line_uri(*e.meta_info)
-                os.system(' '.join(cmd))
                 # NOTE: we need something to hang on till we edit
-                ## DONT USES Popen ^^^^
+                ## vvvv DON'T USES Popen vvvv
+                if os.system(' '.join(cmd)): exit()
                 print('RELOAD')
                 continue
             n += 1
