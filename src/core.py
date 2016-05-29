@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os, sys
-import distance
 
 fp3 = fp4 = sys.stderr
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
@@ -12,6 +11,26 @@ pos_map = {
     'v'    : "verb",
     'm'    : "meaning",
 }
+
+def edit_distance(s1, s2):
+    """
+    >>> edit_distance('this is a test', 'wokka wokka!!!')
+    14
+    """
+    if len(s1) < len(s2): s1, s2 = s2, s1
+    if len(s2) == 0: return len(s1)
+
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    return previous_row[-1]
 
 class Glossary(dict):
     instances = []
@@ -34,9 +53,9 @@ class Glossary(dict):
         for _file in os.listdir(path):
             name, dot, ext = _file.rpartition('.')
             if ext not in FILE_TYPES: continue
-            path = self.fullpath + _file
-            print("loading: *" + path[-40:], file=fp4)
-            self[path] = self.load_entries(path)
+            fullpath = self.fullpath + _file
+            print("loading: *" + fullpath[-40:], file=fp4)
+            self[fullpath] = self.load_entries(fullpath)
 
 
     def load_entries(self, path):
@@ -221,7 +240,7 @@ class Glossary(dict):
         FULL, FUZZ = dict(), dict()
         def traverse_dict(iterable):
             for word, (ID, *has_hashtag, info) in iterable.items():
-                d = distance.edit(query, word)
+                d = edit_distance(query, word)
                 if d > 1 and query not in word: continue
                 if d: FUZZ[(word, ID, path)] = info
                 else: FULL[(word, ID, path)] = info

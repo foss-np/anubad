@@ -21,8 +21,5 @@ mysettings.conf:
 core:
 	./core.py
 
-distance:
-	./distance.py
-
 config-test:
 	./config.py
