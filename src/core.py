@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os, sys
+from collections import OrderedDict
 
 fp3 = fp4 = sys.stderr
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
@@ -33,7 +34,7 @@ def edit_distance(s1, s2):
     return previous_row[-1]
 
 class Glossary(dict):
-    instances = []
+    instances = OrderedDict()
     hashtag = set() # for auto-complete
 
     def __init__(self, path):
@@ -42,7 +43,7 @@ class Glossary(dict):
         self.load_glossary(self.fullpath)
         print("glossary:", path, self.count, file=sys.stderr)
 
-        __class__.instances.append(self)
+        __class__.instances[self.fullpath] = self
 
 
     def load_glossary(self, path):
@@ -53,9 +54,9 @@ class Glossary(dict):
         for _file in os.listdir(path):
             name, dot, ext = _file.rpartition('.')
             if ext not in FILE_TYPES: continue
-            fullpath = self.fullpath + _file
-            print("loading: *" + fullpath[-40:], file=fp4)
-            self[fullpath] = self.load_entries(fullpath)
+            filepath = self.fullpath + _file
+            print("loading: *" + filepath[-40:], file=fp4)
+            self[_file] = self.load_entries(filepath)
 
 
     def load_entries(self, path):
@@ -222,15 +223,15 @@ class Glossary(dict):
     @staticmethod
     def search_hashtag(query):
         FUZZ = dict()
-        for instance in __class__.instances:
-            for path, (liststore, invert) in instance.items():
+        for path, instance in __class__.instances.items():
+            for name, (liststore, invert) in instance.items():
                 for word, (ID, *has_hashtag, info) in liststore.items():
                     if len(has_hashtag) == 0: continue
                     if has_hashtag[0] is False: continue
                     for pos, val in info:
                         if "_#" != pos: continue
                         if query not in val: continue
-                        FUZZ[(word, ID, path)] = info
+                        FUZZ[(word, ID, path + name)] = info
 
         return dict(), FUZZ
 
@@ -242,11 +243,12 @@ class Glossary(dict):
             for word, (ID, *has_hashtag, info) in iterable.items():
                 d = edit_distance(query, word)
                 if d > 1 and query not in word: continue
-                if d: FUZZ[(word, ID, path)] = info
-                else: FULL[(word, ID, path)] = info
+                if d: FUZZ[(word, ID, src)] = info
+                else: FULL[(word, ID, src)] = info
 
-        for instance in __class__.instances:
-            for path, (liststore, invert) in instance.items():
+        for path, instance in __class__.instances.items():
+            for name, (liststore, invert) in instance.items():
+                src = path + name
                 traverse_dict(liststore)
                 traverse_dict(invert)
 
@@ -259,7 +261,7 @@ def load_from_config(rc):
         n = 0
         while n < len(gloss['pairs']):
             try:
-                Glossary(gloss['pairs'][n])
+                g = Glossary(gloss['pairs'][n])
             except Exception as e:
                 print(e)
                 # if not hasattr(e, 'meta_info'):

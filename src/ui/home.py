@@ -211,7 +211,7 @@ class Home(Gtk.Window):
         bar.b_Preference = Gtk.ToolButton(icon_name=Gtk.STOCK_PREFERENCES)
         bar.add(bar.b_Preference)
         bar.b_Preference.connect("clicked", self.preference)
-        bar.b_Preference.set_tooltip_markup("Change Stuffs, Fonts, default gloss")
+        bar.b_Preference.set_tooltip_markup("Preferences")
         ##
         #
         bar.s_end = Gtk.SeparatorToolItem()
@@ -506,16 +506,17 @@ class Home(Gtk.Window):
             path = self.core.Glossary.instances[0].categories['main'][-1]
             line = self.core.Glossary.instances[0].entries
         else:
-            instance, path, row = self.sidebar.get_suggestion(pathlst[0])
+            word, ID, path, parsed_info  = self.sidebar.get_suggestion(pathlst[0])
             # print(row, file=fp6)
 
             ## handel invert map
-            if type(row[0]) == int: line = row[0]
+            if type(ID) == int: line = ID
             else: # else tuple
                 try:
                     i = self.clips.index(self.copy_BUFFER)
                     # print(i, file=fp6)
-                    line = row[0][i]
+                    # print(ID, i)
+                    line = ID[i]
                 except ValueError:
                     line = None
 
@@ -569,6 +570,15 @@ class Home(Gtk.Window):
         )
 
         dialog.props.text = 'Are you sure you want to quit?'
+        def key_release_binds(widget, event):
+            if Gdk.ModifierType.CONTROL_MASK & event.state:
+                if event.keyval == ord('q'):
+                    dialog.destroy()
+                    self.destroy()
+                    Gtk.main_quit()
+
+        dialog.connect('key_release_event', key_release_binds)
+
         response = dialog.run()
         dialog.destroy()
 
@@ -587,16 +597,16 @@ class Home(Gtk.Window):
 
 
     def key_press_binds(self, widget, event):
-        if event.keyval == 65307: # Esc
+        if   event.keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
+        elif event.keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
+        elif event.keyval == 65307: # Esc
             self.handle_esc()
 
 
     def key_release_binds(self, widget, event):
         # TODO reload restart key
         keyval, state = event.keyval, event.state
-        if   keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
-        elif keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
-        elif Gdk.ModifierType.CONTROL_MASK & state:
+        if  Gdk.ModifierType.CONTROL_MASK & state:
             if   keyval == ord('e'): self._open_src()
             elif keyval == ord('l'): self.viewer_clean()
             elif keyval == ord('q'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))

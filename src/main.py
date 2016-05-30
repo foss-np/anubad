@@ -94,6 +94,19 @@ class App(Gtk.Application):
             self.tray = TrayIcon(self)
 
 
+    def insert_plugin_item_on_toolbar(self, widget):
+        bar = self.root.toolbar
+        if hasattr(bar, "s_plugins"):
+            i = bar.get_item_index(bar.s_plugins)
+        else:
+            bar.s_plugins = Gtk.SeparatorToolItem()
+            p = bar.get_item_index(bar.s_end)
+            bar.insert(bar.s_plugins, p)
+            i = b + 1
+
+        bar.insert(widget, i+1)
+
+
     def handle_signals(self):
         for sig in filter(None, SIGS):
             signal.signal( # idle_handler
