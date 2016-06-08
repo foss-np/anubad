@@ -267,8 +267,14 @@ class Home(Gtk.Window):
 
         self.search_entry.connect('key_release_event', _on_key_release)
 
+        self.search_entry.HISTORY = []
+        self.search_entry.CURRENT = 0
+
         def _on_key_press(widget, event):
             # NOTE to stop propagation of signal return True
+            if   event.keyval == 65362: return self.search_entry_term_history(-1) # Up-arrow
+            elif event.keyval == 65364: return self.search_entry_term_history(+1) # Down-arrow
+            elif event.keyval == 65289: self.sidebar.treeview.grab_focus(); return True # Tab
             elif Gdk.ModifierType.CONTROL_MASK & event.state:
                 if   event.keyval == ord('c'): widget.set_text("")
                 elif event.keyval == ord('e'): widget.set_position(-1)
@@ -299,10 +305,30 @@ class Home(Gtk.Window):
         return layout
 
 
+    def search_entry_term_history(self, diff):
+        length = len(self.search_entry.HISTORY)
+        if length == 0: return True
+        i = self.search_entry.CURRENT + diff
+        print("history_seek:", self.search_entry.CURRENT, '+', diff, ':', i, '==', length)
+        if i >= length: return True
+        if i == -1: return True
+        self.search_entry.set_text(self.search_entry.HISTORY[i])
+        self.search_entry.CURRENT = i
+        return True
+
+
     def makeWidgets_sidebar(self):
         self.sidebar = ui.sidebar.Bar(self)
         treeSelection = self.sidebar.treeview.get_selection()
         self.sidebar.select_signal = treeSelection.connect("changed", self.sidebar_on_row_changed)
+
+        def _on_key_press(widget, event):
+            # NOTE to stop propagation of signal return True
+            if event.keyval == 65289: # Tab
+                self.search_entry.grab_focus()
+                return True
+
+        self.sidebar.connect("key_press_event", _on_key_press)
 
         for obj in self.sidebar.track_FONT:
             obj.modify_font(self.fonts['viewer'])
@@ -332,12 +358,17 @@ class Home(Gtk.Window):
 
 
     def viewer_clean(self, widget=None):
-        self.copy_buffer = ""
-        self.clips_circle = None
-        self.view_current.clear()
-        self.viewer.textbuffer.set_text("\n")
-        selection = self.sidebar.treeview.get_selection()
-        selection.unselect_all()
+        if self.viewer.textbuffer.get_char_count() > 1:
+            self.copy_buffer = ""
+            self.clips_circle = None
+            self.view_current.clear()
+            self.viewer.textbuffer.set_text("\n")
+            treeSelection = self.sidebar.treeview.get_selection()
+            treeSelection.unselect_all()
+            return
+
+        self.sidebar.clear()
+        self.clips.clear()
 
 
     def viewer_after_click(self, textview, eventbutton):
@@ -389,6 +420,7 @@ class Home(Gtk.Window):
             query = self.search_entry.get_text()
 
         if not query: return
+        self.search_entry.HISTORY.append(query)
 
         # choosing alternative engines
         for test, func in self.engines:
@@ -582,11 +614,9 @@ class Home(Gtk.Window):
 
     def on_key_press(self, widget, event):
         # NOTE to stop propagation of signal return True
-        if   event.keyval == 65307: self.handle_esc() # Esc
-        elif event.keyval == 65365: self.viewer.textview.grab_focus() # Pg-Up
-        elif event.keyval == 65366: self.viewer.textview.grab_focus() # Pg-Dn
-        elif event.keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
-        elif event.keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
+        if   event.keyval == 65307: return self.handle_esc() # Esc
+        elif event.keyval == 65365: self.viewer.textview.grab_focus(); return # Pg-Up
+        elif event.keyval == 65366: self.viewer.textview.grab_focus(); return # Pg-Dn
 
         if self.search_entry.is_focus(): return
 

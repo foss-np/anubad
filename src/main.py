@@ -28,6 +28,8 @@ SIGS = (
     getattr(signal, "SIGTERM", None),
 )
 
+HIST_FILE = '~/.cache/anubad/history'
+
 class App(Gtk.Application):
     def __init__(self, argv):
         Gtk.Application.__init__(
@@ -38,7 +40,7 @@ class App(Gtk.Application):
 
         self.connect("startup", self.on_startup)
         self.connect("activate", self.on_activate)
-        # self.connect("shutdown", self.on_shutdown)
+        self.connect("shutdown", self.on_shutdown)
 
 
     def on_startup(self, *args):
@@ -73,6 +75,12 @@ class App(Gtk.Application):
         self.root.visible = True
         self.root.connect('delete-event', lambda *a: self.quit())
         self.add_about_to_toolbar(self.root.toolbar)
+
+        # load history
+        self.rc.preferences['enable-history-file'] *= not self.argv.nohistfile
+        if self.rc.preferences['enable-history-file']:
+            self.root.search_entry.HISTORY += open(os.path.expanduser(HIST_FILE)).read().split()
+            self.root.search_entry.CURRENT  = len(self.root.search_entry.HISTORY)
 
         # load plugins
         for i, (name, plug) in enumerate(self.plugins.items()):
@@ -141,8 +149,12 @@ class App(Gtk.Application):
 
 
     def on_shutdown(self, app_obj):
-        print("on_shutdown")
-        # app_obj.quit()
+        if self.rc.preferences['enable-history-file']:
+            print("shutdown: update history")
+            self.hist_fp = open(os.path.expanduser(HIST_FILE), mode='w')
+            self.hist_fp.write('\n'.join(self.root.search_entry.HISTORY))
+            self.hist_fp.close()
+        app_obj.quit()
 
 
     def add_about_to_toolbar(self, bar):
@@ -259,6 +271,12 @@ def argparser():
         action  = "store_true",
         default = False,
         help    = "Disable interrupt")
+
+    parser.add_argument(
+        "--nohistfile",
+        action  = "store_true",
+        default = False,
+        help    = "Disable history file")
 
     parser.add_argument(
         "--notaskbar",

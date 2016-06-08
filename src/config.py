@@ -60,6 +60,7 @@ class RC(configparser.ConfigParser):
         pref = self['preferences']
 
         return {
+            'enable-history-file' : pref.getboolean('enable-entry-history', True),
             'show-on-system-tray' : pref.getboolean('show-on-system-tray', True),
             'use-system-defaults' : pref.getboolean('use-system-defaults', True),
             'remember-gui-state'  : pref.getboolean('remember-gui-state', False),
