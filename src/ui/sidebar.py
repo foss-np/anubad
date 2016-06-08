@@ -54,6 +54,7 @@ class Bar(Gtk.VBox):
         self.treeview = Gtk.TreeView(self.treemodel)
         scroll.add(self.treeview)
 
+        self.treeview.set_enable_search(False)
         self.treeview.set_headers_visible(False)
         self.treeview.set_rubber_banding(True)
 

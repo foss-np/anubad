@@ -267,6 +267,22 @@ class Home(Gtk.Window):
 
         self.search_entry.connect('key_release_event', _on_key_release)
 
+        def _on_key_press(widget, event):
+            # NOTE to stop propagation of signal return True
+            if   event.keyval == 65289:
+                # TODO tab completion
+                return True # Tab
+            elif Gdk.ModifierType.CONTROL_MASK & event.state:
+                if   event.keyval == ord('c'): widget.set_text("")
+                elif event.keyval == ord('e'): widget.set_position(-1)
+                elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
+                elif event.keyval == ord('a'):
+                    if not widget.get_selection_bounds(): return
+                    widget.set_position(0)
+                    return True
+
+        self.search_entry.connect('key_press_event', _on_key_press)
+
         self.search_entry.set_tooltip_markup(tool_tip)
         self.search_entry.set_max_length(32)
         ### font
@@ -381,13 +397,15 @@ class Home(Gtk.Window):
         for test, func in self.engines:
             if test(query):
                 print("engine called", file=fp3)
-                self._view_results({ query: func(query) })
+                result = func(query)
+                if not result: return
+                self._view_results({ query: result })
                 return
 
         ## Ordered Dict use for undo/redo history
         query_RESULTS = OrderedDict()
-        for w in set(query.split()):
-            word = w.strip().lower()
+        for q in query.split():
+            word = q.lower()
             # TODO: check if its in view && the glossary is changed
             for history in self.cache:
                 if word in history.keys():
@@ -568,6 +586,9 @@ class Home(Gtk.Window):
     def on_key_press(self, widget, event):
         # NOTE to stop propagation of signal return True
         if   event.keyval == 65307: self.handle_esc() # Esc
+        elif event.keyval == 65365: self.viewer.textview.grab_focus() # Pg-Up
+        elif event.keyval == 65366: self.viewer.textview.grab_focus() # Pg-Dn
+        elif event.keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
         elif event.keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
 
         if self.search_entry.is_focus(): return

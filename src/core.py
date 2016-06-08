@@ -238,7 +238,7 @@ class Glossary(dict):
 
     @staticmethod
     def search(query):
-        FULL, FUZZ = dict(), dict()
+        FULL, FUZZ = OrderedDict(), dict()
         def match(iterable):
             for word, (ID, *has_hashtag, info) in iterable.items():
                 d = edit_distance(query, word)

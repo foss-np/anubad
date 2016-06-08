@@ -51,7 +51,9 @@ class Relatives(Gtk.Expander):
             obj.treeview = Gtk.TreeView(obj.treemodel)
             obj.add(obj.treeview)
 
+            obj.treeview.set_enable_search(False)
             obj.treeview.set_headers_visible(False)
+
             renderer_text = Gtk.CellRendererText()
             obj.treeview.append_column(Gtk.TreeViewColumn("#", renderer_text, text=0))
             obj.treeview.append_column(Gtk.TreeViewColumn("w", renderer_text, text=1))
