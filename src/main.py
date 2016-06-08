@@ -42,31 +42,31 @@ class App(Gtk.Application):
 
 
     def on_startup(self, *args):
-        rc = config.main(PWD)
+        self.rc = config.main(PWD)
 
-        rc.core['interrupt'] *= not self.argv.nointerrupt
-        if rc.core['interrupt']:
+        self.rc.core['interrupt'] *= not self.argv.nointerrupt
+        if self.rc.core['interrupt']:
             self.handle_signals()
 
         ## load GUI
         # verify app
-        for name, _type in rc.type_list:
-            if not rc.preferences['use-system-defaults']:
-                if rc.apps[name]: continue
+        for name, _type in self.rc.type_list:
+            if not self.rc.preferences['use-system-defaults']:
+                if self.rc.apps[name]: continue
             desktopAppInfo = Gio.app_info_get_default_for_type(_type, 0)
-            rc.apps[name] = desktopAppInfo.get_executable()
+            self.rc.apps[name] = desktopAppInfo.get_executable()
 
         # logo
         self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.png')
 
         # scan plugins
         self.plugins = dict()
-        rc.preferences['enable-plugins'] *= not self.argv.noplugins
-        if rc.preferences['enable-plugins']:
-            self.scan_plugins(rc)
+        self.rc.preferences['enable-plugins'] *= not self.argv.noplugins
+        if self.rc.preferences['enable-plugins']:
+            self.scan_plugins(self.rc)
 
         ## home window
-        self.root = ui.home.main(core, rc, app=self)
+        self.root = ui.home.main(core, self.rc, app=self)
         self.add_window(self.root)
         self.root.set_icon(self.pixbuf_logo)
         self.root.set_title(__PKG_NAME__)
@@ -89,9 +89,17 @@ class App(Gtk.Application):
                 print(e, file=sys.stderr)
 
         # load system tray
-        rc.preferences['show-in-system-tray'] *= not self.argv.notray
-        if rc.preferences['show-in-system-tray']:
+        self.rc.preferences['show-on-system-tray'] *= not self.argv.notray
+        if self.rc.preferences['show-on-system-tray']:
             self.tray = TrayIcon(self)
+
+        # task bar
+        self.rc.preferences['show-on-taskbar'] *= self.argv.notaskbar
+        if self.rc.preferences['show-on-system-tray']:
+            if self.rc.preferences['show-on-taskbar']:
+                self.root.set_skip_taskbar_hint(True)
+        else:
+            print("ignoring: --notaskbar")
 
 
     def insert_plugin_item_on_toolbar(self, widget):
@@ -235,22 +243,28 @@ def argparser():
     """
     parser = argparse.ArgumentParser(description="anubad")
     parser.add_argument(
-        "-p", "--noplugins",
+        "--noplugins",
         action  = "store_true",
         default = False,
         help    = "Disable plugins loading")
 
     parser.add_argument(
-        "-t", "--notray",
+        "--notray",
         action  = "store_true",
         default = False,
-        help    = "Disable tray")
+        help    = "Hide from notification tray")
 
     parser.add_argument(
-        "-i", "--nointerrupt",
+        "--nointerrupt",
         action  = "store_true",
         default = False,
         help    = "Disable interrupt")
+
+    parser.add_argument(
+        "--notaskbar",
+        action  = "store_true",
+        default = False,
+        help    = "Hide from taskbar")
 
     argv = parser.parse_args()
     return argv

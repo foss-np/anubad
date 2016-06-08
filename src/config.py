@@ -60,13 +60,13 @@ class RC(configparser.ConfigParser):
         pref = self['preferences']
 
         return {
-            'show-in-system-tray' : pref.getboolean('show-in-system-tray', True),
+            'show-on-system-tray' : pref.getboolean('show-on-system-tray', True),
             'use-system-defaults' : pref.getboolean('use-system-defaults', True),
             'remember-gui-state'  : pref.getboolean('remember-gui-state', False),
+            'show-on-taskbar'     : pref.getboolean('show-on-taskbar', True),
             'enable-plugins'      : pref.getboolean('enable-plugins', True),
             'append-at-end'       : pref.getboolean('append-at-end', False),
             'regex-search'        : pref.getboolean('regex-search', True),
-            'word-net'            : pref.getboolean('word-net', False),
         }
 
 

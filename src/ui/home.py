@@ -41,10 +41,10 @@ def treeview_signal_safe_toggler(func):
 
     '''
     def wrapper(self, *args, **kwargs):
-        treeselection = self.sidebar.treeview.get_selection()
-        treeselection.disconnect(self.sidebar.select_signal)
+        treeSelection = self.sidebar.treeview.get_selection()
+        treeSelection.disconnect(self.sidebar.select_signal)
         func_return = func(self, *args, **kwargs)
-        self.sidebar.select_signal = treeselection.connect("changed", self.sidebar_on_row_changed)
+        self.sidebar.select_signal = treeSelection.connect("changed", self.sidebar_on_row_changed)
         return func_return
     return wrapper
 
@@ -215,8 +215,8 @@ class Home(Gtk.Window):
         self.history_menu = Gtk.Menu()
         widget.set_menu(self.history_menu)
 
-        for i, query_RESULTS in enumerate(reversed(self.cache), 1):
-            query = ', '.join([ k for k in query_RESULTS.keys() ])
+        for i, results in enumerate(reversed(self.cache), 1):
+            query = ', '.join([ k for k in results.keys() ])
             rmi = Gtk.RadioMenuItem(label=query)
             rmi.show()
             if len(self.cache) - i == self.cache_cursor:
@@ -269,9 +269,6 @@ class Home(Gtk.Window):
 
         def _on_key_press(widget, event):
             # NOTE to stop propagation of signal return True
-            if   event.keyval == 65289:
-                # TODO tab completion
-                return True # Tab
             elif Gdk.ModifierType.CONTROL_MASK & event.state:
                 if   event.keyval == ord('c'): widget.set_text("")
                 elif event.keyval == ord('e'): widget.set_position(-1)
@@ -304,16 +301,16 @@ class Home(Gtk.Window):
 
     def makeWidgets_sidebar(self):
         self.sidebar = ui.sidebar.Bar(self)
-        treeselection = self.sidebar.treeview.get_selection()
-        self.sidebar.select_signal = treeselection.connect("changed", self.sidebar_on_row_changed)
+        treeSelection = self.sidebar.treeview.get_selection()
+        self.sidebar.select_signal = treeSelection.connect("changed", self.sidebar_on_row_changed)
 
         for obj in self.sidebar.track_FONT:
             obj.modify_font(self.fonts['viewer'])
         return self.sidebar
 
 
-    def sidebar_on_row_changed(self, treeselection):
-        model, pathlist = treeselection.get_selected_rows()
+    def sidebar_on_row_changed(self, treeSelection):
+        model, pathlist = treeSelection.get_selected_rows()
         self.clips.clear()
         for path in pathlist:
             self._view_item(*self.sidebar.get_suggestion(path))
@@ -376,8 +373,8 @@ class Home(Gtk.Window):
 
 
     def get_active_query(self):
-        selection = self.sidebar.treeview.get_selection()
-        model, pathlst, = selection.get_selected_rows()
+        treeSelection = self.sidebar.treeview.get_selection()
+        model, pathlst, = treeSelection.get_selected_rows()
 
         if pathlst:
             *c, query = model[pathlst[0]]
@@ -397,30 +394,65 @@ class Home(Gtk.Window):
         for test, func in self.engines:
             if test(query):
                 print("engine called", file=fp3)
-                result = func(query)
-                if not result: return
-                self._view_results({ query: result })
+                output = func(query)
+                if not output: return
+                self._view_results({ query: output })
                 return
 
         ## Ordered Dict use for undo/redo history
-        query_RESULTS = OrderedDict()
+        results = OrderedDict()
         for q in query.split():
             word = q.lower()
             # TODO: check if its in view && the glossary is changed
             for history in self.cache:
                 if word in history.keys():
                     # print("found in hist cache")
-                    query_RESULTS[word] = history[word]
+                    results[word] = history[word]
                     continue
 
-            query_RESULTS[word] = self.core.Glossary.search(word)
+            results[word] = self.core.Glossary.search(word)
 
-        self._view_results(query_RESULTS)
+        self._view_results(results)
 
-        self.cache.append(query_RESULTS)
+        self.cache.append(results)
         self.cache_cursor = len(self.cache) - 1
         self.toolbar.bm_BACKWARD.set_sensitive(True)
         self.toolbar.b_FORWARD.set_sensitive(False)
+
+
+    @treeview_signal_safe_toggler
+    def _view_results(self, results):
+        self.sidebar.clear()
+        self.clips.clear()
+        treeSelection = self.sidebar.treeview.get_selection()
+
+        begin = self.viewer.textbuffer.get_start_iter()
+        self.viewer.textbuffer.place_cursor(begin)
+        self.viewer.textbuffer.insert_at_cursor("\n")
+
+        all_FUZZ = dict()
+        for word, (FULL, FUZZ) in results.items():
+            all_FUZZ.update(FUZZ)
+            if not FULL:
+                self.viewer.not_found(word)
+                continue
+
+            for key, val in FULL.items():
+                self.sidebar.add_suggestion(key, val)
+                self._view_item(*key, val)
+                treeSelection.select_path(self.sidebar.count - 1)
+
+        self.viewer.textbuffer.insert_at_cursor("\n")
+        self.viewer.jump_to_top()
+
+        for key in sorted(all_FUZZ, key=lambda k: k[0]):
+            self.sidebar.add_suggestion(key, all_FUZZ[key])
+
+        if len(self.clips) == 0: return
+        print("clip:", self.clips, file=fp3)
+        self.clips_circle = circle(self.clips)
+        self._circular_search(+1)
+        self.search_entry.grab_focus()
 
 
     def _view_item(self, word, ID, src, parsed_info):
@@ -446,45 +478,10 @@ class Home(Gtk.Window):
         self.view_current.add(meta)
 
 
-    @treeview_signal_safe_toggler
-    def _view_results(self, query_RESULTS):
-        self.sidebar.clear()
-        self.clips.clear()
-        treeselection = self.sidebar.treeview.get_selection()
-
-        begin = self.viewer.textbuffer.get_start_iter()
-        self.viewer.textbuffer.place_cursor(begin)
-        self.viewer.textbuffer.insert_at_cursor("\n")
-
-        all_FUZZ = dict()
-        for word, (FULL, FUZZ) in query_RESULTS.items():
-            all_FUZZ.update(FUZZ)
-            if not FULL:
-                self.viewer.not_found(word)
-                continue
-
-            for key, val in FULL.items():
-                self.sidebar.add_suggestion(key, val)
-                self._view_item(*key, val)
-                treeselection.select_path(self.sidebar.count - 1)
-
-        self.viewer.textbuffer.insert_at_cursor("\n")
-        self.viewer.jump_to_top()
-
-        for key in sorted(all_FUZZ, key=lambda k: k[0]):
-            self.sidebar.add_suggestion(key, all_FUZZ[key])
-
-        if len(self.clips) == 0: return
-        print("clip:", self.clips, file=fp3)
-        self.clips_circle = circle(self.clips)
-        self._circular_search(+1)
-        self.search_entry.grab_focus()
-
-
     @turn_off_auto_copy
     def _open_src(self):
-        treeselection = self.sidebar.treeview.get_selection()
-        model, pathlst = treeselection.get_selected_rows()
+        treeSelection = self.sidebar.treeview.get_selection()
+        model, pathlst = treeSelection.get_selected_rows()
 
         if len(pathlst) == 0:
             path  = self.rc.glossary_list['foss']['pairs'][0]
@@ -576,7 +573,7 @@ class Home(Gtk.Window):
 
 
     def handle_esc(self):
-        if self.rc.preferences['show-in-system-tray']:
+        if self.rc.preferences['show-on-system-tray']:
             self.hide()
             return
 
@@ -614,7 +611,6 @@ class Home(Gtk.Window):
                 query = clip.strip().lower()
                 self.search_entry.set_text(clip)
                 self.search_and_reflect(clip)
-            return
         elif Gdk.ModifierType.MOD1_MASK & event.state:
             if   event.keyval == ord('e'): self._open_src()
             elif event.keyval == 65361: self._jump_history(-1) # Left-arrow
