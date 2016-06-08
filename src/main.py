@@ -78,9 +78,9 @@ class App(Gtk.Application):
         for i, (name, plug) in enumerate(self.plugins.items()):
             if i == 0:
                 bar = self.root.toolbar
-                bar.s_plugins = Gtk.SeparatorToolItem()
-                p = bar.get_item_index(bar.s_end)
-                bar.insert(bar.s_plugins, p)
+                bar.s_PLUGINS = Gtk.SeparatorToolItem()
+                p = bar.get_item_index(bar.s_END)
+                bar.insert(bar.s_PLUGINS, p)
 
             try:
                 if plug.plugin_main(self, PWD):
@@ -96,12 +96,12 @@ class App(Gtk.Application):
 
     def insert_plugin_item_on_toolbar(self, widget):
         bar = self.root.toolbar
-        if hasattr(bar, "s_plugins"):
-            i = bar.get_item_index(bar.s_plugins)
+        if hasattr(bar, "s_PLUGINS"):
+            i = bar.get_item_index(bar.s_PLUGINS)
         else:
-            bar.s_plugins = Gtk.SeparatorToolItem()
-            p = bar.get_item_index(bar.s_end)
-            bar.insert(bar.s_plugins, p)
+            bar.s_PLUGINS = Gtk.SeparatorToolItem()
+            p = bar.get_item_index(bar.s_END)
+            bar.insert(bar.s_PLUGINS, p)
             i = b + 1
 
         bar.insert(widget, i+1)
@@ -138,11 +138,11 @@ class App(Gtk.Application):
 
 
     def add_about_to_toolbar(self, bar):
-        bar.b_About = Gtk.ToolButton(icon_name=Gtk.STOCK_ABOUT)
-        bar.add(bar.b_About)
-        bar.b_About.set_tooltip_markup("More About Anubad")
-        bar.b_About.connect("clicked", self.about_dialog)
-        bar.b_About.show()
+        bar.b_ABOUT = Gtk.ToolButton(icon_name=Gtk.STOCK_ABOUT)
+        bar.add(bar.b_ABOUT)
+        bar.b_ABOUT.set_tooltip_markup("More About Anubad")
+        bar.b_ABOUT.connect("clicked", self.about_dialog)
+        bar.b_ABOUT.show()
 
 
     def scan_plugins(self, rc):

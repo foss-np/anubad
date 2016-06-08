@@ -15,52 +15,12 @@ from collections import OrderedDict
 from subprocess import Popen
 from itertools import count
 
-import utils
 import ui.preferences
 import ui.sidebar
 import ui.view
 import ui.relations
 
-key_codes = {
-    "BACKSPACE"     : 65288,
-    "RETURN"        : 65293,
-    "ESCAPE"        : 65307,
-
-    "LEFT_ARROW"    : 65361,
-    "UP_ARROW"      : 65362,
-    "RIGHT_ARROW"   : 65363,
-    "DOWN_ARROW"    : 65364,
-
-    "MENU"          : 65383,
-    "PAGE_UP"       : 65365,
-    "PAGE_UP"       : 65366,
-
-    "F1"            : 65470,
-    "F2"            : 65471,
-    "F3"            : 65472,
-    "F3"            : 65473,
-    "F5"            : 65474,
-    "F6"            : 65475,
-    "F7"            : 65476,
-    "F8"            : 65477,
-    "F9"            : 65478,
-    "F10"           : 65479,
-    "F11"           : 65480,
-    "F12"           : 65481,
-
-    "SHIFT_LEFT"    : 65505,
-    "SHIFT_RIGHT"   : 65506,
-    "CONTROL_LEFT"  : 65507,
-    "CONTROL_RIGHT" : 65508,
-    "ALT_LEFT"      : 65513,
-    "ALT_RIGHT"     : 65514,
-    "META"          : 65515,
-    "DELETE"        : 65535,
-}
-
-ignore_keys = [ v for k, v in key_codes.items() if v != key_codes["RETURN"]]
-
-fp_dev_null = open(os.devnull, 'w')
+fp_DEVNULL = open(os.devnull, 'w')
 VERBOSE = int(os.environ.get("VERBOSE", 0))
 for i in range(3, 7):
     if VERBOSE > 0:
@@ -71,7 +31,7 @@ for i in range(3, 7):
         stream = "sys.stderr"
         VERBOSE -= 1
     else:
-        stream = "fp_dev_null"
+        stream = "fp_DEVNULL"
     exec("fp%d = %s"%(i, stream))
 
 
@@ -87,6 +47,19 @@ def treeview_signal_safe_toggler(func):
         self.sidebar.select_signal = treeselection.connect("changed", self.sidebar_on_row_changed)
         return func_return
     return wrapper
+
+
+def circle(iterable):
+    if not hasattr(circle, 'DIFF'): # cool static var
+        circle.DIFF = 1
+    saved = iterable[:]
+    i = -1
+    while saved:
+        l = len(saved)
+        i += circle.DIFF
+        if circle.DIFF == +1 and l <= i: i = 0
+        if circle.DIFF == -1 and i <  0: i = l - 1
+        yield saved[i]
 
 
 class Home(Gtk.Window):
@@ -111,13 +84,13 @@ class Home(Gtk.Window):
         self.track_FONT = set()
 
         self.clips = []
-        self.clips_CYCLE = None
+        self.clips_circle = None
 
-        self.view_CURRENT = set()
+        self.view_current = set()
 
-        self.hist_LIST = []
-        self.hist_CURSOR = 0
-        self.copy_BUFFER = ""
+        self.cache = []
+        self.cache_cursor = 0
+        self.copy_buffer = ""
 
         self.engines = [ # not using dict() since we are traversing it
             (lambda q: q[0] == '#',  core.Glossary.search_hashtag),
@@ -126,8 +99,8 @@ class Home(Gtk.Window):
 
         # accelerators
         self.makeWidgets()
-        self.connect('key_press_event', self.key_press_binds)
-        self.connect('key_release_event', self.key_release_binds)
+        self.connect('key_press_event', self.on_key_press)
+        self.connect('key_release_event', self.on_key_release)
         self.connect('focus-in-event', lambda *e: self.search_entry.grab_focus())
         self.connect('focus-out-event', lambda *e: self._on_focus_out_event())
         self.connect('delete-event', self.on_destroy)
@@ -141,14 +114,14 @@ class Home(Gtk.Window):
 
     def turn_off_auto_copy(func):
         def wrapper(self, *args, **kwargs):
-            self.toolbar.t_Copy.set_active(False)
+            self.toolbar.t_COPY.set_active(False)
             return func(self, *args, **kwargs)
         return wrapper
 
 
     def _on_focus_out_event(self):
-        if self.toolbar.t_Copy.get_active():
-            __class__.clipboard.set_text(self.copy_BUFFER, -1)
+        if self.toolbar.t_COPY.get_active():
+            __class__.clipboard.set_text(self.copy_buffer, -1)
 
 
     def makeWidgets(self):
@@ -173,64 +146,64 @@ class Home(Gtk.Window):
         bar = Gtk.Toolbar()
         #
         ## Button Back Button
-        bar.bm_Backward = Gtk.MenuToolButton(icon_name=Gtk.STOCK_GO_BACK)
-        bar.add(bar.bm_Backward)
-        bar.bm_Backward.connect("clicked", lambda e: self._jump_history(-1))
-        bar.bm_Backward.set_tooltip_markup("Previous, <u>Alt+←</u>")
-        bar.bm_Backward.set_sensitive(False)
+        bar.bm_BACKWARD = Gtk.MenuToolButton(icon_name=Gtk.STOCK_GO_BACK)
+        bar.add(bar.bm_BACKWARD)
+        bar.bm_BACKWARD.connect("clicked", lambda e: self._jump_history(-1))
+        bar.bm_BACKWARD.set_tooltip_markup("Previous, <u>Alt+←</u>")
+        bar.bm_BACKWARD.set_sensitive(False)
         ### History
         # TODO: find the widget flag
         self.hist_menu_toggle_state = False
         self.history_menu = Gtk.Menu() # NOTE: DUMMY MENU For Menu activation
-        bar.bm_Backward.set_menu(self.history_menu)
-        bar.bm_Backward.connect("show-menu", lambda e: self._show_history(e))
+        bar.bm_BACKWARD.set_menu(self.history_menu)
+        bar.bm_BACKWARD.connect("show-menu", lambda e: self._show_history(e))
         ##
         ## Button Forward Button
-        bar.b_Forward = Gtk.ToolButton(icon_name=Gtk.STOCK_GO_FORWARD)
-        bar.add(bar.b_Forward)
-        bar.b_Forward.connect("clicked", lambda e: self._jump_history(+1))
-        bar.b_Forward.set_tooltip_markup("Next, <u>Alt+→</u>")
-        bar.b_Forward.set_sensitive(False)
+        bar.b_FORWARD = Gtk.ToolButton(icon_name=Gtk.STOCK_GO_FORWARD)
+        bar.add(bar.b_FORWARD)
+        bar.b_FORWARD.connect("clicked", lambda e: self._jump_history(+1))
+        bar.b_FORWARD.set_tooltip_markup("Next, <u>Alt+→</u>")
+        bar.b_FORWARD.set_sensitive(False)
         ##
         #
         bar.add(Gtk.SeparatorToolItem())
         ##
         ## Smart Copy Toggle Button
-        bar.t_Copy = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_COPY)
-        bar.add(bar.t_Copy)
-        bar.t_Copy.set_active(True)
+        bar.t_COPY = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_COPY)
+        bar.add(bar.t_COPY)
+        bar.t_COPY.set_active(True)
         ##
         ## Add Button
-        bar.b_Add = Gtk.ToolButton(icon_name=Gtk.STOCK_ADD)
-        bar.add(bar.b_Add)
-        # bar.b_Add.connect("clicked", lambda w: self.add_to_gloss())
-        bar.b_Add.set_tooltip_markup("Add new word to Glossary, <u>Ctrl+i</u>")
+        bar.b_ADD = Gtk.ToolButton(icon_name=Gtk.STOCK_ADD)
+        bar.add(bar.b_ADD)
+        # bar.b_ADD.connect("clicked", lambda w: self.add_to_gloss())
+        bar.b_ADD.set_tooltip_markup("Add new word to Glossary, <u>Ctrl+i</u>")
         ##
         #
         ##  Preference
-        bar.b_Preference = Gtk.ToolButton(icon_name=Gtk.STOCK_PREFERENCES)
-        bar.add(bar.b_Preference)
-        bar.b_Preference.connect("clicked", self.preference)
-        bar.b_Preference.set_tooltip_markup("Preferences")
+        bar.b_PREFERENCE = Gtk.ToolButton(icon_name=Gtk.STOCK_PREFERENCES)
+        bar.add(bar.b_PREFERENCE)
+        bar.b_PREFERENCE.connect("clicked", self.preference)
+        bar.b_PREFERENCE.set_tooltip_markup("Preferences")
         ##
         #
-        bar.s_end = Gtk.SeparatorToolItem()
-        bar.add(bar.s_end)
+        bar.s_END = Gtk.SeparatorToolItem()
+        bar.add(bar.s_END)
         return bar
 
 
     def _jump_history(self, diff):
-        pos = self.hist_CURSOR + diff
+        pos = self.cache_cursor + diff
 
         if 0 > pos: return
-        elif len(self.hist_LIST) <= pos:
-            self.toolbar.b_Forward.set_sensitive(False)
+        elif len(self.cache) <= pos:
+            self.toolbar.b_FORWARD.set_sensitive(False)
             return
 
-        if diff == -1: self.toolbar.b_Forward.set_sensitive(True)
+        if diff == -1: self.toolbar.b_FORWARD.set_sensitive(True)
 
-        self.hist_CURSOR = pos
-        self._view_results(self.hist_LIST[pos])
+        self.cache_cursor = pos
+        self._view_results(self.cache[pos])
 
 
     def _show_history(self, widget):
@@ -242,11 +215,11 @@ class Home(Gtk.Window):
         self.history_menu = Gtk.Menu()
         widget.set_menu(self.history_menu)
 
-        for i, query_RESULTS in enumerate(reversed(self.hist_LIST), 1):
+        for i, query_RESULTS in enumerate(reversed(self.cache), 1):
             query = ', '.join([ k for k in query_RESULTS.keys() ])
             rmi = Gtk.RadioMenuItem(label=query)
             rmi.show()
-            if len(self.hist_LIST) - i == self.hist_CURSOR:
+            if len(self.cache) - i == self.cache_cursor:
                 rmi.set_active(True)
             self.history_menu.append(rmi)
 
@@ -287,7 +260,13 @@ class Home(Gtk.Window):
 
         entrycompletion.set_match_func(_match_func, liststore)
         ### options
-        self.search_entry.connect('key_release_event', self.search_entry_binds)
+        def _on_key_release(widget, event):
+            # NOTE to stop propagation of signal return True
+            if   event is None: self.search_and_reflect()
+            elif event.keyval == 65293: self.search_and_reflect() # <enter> return
+
+        self.search_entry.connect('key_release_event', _on_key_release)
+
         self.search_entry.set_tooltip_markup(tool_tip)
         self.search_entry.set_max_length(32)
         ### font
@@ -301,18 +280,10 @@ class Home(Gtk.Window):
         ## Search Button
         self.b_search = Gtk.Button(label="Search")
         layout.pack_start(self.b_search, expand=False, fill=False, padding=1)
-        self.b_search.connect('clicked', lambda w: self.search_entry_binds(w, None))
+        self.b_search.connect('clicked', lambda w: _on_key_release(w, None))
         self.b_search.set_tooltip_markup(tool_tip)
 
         return layout
-
-
-    def search_entry_binds(self, widget, event):
-        # FIXME this cheat signal not forwarded
-        if   event is None: self.search_and_reflect()
-        elif Gdk.ModifierType.CONTROL_MASK & event.state:
-            if event.keyval == ord('c'): self.search_entry.set_text("")
-        elif event.keyval == 65293: self.search_and_reflect() # <enter> return
 
 
     def makeWidgets_sidebar(self):
@@ -332,7 +303,7 @@ class Home(Gtk.Window):
             self._view_item(*self.sidebar.get_suggestion(path))
 
         if len(self.clips) == 0: return
-        self.clips_CIRCLE = utils.circle(self.clips)
+        self.clips_circle = circle(self.clips)
         self._circular_search(+1)
 
 
@@ -348,9 +319,9 @@ class Home(Gtk.Window):
 
 
     def viewer_clean(self, widget=None):
-        self.copy_BUFFER = ""
-        self.clips_CIRCLE = None
-        self.view_CURRENT.clear()
+        self.copy_buffer = ""
+        self.clips_circle = None
+        self.view_current.clear()
         self.viewer.textbuffer.set_text("\n")
         selection = self.sidebar.treeview.get_selection()
         selection.unselect_all()
@@ -369,8 +340,8 @@ class Home(Gtk.Window):
         ## highlight
         self.viewer.clean_highlights()
         self.viewer.textbuffer.apply_tag(self.viewer.tag_found, begin, end)
-        self.toolbar.t_Copy.set_active(True)
-        self.copy_BUFFER = text
+        self.toolbar.t_COPY.set_active(True)
+        self.copy_buffer = text
 
 
     def viewer_on_activity(self, textview, event):
@@ -418,7 +389,7 @@ class Home(Gtk.Window):
         for w in set(query.split()):
             word = w.strip().lower()
             # TODO: check if its in view && the glossary is changed
-            for history in self.hist_LIST:
+            for history in self.cache:
                 if word in history.keys():
                     # print("found in hist cache")
                     query_RESULTS[word] = history[word]
@@ -428,21 +399,15 @@ class Home(Gtk.Window):
 
         self._view_results(query_RESULTS)
 
-        self.hist_LIST.append(query_RESULTS)
-        self.hist_CURSOR = len(self.hist_LIST) - 1
-        self.toolbar.bm_Backward.set_sensitive(True)
-        self.toolbar.b_Forward.set_sensitive(False)
+        self.cache.append(query_RESULTS)
+        self.cache_cursor = len(self.cache) - 1
+        self.toolbar.bm_BACKWARD.set_sensitive(True)
+        self.toolbar.b_FORWARD.set_sensitive(False)
 
 
-    def _view_item(self, word, ID, path, parsed_info):
-        """
-        >>> root._view_item(instance, src, [1, "sunday" "[सन्डे] n(आइतबार) #time"])
-        >>> print(GUI.clips)
-        ['आइतबार', 'सन्डे'],
-        """
-        # TODO: move it to viewer
+    def _view_item(self, word, ID, src, parsed_info):
         print(parsed_info, file=fp4)
-        meta = (word, ID, path)
+        meta = (word, ID, src)
 
         ## put trasliteration at last
         transliterate = [] # collect trasliterations
@@ -455,11 +420,12 @@ class Home(Gtk.Window):
         ## adding transliteration
         self.clips += transliterate
 
-        if meta in self.view_CURRENT:
+        if meta in self.view_current:
             print("already in view:", meta, file=fp3)
             return
-        self.viewer.insert_result(word, parsed_info, path)
-        self.view_CURRENT.add(meta)
+
+        self.viewer.insert_result(word, parsed_info, src)
+        self.view_current.add(meta)
 
 
     @treeview_signal_safe_toggler
@@ -492,7 +458,7 @@ class Home(Gtk.Window):
 
         if len(self.clips) == 0: return
         print("clip:", self.clips, file=fp3)
-        self.clips_CIRCLE = utils.circle(self.clips)
+        self.clips_circle = circle(self.clips)
         self._circular_search(+1)
         self.search_entry.grab_focus()
 
@@ -503,41 +469,44 @@ class Home(Gtk.Window):
         model, pathlst = treeselection.get_selected_rows()
 
         if len(pathlst) == 0:
-            path = self.core.Glossary.instances[0].categories['main'][-1]
-            line = self.core.Glossary.instances[0].entries
+            path  = self.rc.glossary_list['foss']['pairs'][0]
+            gloss = self.core.Glossary.instances[path]
+            src   = path + 'main.tra'
+            line  = gloss.counter
         else:
-            word, ID, path, parsed_info  = self.sidebar.get_suggestion(pathlst[0])
+            word, ID, src, parsed_info  = self.sidebar.get_suggestion(pathlst[0])
             # print(row, file=fp6)
 
             ## handel invert map
             if type(ID) == int: line = ID
             else: # else tuple
                 try:
-                    i = self.clips.index(self.copy_BUFFER)
+                    i = self.clips.index(self.copy_buffer)
                     # print(i, file=fp6)
                     # print(ID, i)
                     line = ID[i]
                 except ValueError:
                     line = None
 
-        cmd = self.rc.editor_goto_line_uri(path, line)
-        print("pid:", path, Popen(cmd).pid, file=fp5)
+        cmd = self.rc.editor_goto_line_uri(src, line)
+        print("pid:", src, Popen(cmd).pid, file=fp5)
 
 
-    def _circular_search(self, d):
-        if not self.clips_CIRCLE:
+    def _circular_search(self, diff):
+        if not self.clips_circle:
             self.search_entry.grab_focus()
             return
 
-        self.toolbar.t_Copy.set_active(True)
-        utils.diff = d
-        text = next(self.clips_CIRCLE)
+        self.toolbar.t_COPY.set_active(True)
+        circle.DIFF = diff
+        text = next(self.clips_circle)
 
         ## highlight current clip
+        ## TODO only highlight new search item
         begin, end = self.viewer.clean_highlights()
         start, stop = self.viewer.find_and_highlight(text, begin)
         self.viewer.jump_to(start)
-        self.copy_BUFFER = text
+        self.copy_buffer = text
 
 
     @turn_off_auto_copy
@@ -570,14 +539,14 @@ class Home(Gtk.Window):
         )
 
         dialog.props.text = 'Are you sure you want to quit?'
-        def key_release_binds(widget, event):
+        def on_key_release(widget, event):
             if Gdk.ModifierType.CONTROL_MASK & event.state:
                 if event.keyval == ord('q'):
                     dialog.destroy()
                     self.destroy()
                     Gtk.main_quit()
 
-        dialog.connect('key_release_event', key_release_binds)
+        dialog.connect('key_release_event', on_key_release)
 
         response = dialog.run()
         dialog.destroy()
@@ -596,46 +565,39 @@ class Home(Gtk.Window):
         self.iconify()
 
 
-    def key_press_binds(self, widget, event):
-        if   event.keyval == 65362: self.sidebar.treeview.grab_focus() # Up-arrow
+    def on_key_press(self, widget, event):
+        # NOTE to stop propagation of signal return True
+        if   event.keyval == 65307: self.handle_esc() # Esc
         elif event.keyval == 65364: self.sidebar.treeview.grab_focus() # Down-arrow
-        elif event.keyval == 65307: # Esc
-            self.handle_esc()
+
+        if self.search_entry.is_focus(): return
+
+        if event.keyval > 127: return # ignore non-printable values
+        self.search_entry.grab_focus()
+        pos = self.search_entry.get_position()
+        self.search_entry.set_position(pos + 1)
 
 
-    def key_release_binds(self, widget, event):
-        # TODO reload restart key
-        keyval, state = event.keyval, event.state
-        if  Gdk.ModifierType.CONTROL_MASK & state:
-            if   keyval == ord('e'): self._open_src()
-            elif keyval == ord('l'): self.viewer_clean()
-            elif keyval == ord('q'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
-            elif keyval == ord('r'): self._circular_search(-1)
-            elif keyval == ord('s'): self._circular_search(+1)
-            elif keyval == ord('g'): # grab clipboard
+    def on_key_release(self, widget, event):
+        # NOTE to stop propagation of signal return True
+        if   event.keyval == 65474: self.core.load_from_config(self.rc) # F5
+        elif Gdk.ModifierType.CONTROL_MASK & event.state:
+            if   event.keyval == ord('l'): self.viewer_clean()
+            elif event.keyval == ord('q'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
+            elif event.keyval == ord('s'): self._circular_search(+1)
+            elif event.keyval == ord('r'): self._circular_search(-1)
+            elif event.keyval == ord('S'): self._circular_search(-1)
+            elif event.keyval == ord('g'): # grab clipboard
                 clip = __class__.clipboard.wait_for_text()
                 if clip is None: return
                 query = clip.strip().lower()
                 self.search_entry.set_text(clip)
                 self.search_and_reflect(clip)
             return
-        elif Gdk.ModifierType.MOD1_MASK & state:
-            if   keyval == 65361: self._jump_history(-1) # Left-arrow
-            elif keyval == 65363: self._jump_history(+1) # Right-arrow
-            return
-        elif Gdk.ModifierType.SHIFT_MASK & event.state:
-            # TODO Scroll viewer
-            if   keyval == 65365: pass # Pg-Dn
-            elif keyval == 65366: pass # Pg-Up
-            return
-
-        if event.keyval in ignore_keys: return
-        if self.search_entry.is_focus(): return
-
-        self.search_entry.grab_focus()
-        pos = self.search_entry.get_position()
-        self.search_entry.set_position(pos + 1)
-        self.search_entry_binds(widget, event)
+        elif Gdk.ModifierType.MOD1_MASK & event.state:
+            if   event.keyval == ord('e'): self._open_src()
+            elif event.keyval == 65361: self._jump_history(-1) # Left-arrow
+            elif event.keyval == 65363: self._jump_history(+1) # Right-arrow
 
 
 def main(core, rc, app=None):

@@ -38,10 +38,10 @@ class Glossary(dict):
     hashtag = set() # for auto-complete
 
     def __init__(self, path):
-        self.count = 0
+        self.counter = 0
         self.fullpath = os.path.expanduser(path)
         self.load_glossary(self.fullpath)
-        print("glossary:", path, self.count, file=sys.stderr)
+        print("glossary:", path, self.counter, file=sys.stderr)
 
         __class__.instances[self.fullpath] = self
 
@@ -54,19 +54,19 @@ class Glossary(dict):
         for _file in os.listdir(path):
             name, dot, ext = _file.rpartition('.')
             if ext not in FILE_TYPES: continue
-            filepath = self.fullpath + _file
-            print("loading: *" + filepath[-40:], file=fp4)
-            self[_file] = self.load_entries(filepath)
+            src = self.fullpath + _file
+            print("loading: *" + src[-40:], file=fp4)
+            self[_file] = self.load_entries(src)
 
 
-    def load_entries(self, path):
+    def load_entries(self, src):
         liststore = dict()
         invert = dict()
 
         try:
-            data = open(path, encoding="UTF-8").read()
+            data = open(src, encoding="UTF-8").read()
         except:
-            print("error: in file", path, file=sys.stderr)
+            print("error: in file", src, file=sys.stderr)
             return
 
         for i, line in enumerate(data.splitlines(), 1):
@@ -74,21 +74,21 @@ class Glossary(dict):
                 word, defination = line.split('; ')
             except Exception as e:
                 print("fatal:", e, file=sys.stderr)
-                print("wrong format %s: %d"%(path, i), file=sys.stderr)
-                e.meta_info = (path, i)
+                print("wrong format %s: %d"%(src, i), file=sys.stderr)
+                e.meta_info = (src, i)
                 raise
 
             try:
                 parsed_info = self.format_parser(defination)
             except Exception as e:
-                e.meta_info = (path, i)
+                e.meta_info = (src, i)
                 raise
 
             has_hashtag = False
             for pos, val in parsed_info:
                 if pos == '':
                     e = Exception("pos tag empty")
-                    e.meta_info = (path, i)
+                    e.meta_info = (src, i)
                     raise e
 
                 if pos == '_#':
@@ -110,15 +110,15 @@ class Glossary(dict):
             duplicate = liststore.get(word)
             if duplicate:
                 print("repeated entry:", word, file=sys.stderr)
-                print("%s: %d == %d"%(path, i, duplicate[0]), file=sys.stderr)
+                print("%s: %d == %d"%(src, i, duplicate[0]), file=sys.stderr)
                 e = Exception('Repeated entries')
-                e.meta_info = (path, i)
+                e.meta_info = (src, i)
                 raise e
 
             liststore[word] = (i, has_hashtag, parsed_info)
 
         print(i, file=fp4)
-        self.count += i
+        self.counter += i
         return (liststore, invert)
 
 
@@ -239,7 +239,7 @@ class Glossary(dict):
     @staticmethod
     def search(query):
         FULL, FUZZ = dict(), dict()
-        def traverse_dict(iterable):
+        def match(iterable):
             for word, (ID, *has_hashtag, info) in iterable.items():
                 d = edit_distance(query, word)
                 if d > 1 and query not in word: continue
@@ -249,13 +249,14 @@ class Glossary(dict):
         for path, instance in __class__.instances.items():
             for name, (liststore, invert) in instance.items():
                 src = path + name
-                traverse_dict(liststore)
-                traverse_dict(invert)
+                match(liststore)
+                match(invert)
 
         return FULL, FUZZ
 
 
 def load_from_config(rc):
+    Glossary.instances.clear()
     for gloss in sorted(rc.glossary_list.values(), key=lambda v: v['priority']):
         # while loop for reloading
         n = 0

@@ -10,9 +10,9 @@ def espeak(word, tone="nepali"):
 
 
 def plugin_main(app, fullpath):
-    b_espeak = Gtk.ToolButton(icon_name=Gtk.STOCK_MEDIA_PLAY)
-    app.insert_plugin_item_on_toolbar(b_espeak)
-    b_espeak.set_tooltip_markup("Say it")
-    b_espeak.connect("clicked", lambda w: espeak(app.root.copy_BUFFER))
-    b_espeak.show()
+    b_ESPEAK = Gtk.ToolButton(icon_name=Gtk.STOCK_MEDIA_PLAY)
+    app.insert_plugin_item_on_toolbar(b_ESPEAK)
+    b_ESPEAK.set_tooltip_markup("Say it")
+    b_ESPEAK.connect("clicked", lambda w: espeak(app.root.copy_buffer))
+    b_ESPEAK.show()
     return True
