@@ -22,11 +22,6 @@ import core
 import ui.home
 PWD = ui.home.PWD
 
-SIGS = (
-    getattr(signal, "SIGINT",  None),
-    getattr(signal, "SIGHUP",  None),
-    getattr(signal, "SIGTERM", None),
-)
 
 HIST_FILE = '~/.cache/anubad/history'
 
@@ -48,7 +43,7 @@ class App(Gtk.Application):
 
         self.rc.core['interrupt'] *= not self.argv.nointerrupt
         if self.rc.core['interrupt']:
-            self.handle_signals()
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
 
         ## load GUI
         # verify app
@@ -121,24 +116,6 @@ class App(Gtk.Application):
             i = b + 1
 
         bar.insert(widget, i+1)
-
-
-    def handle_signals(self):
-        for sig in filter(None, SIGS):
-            signal.signal( # idle_handler
-                sig,
-                lambda *a: GLib.idle_add(
-                    self.signal_action,
-                    priority=GLib.PRIORITY_HIGH
-                )
-            )
-            GLib.idle_add(
-                GLib.unix_signal_add,
-                GLib.PRIORITY_HIGH,
-                sig,
-                lambda *a: self.signal_action(a[0]),
-                sig
-            )
 
 
     def on_activate(self, *args):

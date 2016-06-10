@@ -52,7 +52,7 @@ class RC(configparser.ConfigParser):
         return {
             'debugly'   : core.get('debugly', ''),
             'plugins'   : core.get('plugins', ''),
-            'interrupt' : core.getboolean('signals', False),
+            'interrupt' : core.getboolean('interrupt', True),
         }
 
 
