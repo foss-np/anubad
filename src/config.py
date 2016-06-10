@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-config file handeler with with robust error handeling
+config file parser with with robust error handeling
 """
 
 import os
@@ -8,15 +8,30 @@ import configparser
 
 FILE_CONF_DEFAULTS = '../config'
 FILE_CONF = '~/.config/anubad/config'
+FILE_HIST = '~/.cache/anubad/history'
+
+SIZE_HIST  = 1024
+SIZE_CACHE = 20
+
 
 class RC(configparser.ConfigParser):
-    type_list = (
+    MIME_TYPES = (
         ("file-manager", "inode/directory"),
         ("editor", "text/plain"),
         ("browser", "x-scheme-handler/https"),
     )
 
-    def __init__(self):
+    __instance__ = None
+
+    def __new__(cls, *args, **kargs):
+        """Override the __new__ method to make singleton"""
+        if cls.__instance__ is None:
+            cls.__instance__ = configparser.ConfigParser.__new__(cls)
+            cls.__instance__.singleton_init(*args, **kargs)
+        return cls.__instance__
+
+
+    def singleton_init(self):
         configparser.ConfigParser.__init__(self)
         self.glossary_list = dict()
         self.apps,        self['apps']        = dict(), dict()
@@ -52,7 +67,7 @@ class RC(configparser.ConfigParser):
         return {
             'debugly'   : core.get('debugly', ''),
             'plugins'   : core.get('plugins', ''),
-            'interrupt' : core.getboolean('interrupt', True),
+            'gloss-fix' : core.getboolean('gloss-fix', False),
         }
 
 

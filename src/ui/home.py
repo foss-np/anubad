@@ -9,11 +9,10 @@ sys.path.append(PWD)
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, Gio, Pango
+from gi.repository import Gtk, Gdk, Pango
 
 from collections import OrderedDict
 from subprocess import Popen
-from itertools import count
 
 import ui.preferences
 import ui.sidebar
@@ -113,6 +112,7 @@ class Home(Gtk.Window):
 
 
     def turn_off_auto_copy(func):
+        """DECORATOR FUNC to turn off copy mode"""
         def wrapper(self, *args, **kwargs):
             self.toolbar.t_COPY.set_active(False)
             return func(self, *args, **kwargs)
@@ -238,12 +238,20 @@ class Home(Gtk.Window):
         tool_tip = "<b>Search:</b> \t⌨ [<i>Enter</i>]"
         self.search_entry = Gtk.SearchEntry()
         layout.pack_start(self.search_entry, expand=True, fill=True, padding=2)
+
+        ### Search Entry Conf
+        self.search_entry.set_tooltip_markup(tool_tip)
+        self.search_entry.set_max_length(32)
+        self.search_entry.HISTORY = []
+        self.search_entry.CURRENT = 0
+
         ### liststore
         liststore = Gtk.ListStore(str, str)
         # NOTE: second variable to do the split match, and optimization
         for item in sorted(self.core.Glossary.hashtag):
             liststore.append([item, item.replace('.', '#')])
-        ### entrycomplete
+
+        ### EntryComplete
         entrycompletion = Gtk.EntryCompletion()
         self.search_entry.set_completion(entrycompletion)
         entrycompletion.set_model(liststore)
@@ -259,7 +267,8 @@ class Home(Gtk.Window):
             return query in model
 
         entrycompletion.set_match_func(_match_func, liststore)
-        ### options
+
+        ### Bindings
         def _on_key_release(widget, event):
             # NOTE to stop propagation of signal return True
             if   event is None: self.search_and_reflect()
@@ -267,18 +276,19 @@ class Home(Gtk.Window):
 
         self.search_entry.connect('key_release_event', _on_key_release)
 
-        self.search_entry.HISTORY = []
-        self.search_entry.CURRENT = 0
-
         def _on_key_press(widget, event):
             # NOTE to stop propagation of signal return True
-            if   event.keyval == 65362: return self.search_entry_term_history(-1) # Up-arrow
-            elif event.keyval == 65364: return self.search_entry_term_history(+1) # Down-arrow
+            if   event.keyval == 65362: return self.search_entry_nav_history(-1) # Up-arrow
+            elif event.keyval == 65364: return self.search_entry_nav_history(+1) # Down-arrow
             elif event.keyval == 65289: self.sidebar.treeview.grab_focus(); return True # Tab
             elif Gdk.ModifierType.CONTROL_MASK & event.state:
-                if   event.keyval == ord('c'): widget.set_text("")
-                elif event.keyval == ord('e'): widget.set_position(-1)
+                if   event.keyval == 65365: return self.search_entry_nav_history(-1) # Pg-Up
+                elif event.keyval == 65366: return self.search_entry_nav_history(+1) # Pg-Dn
+                elif event.keyval == ord('p'): return self.search_entry_nav_history(-1)
+                elif event.keyval == ord('n'): return self.search_entry_nav_history(+1)
+                elif event.keyval == ord('c'): widget.set_text("")
                 elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
+                elif event.keyval == ord('e'): widget.set_position(-1)
                 elif event.keyval == ord('a'):
                     if not widget.get_selection_bounds(): return
                     widget.set_position(0)
@@ -286,15 +296,9 @@ class Home(Gtk.Window):
 
         self.search_entry.connect('key_press_event', _on_key_press)
 
-        self.search_entry.set_tooltip_markup(tool_tip)
-        self.search_entry.set_max_length(32)
         ### font
         self.search_entry.modify_font(self.fonts['search'])
         self.track_FONT.add(self.search_entry)
-        ### acceleration
-        accel = Gtk.AccelGroup()
-        self.add_accel_group(accel)
-        self.search_entry.add_accelerator("grab_focus", accel, ord('f'), Gdk.ModifierType.CONTROL_MASK, 0)
 
         ## Search Button
         self.b_search = Gtk.Button(label="Search")
@@ -305,11 +309,10 @@ class Home(Gtk.Window):
         return layout
 
 
-    def search_entry_term_history(self, diff):
+    def search_entry_nav_history(self, diff):
         length = len(self.search_entry.HISTORY)
         if length == 0: return True
         i = self.search_entry.CURRENT + diff
-        print("history_seek:", self.search_entry.CURRENT, '+', diff, ':', i, '==', length)
         if i >= length: return True
         if i == -1: return True
         self.search_entry.set_text(self.search_entry.HISTORY[i])
@@ -420,7 +423,9 @@ class Home(Gtk.Window):
             query = self.search_entry.get_text()
 
         if not query: return
+
         self.search_entry.HISTORY.append(query)
+        self.search_entry.CURRENT = len(self.search_entry.HISTORY)
 
         # choosing alternative engines
         for test, func in self.engines:
@@ -435,10 +440,9 @@ class Home(Gtk.Window):
         results = OrderedDict()
         for q in query.split():
             word = q.lower()
-            # TODO: check if its in view && the glossary is changed
             for history in self.cache:
                 if word in history.keys():
-                    # print("found in hist cache")
+                    print("cache: hit", word, file=fp3)
                     results[word] = history[word]
                     continue
 
@@ -556,26 +560,12 @@ class Home(Gtk.Window):
         self.copy_buffer = text
 
 
-    @turn_off_auto_copy
-    def add_to_gloss(self, query=""):
-        widget = add.Add(self, l1=query, l2="")
-        for obj in widget.track_FONT:
-            obj.modify_font(FONT_obj)
-        # TODO: connection
-        widget.connect('destroy', self._add_to_gloss_reflect)
-
-
-    def _add_to_gloss_reflect(self, *args):
-        print("hello i'm back", file=fp5)
-
-
     def preference(self, widget):
         s = ui.preferences.Settings(self.rc, parent=self)
         s.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
         s.show_all()
 
 
-    # def do_delete_event(self, event):
     def on_destroy(self, event, *args):
         """Override the default handler for the delete-event signal"""
         # Show our message dialog
@@ -614,7 +604,12 @@ class Home(Gtk.Window):
 
     def on_key_press(self, widget, event):
         # NOTE to stop propagation of signal return True
-        if   event.keyval == 65307: return self.handle_esc() # Esc
+        if   Gdk.ModifierType.SHIFT_MASK & event.state:
+            if   event.keyval == 65365: self._circular_search(-1); return True # Pg-Up
+            elif event.keyval == 65366: self._circular_search(+1); return True # Pg-Dn
+        elif Gdk.ModifierType.CONTROL_MASK & event.state:
+            if   event.keyval == 65379: self._circular_search(+1); return # Insert
+        elif event.keyval == 65307: return self.handle_esc() # Esc
         elif event.keyval == 65365: self.viewer.textview.grab_focus(); return # Pg-Up
         elif event.keyval == 65366: self.viewer.textview.grab_focus(); return # Pg-Dn
 
@@ -629,12 +624,11 @@ class Home(Gtk.Window):
     def on_key_release(self, widget, event):
         # NOTE to stop propagation of signal return True
         if   event.keyval == 65474: self.core.load_from_config(self.rc) # F5
+        # NOTE: ^^^^ this does'nt reload the hashtags to entry
         elif Gdk.ModifierType.CONTROL_MASK & event.state:
             if   event.keyval == ord('l'): self.viewer_clean()
             elif event.keyval == ord('q'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
-            elif event.keyval == ord('s'): self._circular_search(+1)
-            elif event.keyval == ord('r'): self._circular_search(-1)
-            elif event.keyval == ord('S'): self._circular_search(-1)
+            elif event.keyval == ord('Q'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
             elif event.keyval == ord('g'): # grab clipboard
                 clip = __class__.clipboard.wait_for_text()
                 if clip is None: return

@@ -266,6 +266,8 @@ def load_from_config(rc):
             except Exception as e:
                 print(e)
                 # if not hasattr(e, 'meta_info'):
+                # TODO robustness and show error in gui
+                if not rc.core['gloss-fix']: return
                 cmd = rc.editor_goto_line_uri(*e.meta_info)
                 # NOTE: we need something to hang on till we edit
                 ## vvvv DON'T USES Popen vvvv

@@ -84,7 +84,7 @@ class Settings(Gtk.Window):
         self.appchooser_widget = []
         self.appchooser_block = grid
         rc_app = self.rc['apps'] if 'apps' in self.rc.sections() else {}
-        for i, (name, _type) in enumerate(self.rc.type_list):
+        for i, (name, _type) in enumerate(self.rc.MIME_TYPES):
             label = Gtk.Label(label=name, xalign=1)
             grid.attach(label, left=0, top=i, width=1, height=1)
 
