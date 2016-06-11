@@ -231,13 +231,13 @@ class Settings(Gtk.Window):
 
 
 def main(rc):
-    root = Settings(rc)
-    root.set_position(Gtk.WindowPosition.CENTER)
-    root.show_all()
-    return root
+    win = Settings(rc)
+    win.set_position(Gtk.WindowPosition.CENTER)
+    win.show_all()
+    return win
 
 
-if __name__ == '__main__':
+def sample():
     import sys
     sys.path.append(sys.path[0]+'/../')
 
@@ -248,4 +248,8 @@ if __name__ == '__main__':
 
     # in isolation testing, make Esc quit Gtk mainloop
     root.on_destroy = Gtk.main_quit
+
+
+if __name__ == '__main__':
+    sample()
     Gtk.main()

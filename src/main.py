@@ -8,12 +8,14 @@ __PKG_DESC__ = "A Glossary Browser"
 import os, sys
 import argparse
 import signal
+import traceback
 import importlib
 
 import gi
 gi.require_version('Gtk', '3.0')
 
-from gi.repository import Gtk, GLib, Gio
+from gi.repository import Gtk, Gdk
+from gi.repository import GLib, Gio
 from gi.repository import GdkPixbuf
 
 import config
@@ -55,28 +57,22 @@ class App(Gtk.Application):
         if rc.preferences['enable-plugins']:
             self.scan_plugins(rc)
 
-        ## Home/root window
-        self.root = ui.home.main(core, rc, app=self)
-        self.add_window(self.root)
-        self.root.set_icon(self.pixbuf_logo)
-        self.root.set_title(__PKG_NAME__)
-        self.root.visible = True
-        self.root.connect('delete-event', lambda *a: self.quit())
-        self.add_about_to_toolbar(self.root.toolbar)
+        ## Home window
+        self.home = ui.home.main(core, rc, app=self)
+        self.add_window(self.home)
+        self.home.set_icon(self.pixbuf_logo)
+        self.home.set_title(__PKG_NAME__)
+        self.home.visible = True
+        self.home.connect('delete-event', lambda *a: self.quit())
+        self.add_about_to_toolbar(self.home.toolbar)
 
         ## load plugins
         for i, (name, plug) in enumerate(self.plugins.items()):
-            if i == 0:
-                bar = self.root.toolbar
-                bar.s_PLUGINS = Gtk.SeparatorToolItem()
-                p = bar.get_item_index(bar.s_END)
-                bar.insert(bar.s_PLUGINS, p)
-
             try:
                 if plug.plugin_main(self, PWD):
                     print("plugin:", name, file=sys.stderr)
             except Exception as e:
-                print(e, file=sys.stderr)
+                traceback.print_exception(*sys.exc_info())
 
         ## system tray
         rc.preferences['show-on-system-tray'] *= not self.argv.notray
@@ -87,38 +83,38 @@ class App(Gtk.Application):
         rc.preferences['show-on-taskbar'] *= self.argv.notaskbar
         if rc.preferences['show-on-system-tray']:
             if rc.preferences['show-on-taskbar']:
-                self.root.set_skip_taskbar_hint(True)
+                self.home.set_skip_taskbar_hint(True)
         else:
             print("ignoring: --notaskbar")
 
         ## root.history
         rc.preferences['enable-history-file'] *= not self.argv.nohistfile
         if rc.preferences['enable-history-file']:
-            self.root.search_entry.HISTORY += open(
+            self.home.search_entry.HISTORY += open(
                 os.path.expanduser(config.FILE_HIST),
                 encoding = "UTF-8"
             ).read().splitlines()
-            self.root.search_entry.CURRENT  = len(self.root.search_entry.HISTORY)
+            self.home.search_entry.CURRENT  = len(self.home.search_entry.HISTORY)
 
 
     def insert_plugin_item_on_toolbar(self, widget):
-        bar = self.root.toolbar
+        bar = self.home.toolbar
         if hasattr(bar, "s_PLUGINS"):
             i = bar.get_item_index(bar.s_PLUGINS)
         else:
             bar.s_PLUGINS = Gtk.SeparatorToolItem()
-            p = bar.get_item_index(bar.s_END)
-            bar.insert(bar.s_PLUGINS, p)
-            i = b + 1
+            i = bar.get_item_index(bar.s_END)
+            bar.insert(bar.s_PLUGINS, i)
+            bar.s_PLUGINS.show()
 
         bar.insert(widget, i+1)
 
 
     def on_activate(self, *args):
-        self.root.show_all()
-        self.root.parse_geometry(self.root.rc.gui['geometry'])
-        self.root.present()
-        self.root.grab_focus()
+        self.home.show_all()
+        self.home.parse_geometry(self.home.rc.gui['geometry'])
+        self.home.present()
+        self.home.grab_focus()
 
 
     def on_shutdown(self, app_obj):
@@ -126,7 +122,7 @@ class App(Gtk.Application):
         if rc.preferences['enable-history-file']:
             print("shutdown: update history")
             app_obj.hist_fp = open(os.path.expanduser(config.FILE_HIST), mode='w')
-            # print('\n'.join(self.root.search_entry.HISTORY))
+            # print('\n'.join(self.home.search_entry.HISTORY))
             app_obj.hist_fp.write('\n'.join(app_obj.root.search_entry.HISTORY))
             app_obj.hist_fp.close()
         app_obj.quit()
@@ -154,7 +150,7 @@ class App(Gtk.Application):
 
 
     def about_dialog(self, widget):
-        self.about = Gtk.AboutDialog(title="anubad", parent=self.root)
+        self.about = Gtk.AboutDialog(title="anubad", parent=self.home)
         self.about.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
         self.about.set_logo(self.pixbuf_logo)
         self.about.set_program_name(__PKG_NAME__)
@@ -165,13 +161,6 @@ class App(Gtk.Application):
         self.about.set_license(open(PWD + '../LICENSE').read())
         self.about.run()
         self.about.destroy()
-
-
-    def signal_action(self, signal):
-        if   signal is  1: print("Caught signal SIGHUP(1)")
-        elif signal is  2: print("Caught signal SIGINT(2)")
-        elif signal is 15: print("Caught signal SIGTERM(15)")
-        self.quit()
 
 
 class TrayIcon(Gtk.StatusIcon):
@@ -223,11 +212,6 @@ class TrayIcon(Gtk.StatusIcon):
 
 
 def argparser():
-    """
-    anubad [OPTIONS] [SOURCE]:[TARGETS] [TEXT]
-    $ anubad en:np test
-    $ anubad :np test
-    """
     parser = argparse.ArgumentParser(description="anubad")
     parser.add_argument(
         "--noplugins",
@@ -257,15 +241,9 @@ def argparser():
     return argv
 
 
-def main():
-    argv = argparser()
-    return App(argv)
-
-
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    app = main()
-    exit_status = app.run(None) #sys.argv)
-    # app.run(None)
+    app = App()
+    exit_status = app.run(sys.argv)
     print("exit_status:", exit_status)
     exit(exit_status)

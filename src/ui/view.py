@@ -313,19 +313,16 @@ class Display(Gtk.Overlay):
     #     self.textview.add_child_at_anchor(link, anchor)
 
 
-def root_binds(widget, event):
-    # print(event.keyval)
-    if event.keyval == 65307:
-        Gtk.main_quit()
-
-
 def sample():
     filepath = os.path.abspath(__file__)
     PWD = os.path.dirname(filepath) + '/../'
 
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
-    root.connect('key_release_event', root_binds)
+    root.connect( # quit when Esc is pressed
+        'key_release_event',
+        lambda w, e: Gtk.main_quit() if e.keyval == 65307 else None
+    )
     root.set_default_size(500, 300)
 
     obj = Display(root, PWD)
@@ -337,7 +334,7 @@ def sample():
 
 
 if __name__ == '__main__':
-    root = sample()
+    sample()
 
     import doctest
     doctest.testmod()

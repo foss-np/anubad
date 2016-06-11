@@ -64,16 +64,13 @@ class Bar(Gtk.VBox):
         return scroll
 
 
-def root_binds(widget, event):
-    # print(event.keyval)
-    if event.keyval == 65307:
-        Gtk.main_quit()
-
-
 def sample():
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
-    root.connect('key_release_event', root_binds)
+    root.connect( # quit when Esc is pressed
+        'key_release_event',
+        lambda w, e: Gtk.main_quit() if e.keyval == 65307 else None
+    )
     root.set_default_size(300, 200)
 
     sidebar = Bar(root)
@@ -81,6 +78,7 @@ def sample():
     root.show_all()
     return root
 
+
 if __name__ == '__main__':
-    root = sample()
+    sample()
     Gtk.main()

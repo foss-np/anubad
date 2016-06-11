@@ -64,16 +64,11 @@ def circle(iterable):
 class Home(Gtk.Window):
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    def __init__(self, core, rc, app=None):
-        Gtk.Window.__init__(
-            self,
-            type=Gtk.WindowType.TOPLEVEL,
-            application=app
-        )
+    def __init__(self, core, rc):
+        Gtk.Window.__init__(self)
 
         self.core = core
         self.rc   = rc
-        self.app  = app
 
         self.fonts = {
             'viewer': Pango.font_description_from_string(rc.fonts['viewer']),
@@ -111,11 +106,13 @@ class Home(Gtk.Window):
         self.set_position(Gtk.WindowPosition.CENTER)
 
 
-    def turn_off_auto_copy(func):
-        """DECORATOR FUNC to turn off copy mode"""
+    def track_progress_activity(func):
+        """DECORATOR FUNC to track progress"""
         def wrapper(self, *args, **kwargs):
-            self.toolbar.t_COPY.set_active(False)
-            return func(self, *args, **kwargs)
+            self.search_entry.progress_pulse()
+            func_return = func(self, *args, **kwargs)
+            self.search_entry.set_progress_fraction(1)
+            return func_return
         return wrapper
 
 
@@ -140,6 +137,7 @@ class Home(Gtk.Window):
 
         self.relations = self.makeWidgets_relations()
         self.layout.attach(self.relations, left=0, top=5, width=5, height=2)
+        self.layout.show_all()
 
 
     def makeWidgets_toolbar(self):
@@ -514,35 +512,6 @@ class Home(Gtk.Window):
         self.view_current.add(meta)
 
 
-    @turn_off_auto_copy
-    def _open_src(self):
-        treeSelection = self.sidebar.treeview.get_selection()
-        model, pathlst = treeSelection.get_selected_rows()
-
-        if len(pathlst) == 0:
-            path  = self.rc.glossary_list['foss']['pairs'][0]
-            gloss = self.core.Glossary.instances[path]
-            src   = path + 'main.tra'
-            line  = gloss.counter
-        else:
-            word, ID, src, parsed_info  = self.sidebar.get_suggestion(pathlst[0])
-            # print(row, file=fp6)
-
-            ## handel invert map
-            if type(ID) == int: line = ID
-            else: # else tuple
-                try:
-                    i = self.clips.index(self.copy_buffer)
-                    # print(i, file=fp6)
-                    # print(ID, i)
-                    line = ID[i]
-                except ValueError:
-                    line = None
-
-        cmd = self.rc.editor_goto_line_uri(src, line)
-        print("pid:", src, Popen(cmd).pid, file=fp5)
-
-
     def _circular_search(self, diff):
         if not self.clips_circle:
             self.search_entry.grab_focus()
@@ -623,7 +592,7 @@ class Home(Gtk.Window):
 
     def on_key_release(self, widget, event):
         # NOTE to stop propagation of signal return True
-        if   event.keyval == 65474: self.core.load_from_config(self.rc) # F5
+        if   event.keyval == 65474: core.load_from_config(self.rc) # F5
         # NOTE: ^^^^ this does'nt reload the hashtags to entry
         elif Gdk.ModifierType.CONTROL_MASK & event.state:
             if   event.keyval == ord('l'): self.viewer_clean()
@@ -636,26 +605,24 @@ class Home(Gtk.Window):
                 self.search_entry.set_text(clip)
                 self.search_and_reflect(clip)
         elif Gdk.ModifierType.MOD1_MASK & event.state:
-            if   event.keyval == ord('e'): self._open_src()
-            elif event.keyval == 65361: self._jump_history(-1) # Left-arrow
+            if event.keyval == 65361: self._jump_history(-1) # Left-arrow
             elif event.keyval == 65363: self._jump_history(+1) # Right-arrow
 
 
-def main(core, rc, app=None):
+def main(core, rc):
     core.fp3 = fp5
     core.fp4 = fp6
-    core.load_from_config(rc)
 
-    root = Home(core, rc, app)
-    root.show_all()
-    return root
+    win = Home(core, rc)
+    win.show_all()
+    return win
 
 
 if __name__ == '__main__':
     import core
-
     import config
     rc = config.main(PWD)
+    core.load_from_config(rc)
 
     root = main(core, rc)
     root.connect('delete-event', Gtk.main_quit)

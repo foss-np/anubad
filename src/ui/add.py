@@ -120,9 +120,9 @@ class Add(Gtk.Window):
 
 
 def sample():
-    root = Add()
-    root.show_all()
-    return root
+    win = Add()
+    win.show_all()
+    return win
 
 
 if __name__ == '__main__':

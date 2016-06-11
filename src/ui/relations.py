@@ -6,6 +6,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 
+
 class Relatives(Gtk.Expander):
     types = (
         '    Synonyms    ', #SPACE HACK for width
@@ -23,6 +24,7 @@ class Relatives(Gtk.Expander):
         'Parts', #Meronyms
     )
     pages = {}
+
     def __init__(self, parent=None):
         Gtk.Expander.__init__(self)
         self.parent = parent
@@ -31,6 +33,7 @@ class Relatives(Gtk.Expander):
         self.set_label("Relatives")
         self.set_expanded(True)
         self.show_all()
+
 
     def makeWidgets(self):
         self.notebook = Gtk.Notebook()
@@ -62,19 +65,13 @@ class Relatives(Gtk.Expander):
             Relatives.pages[text.strip()] = obj
 
 
-def root_binds(widget, event):
-    # print(event.keyval)
-    if event.keyval == 65307:
-        Gtk.main_quit()
-
-
 def sample():
-    global clipboard
-    clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-
     root = Gtk.Window()
     root.connect('delete-event', Gtk.main_quit)
-    root.connect('key_release_event', root_binds)
+    root.connect( # quit when Esc is pressed
+        'key_release_event',
+        lambda w, e: Gtk.main_quit() if e.keyval == 65307 else None
+    )
     root.set_default_size(500, 300)
 
     root.layout = Gtk.VBox(root)
@@ -88,5 +85,5 @@ def sample():
 
 
 if __name__ == '__main__':
-    root = sample()
+    sample()
     Gtk.main()

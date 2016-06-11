@@ -106,12 +106,12 @@ class adaptor:
 
 
 def plugin_main(app, fullpath):
-    path = app.root.rc.glossary_list['foss']['pairs'][0]
-    gloss = app.root.core.Glossary.instances[path]
+    path = app.home.rc.glossary_list['foss']['pairs'][0]
+    gloss = app.home.core.Glossary.instances[path]
     liststore, ulta = gloss['numbers.tra']
 
     n2w = adaptor(liststore, path + 'numbers.tra')
-    app.root.engines.append((lambda q: q.isdigit(), n2w.gui_reflect))
+    app.home.engines.append((lambda q: q.isdigit(), n2w.gui_reflect))
     return True
 
 

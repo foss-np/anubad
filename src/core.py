@@ -3,7 +3,7 @@
 import os, sys
 from collections import OrderedDict
 
-fp3 = fp4 = sys.stderr
+fp3 = fp4 = open(os.devnull, 'w')
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
 pos_map = {
     'n'    : "noun",
@@ -278,6 +278,8 @@ def load_from_config(rc):
 
 
 if __name__ == '__main__':
+    fp3 = fp4 = sys.stderr
+
     import config
     rc = config.main()
 
