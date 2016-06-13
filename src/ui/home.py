@@ -67,9 +67,8 @@ class Home(Gtk.Window):
     def __init__(self, core, rc):
         Gtk.Window.__init__(self)
 
-        self.core = core
-        self.rc   = rc
-
+        self.core  = core
+        self.tray  = rc.preferences['show-on-system-tray']
         self.fonts = {
             'viewer': Pango.font_description_from_string(rc.fonts['viewer']),
             'search': Pango.font_description_from_string(rc.fonts['viewer']),
@@ -87,8 +86,8 @@ class Home(Gtk.Window):
         self.copy_buffer = ""
 
         self.engines = [ # not using dict() since we are traversing it
-            (lambda q: q[0] == '#',  core.Glossary.search_hashtag),
-            (lambda q: q[0] == '\\', lambda q: core.Glossary.search(q[1:])),
+            (lambda q: q[0] == '#',  self.core.Glossary.search_hashtag),
+            (lambda q: q[0] == '\\', lambda q: self.core.Glossary.search(q[1:])),
         ]
 
         # accelerators
@@ -564,7 +563,7 @@ class Home(Gtk.Window):
 
 
     def handle_esc(self):
-        if self.rc.preferences['show-on-system-tray']:
+        if self.tray:
             self.hide()
             return
 

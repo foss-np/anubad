@@ -14,7 +14,7 @@ import importlib
 import gi
 gi.require_version('Gtk', '3.0')
 
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk
 from gi.repository import GLib, Gio
 from gi.repository import GdkPixbuf
 
@@ -45,8 +45,7 @@ class TrayIcon(Gtk.StatusIcon):
     def toggle_visibility(self, widget):
         self.visible = not self.visible
         if self.visible:
-            self.app.home.show()
-            self.app.home.parse_geometry(self.app.home.rc.gui['geometry'])
+            self.app.activate()
             return
 
         self.app.home.hide()
@@ -72,68 +71,80 @@ class TrayIcon(Gtk.StatusIcon):
 
 
 class App(Gtk.Application):
-    def __init__(self):
+    def __init__(self, opts):
         Gtk.Application.__init__(
             self,
             application_id = __PKG_ID__,
             flags = Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
         )
 
+        self.opts = opts
         self.home = None
 
 
     def do_startup(self):
-        print("do_startup")
         Gtk.Application.do_startup(self)
 
-        rc = config.main(PWD)
-        parser = create_arg_parser()
-        argv, unknown = parser.parse_known_args()
-        apply_args(rc, argv)
+        self.rc = config.main(PWD)
+        apply_rc_changes(self.rc, self.opts)
 
-        verify_mime(rc)
-        core.load_from_config(rc)
+        verify_mime(self.rc)
+        core.load_from_config(self.rc)
 
-        self.plugins = { k: v for k, v in scan_plugins(rc) }
-
+        self.plugins = { k: v for k, v in scan_plugins(self.rc) }
         self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.png')
-
-        ## Home window
-        self.home = ui.home.main(core, rc)
-        self.add_window(self.home)
-        self.home.set_icon(self.pixbuf_logo)
-        self.home.set_title(__PKG_NAME__)
-        self.home.connect('delete-event', lambda *a: self.quit())
-        self.add_about_to_toolbar(self.home.toolbar)
-
-        load_plugins(self, self.plugins)
-
-        # if rc.preferences['show-on-taskbar']    : self.home.set_skip_taskbar_hint(True)
-        if rc.preferences['show-on-system-tray']: self.tray = TrayIcon(self, rc.preferences['hide-on-startup'])
-        if rc.preferences['enable-history-file']:
-            self.home.search_entry.HISTORY += open(
-                os.path.expanduser(config.FILE_HIST),
-                encoding = "UTF-8"
-            ).read().splitlines()
-            self.home.search_entry.CURRENT = len(self.home.search_entry.HISTORY)
 
 
     def do_activate(self):
+        if self.home == None:
+            self.home = self.create_home_window()
+            load_plugins(self, self.plugins)
+
         self.home.show()
-        self.home.parse_geometry(self.home.rc.gui['geometry'])
+        self.home.parse_geometry(self.rc.gui['geometry'])
         self.home.present()
+
+
+    def do_shutdown(self):
+        if self.home and self.rc.preferences['enable-history-file']:
+            print("shutdown: update history")
+            fp = open(os.path.expanduser(config.FILE_HIST), mode='w+')
+            fp.write('\n'.join(self.home.search_entry.HISTORY))
+            fp.close()
+        self.quit()
 
 
     def do_command_line(self, command_line):
         options = command_line.get_options_dict()
-        arguments = command_line.get_arguments()
-        if len(arguments) <= 1:
+        argv = command_line.get_arguments()
+        if len(argv) == 0:
             self.activate()
             return 0
 
-        if   "exit" == arguments[1]: self.quit()
-        elif "quit" == arguments[1]: self.quit()
         return 0
+
+
+    def create_home_window(self):
+        home = ui.home.main(core, self.rc)
+        self.add_window(home)
+        home.set_icon(self.pixbuf_logo)
+        home.set_title(__PKG_NAME__)
+        home.connect('delete-event', lambda *a: self.quit())
+
+        self.add_about_to_toolbar(home.toolbar)
+        home.engines.append((lambda q: q[0] == '>', self.commander.gui_adaptor))
+
+        if self.rc.preferences['show-on-taskbar']    : home.set_skip_taskbar_hint(True)
+        if self.rc.preferences['show-on-system-tray']:
+            self.tray = TrayIcon(self)
+        if self.rc.preferences['enable-history-file']:
+            home.search_entry.HISTORY += open(
+                os.path.expanduser(config.FILE_HIST),
+                encoding = "UTF-8"
+            ).read().splitlines()
+            home.search_entry.CURRENT = len(home.search_entry.HISTORY)
+
+        return home
 
 
     def insert_plugin_item_on_toolbar(self, widget):
@@ -179,12 +190,12 @@ def verify_mime(rc):
         rc.apps[name] = desktopAppInfo.get_executable()
 
 
-def apply_args(rc, argv):
-    rc.preferences['enable-plugins']      *= not argv.noplugins
-    rc.preferences['show-on-system-tray'] *= not argv.notray
-    rc.preferences['enable-history-file'] *= not argv.nohistfile
+def apply_rc_changes(rc, opts):
+    rc.preferences['enable-plugins']      *= not opts.noplugins
+    rc.preferences['show-on-system-tray'] *= not opts.notray
+    rc.preferences['enable-history-file'] *= not opts.nohistfile
     if rc.preferences['show-on-system-tray']:
-        rc.preferences['show-on-taskbar'] *= argv.notaskbar
+        rc.preferences['show-on-taskbar'] *= opts.notaskbar
 
 
 def scan_plugins(rc):
@@ -241,5 +252,7 @@ def create_arg_parser():
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    app = App()
-    app.run(sys.argv)
+    parser = create_arg_parser()
+    opts, unknown = parser.parse_known_args()
+    app = App(opts)
+    app.run(unknown)

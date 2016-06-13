@@ -38,7 +38,7 @@ def plugin_open_src(app):
         model, pathlst = treeSelection.get_selected_rows()
 
         if len(pathlst) == 0:
-            path  = app.home.rc.glossary_list['foss']['pairs'][0]
+            path  = app.rc.glossary_list['foss']['pairs'][0]
             gloss = app.home.core.Glossary.instances[path]
             src   = path + 'main.tra'
             line  = gloss.counter
@@ -58,7 +58,7 @@ def plugin_open_src(app):
                 except ValueError:
                     line = None
 
-        cmd = app.home.rc.editor_goto_line_uri(src, line)
+        cmd = app.rc.editor_goto_line_uri(src, line)
         print("pid:", src, Popen(cmd).pid)
 
     def _on_key_release(widget, event):
@@ -104,62 +104,6 @@ def engine_dump(home, query):
     home.viewer.insert_at_cursor(output)
 
 
-def file_opener(app, args):
-    if len(args) < 2:
-        output  = "Accessable files\n\t$"
-        output += '\n\t$'.join(attr for attr in dir(config) if attr.startswith("FILE"))
-        return output
-
-    if args[1].startswith('$'):
-        arg1 = args[1].strip('$')
-        if hasattr(config, arg1):
-            var = getattr(config, arg1)
-        else:
-            return "'%s' undefined variable"%args[1]
-    else: var = ''.join(args[1:])
-
-    path = os.path.expanduser(var)
-    if os.path.isfile(path):
-        return str(Popen(app.home.rc.editor_goto_line_uri(path)))
-
-    return "'%s' file not found"%path
-
-def stats(app, *a):
-    output = ""
-    for path, instance in app.home.core.Glossary.instances.items():
-        output += "%s : %d \n"%(path, instance.counter)
-    return output
-
-
-commands = {
-    'history'      : (lambda app, *a: '\n'.join(app.home.search_entry.HISTORY)),
-    'edit'         : file_opener,
-    'count'        : (lambda app, *a: "not implemented"),
-    'stats'        : stats,
-    'gloss'        : (lambda app, *a: "not implemented"),
-}
-
-def engine_cmd(app, query):
-    cmd = query.split()
-    if len(cmd) == 0: return
-
-    for key, func in commands.items():
-        if key == cmd[0]:
-            output = func(app, cmd)
-            break
-    else:
-        output  = "'%s' is not a valid command,\n"%cmd[0]
-        output += "avaliable commands\n\t"
-        output += '\n\t'.join(commands)
-
-    begin = app.home.viewer.textbuffer.get_start_iter()
-    app.home.viewer.textbuffer.place_cursor(begin)
-    app.home.viewer.insert_at_cursor("\n")
-    app.home.viewer.insert_at_cursor(output)
-    app.home.search_entry.set_text("> ")
-    app.home.search_entry.set_position(2)
-
-
 def engine_python(app, query):
     # try:
     #     if not hasattr(app.home, query):
@@ -179,6 +123,5 @@ def plugin_main(app, fullpath):
     plugin_open_src(app)
     app.home.engines.append((lambda q: q[0] == '$', lambda q: engine_shell(app.home, q[1:].strip())))
     app.home.engines.append((lambda q: q.startswith('>>>'), lambda q: engine_python(app, q[3:].strip())))
-    app.home.engines.append((lambda q: q[0] == '>', lambda q: engine_cmd(app, q[1:].strip())))
     app.home.engines.append((lambda q: q.startswith('d:'), lambda q: engine_dump(app.home, q[2:].strip())))
     return True
