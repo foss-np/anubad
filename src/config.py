@@ -80,6 +80,7 @@ class RC(configparser.ConfigParser):
             'use-system-defaults' : pref.getboolean('use-system-defaults', True),
             'remember-gui-state'  : pref.getboolean('remember-gui-state', False),
             'show-on-taskbar'     : pref.getboolean('show-on-taskbar', True),
+            'hide-on-startup'     : pref.getboolean('hide-on-startup', True),
             'enable-plugins'      : pref.getboolean('enable-plugins', True),
             'append-at-end'       : pref.getboolean('append-at-end', False),
             'regex-search'        : pref.getboolean('regex-search', True),

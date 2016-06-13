@@ -99,6 +99,7 @@ class App(Gtk.Application):
         if self.home == None:
             self.home = self.create_home_window()
             load_plugins(self, self.plugins)
+            if self.rc.preferences['hide-on-startup']: return
 
         self.home.show()
         self.home.parse_geometry(self.rc.gui['geometry'])
@@ -136,7 +137,7 @@ class App(Gtk.Application):
 
         if self.rc.preferences['show-on-taskbar']    : home.set_skip_taskbar_hint(True)
         if self.rc.preferences['show-on-system-tray']:
-            self.tray = TrayIcon(self)
+            self.tray = TrayIcon(self, self.rc.preferences['hide-on-startup'])
         if self.rc.preferences['enable-history-file']:
             home.search_entry.HISTORY += open(
                 os.path.expanduser(config.FILE_HIST),
@@ -192,6 +193,7 @@ def verify_mime(rc):
 
 def apply_rc_changes(rc, opts):
     rc.preferences['enable-plugins']      *= not opts.noplugins
+    rc.preferences['hide-on-startup']      = opts.hide
     rc.preferences['show-on-system-tray'] *= not opts.notray
     rc.preferences['enable-history-file'] *= not opts.nohistfile
     if rc.preferences['show-on-system-tray']:
@@ -228,6 +230,12 @@ def create_arg_parser():
         action  = "store_true",
         default = False,
         help    = "Disable plugins loading")
+
+    parser.add_argument(
+        "--hide",
+        action  = "store_true",
+        default = False,
+        help    = "Hide on startup")
 
     parser.add_argument(
         "--notray",
