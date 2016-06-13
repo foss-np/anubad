@@ -12,7 +12,6 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 
 from collections import OrderedDict
-from subprocess import Popen
 
 import ui.preferences
 import ui.sidebar
@@ -103,16 +102,6 @@ class Home(Gtk.Window):
         # gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.WATCH))
         self.set_default_size(600, 550)
         self.set_position(Gtk.WindowPosition.CENTER)
-
-
-    def track_progress_activity(func):
-        """DECORATOR FUNC to track progress"""
-        def wrapper(self, *args, **kwargs):
-            self.search_entry.progress_pulse()
-            func_return = func(self, *args, **kwargs)
-            self.search_entry.set_progress_fraction(1)
-            return func_return
-        return wrapper
 
 
     def _on_focus_out_event(self):
@@ -239,14 +228,14 @@ class Home(Gtk.Window):
         ### Search Entry Conf
         self.search_entry.set_tooltip_markup(tool_tip)
         self.search_entry.set_max_length(32)
+        self.search_entry.set_progress_pulse_step(0.4)
         self.search_entry.HISTORY = []
         self.search_entry.CURRENT = 0
 
         ### liststore
-        liststore = Gtk.ListStore(str, str)
-        # NOTE: second variable to do the split match, and optimization
+        liststore = Gtk.ListStore(str)
         for item in sorted(self.core.Glossary.hashtag):
-            liststore.append([item, item.replace('.', '#')])
+            liststore.append([item])
 
         ### EntryComplete
         entrycompletion = Gtk.EntryCompletion()
@@ -260,8 +249,8 @@ class Home(Gtk.Window):
 
         def _match_func(gobj_completion, query, treeiter, liststore):
             if not query[0] == '#': return False
-            model = entrycompletion.get_model()[treeiter][1]
-            return query in model
+            c1 = entrycompletion.get_model()[treeiter][0]
+            return query[1:] in c1
 
         entrycompletion.set_match_func(_match_func, liststore)
 
@@ -283,7 +272,9 @@ class Home(Gtk.Window):
                 elif event.keyval == 65366: return self.search_entry_nav_history(+1) # Pg-Dn
                 elif event.keyval == ord('p'): return self.search_entry_nav_history(-1)
                 elif event.keyval == ord('n'): return self.search_entry_nav_history(+1)
-                elif event.keyval == ord('c'): widget.set_text("")
+                elif event.keyval == ord('c'):
+                    if not widget.get_selection_bounds(): widget.set_text("")
+                    else: self.toolbar.t_COPY.set_active(False)
                 elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
                 elif event.keyval == ord('e'): widget.set_position(-1)
                 elif event.keyval == ord('a'):
@@ -313,6 +304,7 @@ class Home(Gtk.Window):
         if i >= length: return True
         if i == -1: return True
         self.search_entry.set_text(self.search_entry.HISTORY[i])
+        self.search_entry.set_position(-1)
         self.search_entry.CURRENT = i
         return True
 
@@ -546,7 +538,7 @@ class Home(Gtk.Window):
         dialog.props.text = 'Are you sure you want to quit?'
         def on_key_release(widget, event):
             if Gdk.ModifierType.CONTROL_MASK & event.state:
-                if event.keyval == ord('q'):
+                if event.keyval in (ord('q'), ord('Q'),  ord('c'), ord('C')):
                     dialog.destroy()
                     self.destroy()
                     Gtk.main_quit()
@@ -572,11 +564,17 @@ class Home(Gtk.Window):
 
     def on_key_press(self, widget, event):
         # NOTE to stop propagation of signal return True
-        if   Gdk.ModifierType.SHIFT_MASK & event.state:
+        if  Gdk.ModifierType.CONTROL_MASK & event.state:
+            if event.keyval == 65379: # Insert
+                if    self.viewer.textbuffer.get_selection_bounds(): self.toolbar.t_COPY.set_active(False)
+                elif  self.search_entry.get_selection_bounds()     : self.toolbar.t_COPY.set_active(False)
+                else: self._circular_search(+1)
+            elif event.keyval == ord('b'): self._circular_search(+1)
+            elif event.keyval == ord('B'): self._circular_search(-1)
+            return
+        elif Gdk.ModifierType.SHIFT_MASK & event.state:
             if   event.keyval == 65365: self._circular_search(-1); return True # Pg-Up
             elif event.keyval == 65366: self._circular_search(+1); return True # Pg-Dn
-        elif Gdk.ModifierType.CONTROL_MASK & event.state:
-            if   event.keyval == 65379: self._circular_search(+1); return # Insert
         elif event.keyval == 65307: return self.handle_esc() # Esc
         elif event.keyval == 65365: self.viewer.textview.grab_focus(); return # Pg-Up
         elif event.keyval == 65366: self.viewer.textview.grab_focus(); return # Pg-Dn
@@ -591,12 +589,15 @@ class Home(Gtk.Window):
 
     def on_key_release(self, widget, event):
         # NOTE to stop propagation of signal return True
-        if   event.keyval == 65474: core.load_from_config(self.rc) # F5
+        if   event.keyval == 65474: self.core.Glossary.reload() # F5
+        # TODO: exception handeling
         # NOTE: ^^^^ this does'nt reload the hashtags to entry
         elif Gdk.ModifierType.CONTROL_MASK & event.state:
             if   event.keyval == ord('l'): self.viewer_clean()
             elif event.keyval == ord('q'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
             elif event.keyval == ord('Q'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
+            elif event.keyval == ord('x'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
+            elif event.keyval == ord('X'): self.emit("delete-event", Gdk.Event.new(Gdk.EventType.DELETE))
             elif event.keyval == ord('g'): # grab clipboard
                 clip = __class__.clipboard.wait_for_text()
                 if clip is None: return

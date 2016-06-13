@@ -221,6 +221,13 @@ class Glossary(dict):
 
 
     @staticmethod
+    def reload():
+        for path, instance in __class__.instances.items():
+            del instance
+            Glossary(path)
+
+
+    @staticmethod
     def search_hashtag(query):
         FUZZ = dict()
         for path, instance in __class__.instances.items():
@@ -256,7 +263,6 @@ class Glossary(dict):
 
 
 def load_from_config(rc):
-    Glossary.instances.clear()
     for gloss in sorted(rc.glossary_list.values(), key=lambda v: v['priority']):
         # while loop for reloading
         n = 0
