@@ -109,6 +109,26 @@ class Home(Gtk.Window):
             __class__.clipboard.set_text(self.copy_buffer, -1)
 
 
+    def engine_default(self, query):
+        ## Ordered Dict use for undo/redo history
+        results = OrderedDict()
+        for q in query.split():
+            word = q.lower()
+            for history in self.cache:
+                if word in history.keys():
+                    print("cache: hit", word, file=fp3)
+                    results[word] = history[word]
+                    continue
+
+            results[word] = self.core.Glossary.search(word)
+
+        self.cache.append(results)
+        self.cache_cursor = len(self.cache) - 1
+        self.toolbar.bm_BACKWARD.set_sensitive(True)
+        self.toolbar.b_FORWARD.set_sensitive(False)
+        return results
+
+
     def makeWidgets(self):
         self.layout = Gtk.Grid()
         self.add(self.layout)
@@ -416,33 +436,28 @@ class Home(Gtk.Window):
         self.search_entry.HISTORY.append(query)
         self.search_entry.CURRENT = len(self.search_entry.HISTORY)
 
-        # choosing alternative engines
+        # choosing engines
+        engine = self.engine_default
         for test, func in self.engines:
             if test(query):
-                print("engine called", file=fp3)
-                output = func(query)
-                if not output: return
-                self._view_results({ query: output })
-                return
+                engine = func
+                break
 
-        ## Ordered Dict use for undo/redo history
-        results = OrderedDict()
-        for q in query.split():
-            word = q.lower()
-            for history in self.cache:
-                if word in history.keys():
-                    print("cache: hit", word, file=fp3)
-                    results[word] = history[word]
-                    continue
 
-            results[word] = self.core.Glossary.search(word)
+        self.fit_output(engine(query))
 
-        self._view_results(results)
 
-        self.cache.append(results)
-        self.cache_cursor = len(self.cache) - 1
-        self.toolbar.bm_BACKWARD.set_sensitive(True)
-        self.toolbar.b_FORWARD.set_sensitive(False)
+    def fit_output(self, query, output):
+        if type(output) == tuple: return self._view_results({ query: output })
+        if type(output) == str:
+            begin = self.viewer.textbuffer.get_start_iter()
+            self.viewer.textbuffer.place_cursor(begin)
+            self.viewer.insert_at_cursor("\n")
+            if output == '': self.viewer.not_found(query)
+            else: self.viewer.insert_at_cursor(output)
+            return
+
+        self._view_results(output)
 
 
     @treeview_signal_safe_toggler

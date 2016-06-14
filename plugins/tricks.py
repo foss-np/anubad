@@ -70,17 +70,10 @@ def plugin_open_src(app):
 
 def engine_shell(home, query):
     # TODO handle error, exit != 0
-    output = check_output(query.split(), universal_newlines=True)
-    begin = home.viewer.textbuffer.get_start_iter()
-    home.viewer.textbuffer.place_cursor(begin)
-    home.viewer.insert_at_cursor("\n")
-    if output == '':
-        home.viewer.not_found(query, "nothing in stdout")
-        return
-
     home.search_entry.set_text("$ ")
     home.search_entry.set_position(2)
-    home.viewer.insert_at_cursor(output)
+    return check_output(query.split(), universal_newlines=True)
+
 
 
 def engine_dump(home, query):
@@ -94,34 +87,22 @@ def engine_dump(home, query):
             for element in ID:
                 output += linecache.getline(src, element)
 
-    begin = home.viewer.textbuffer.get_start_iter()
-    home.viewer.textbuffer.place_cursor(begin)
-    home.viewer.insert_at_cursor("\n")
-    if output == '':
-        home.viewer.not_found(query)
-        return
-
-    home.viewer.insert_at_cursor(output)
-
+    return output
 
 def engine_python(app, query):
     # try:
     #     if not hasattr(app.home, query):
     #         output = "doesn't have anything like that"
     # except
-    output = "python engine not implemented"
-    begin = app.home.viewer.textbuffer.get_start_iter()
-    app.home.viewer.textbuffer.place_cursor(begin)
-    app.home.viewer.insert_at_cursor("\n")
-    app.home.viewer.insert_at_cursor(output)
     app.home.search_entry.set_text(">>> ")
     app.home.search_entry.set_position(4)
+    return "python engine not implemented"
 
 
 def plugin_main(app, fullpath):
     plugin_open_dir(app)
     plugin_open_src(app)
+    app.home.engines.insert(0, ((lambda q: q.startswith('>>>'), lambda q: engine_python(app, q[3:].strip()))))
     app.home.engines.append((lambda q: q[0] == '$', lambda q: engine_shell(app.home, q[1:].strip())))
-    app.home.engines.append((lambda q: q.startswith('>>>'), lambda q: engine_python(app, q[3:].strip())))
     app.home.engines.append((lambda q: q.startswith('d:'), lambda q: engine_dump(app.home, q[2:].strip())))
     return True
