@@ -18,7 +18,7 @@ class Settings(Gtk.Window):
         return cls.__instance__
 
 
-    def singleton_init(self, rc, parent=None):
+    def singleton_init(self, cnf, parent=None):
         Gtk.Window.__init__(
             self,
             # parent=parent, # creates the warning
@@ -27,7 +27,7 @@ class Settings(Gtk.Window):
         )
 
         self.parent = parent
-        self.rc = rc
+        self.cnf = cnf
 
         self.set_transient_for(parent)
 
@@ -52,7 +52,7 @@ class Settings(Gtk.Window):
 
         self.font_button = Gtk.FontButton()
         layout.attach(self.font_button, left=1, top=1, width=1, height=1)
-        self.font_button.set_font_name(self.rc.fonts['viewer'])
+        self.font_button.set_font_name(self.cnf.fonts['viewer'])
         self.font_button.connect('font-set', self._change_font)
 
         layout.attach(self.makeWidgets_behavious(), left=0, top=2, width=2, height=1)
@@ -73,7 +73,7 @@ class Settings(Gtk.Window):
 
         switch = Gtk.CheckButton(label="use system default")
         layout.add(switch)
-        switch.set_active(self.rc.preferences['use-system-defaults'])
+        switch.set_active(self.cnf.preferences['use-system-defaults'])
         switch.connect("toggled", self.toggle_system_default)
 
         grid = Gtk.Grid()
@@ -83,8 +83,8 @@ class Settings(Gtk.Window):
 
         self.appchooser_widget = []
         self.appchooser_block = grid
-        rc_app = self.rc['apps'] if 'apps' in self.rc.sections() else {}
-        for i, (name, _type) in enumerate(self.rc.MIME_TYPES):
+        cnf_app = self.cnf['apps'] if 'apps' in self.cnf.sections() else {}
+        for i, (name, _type) in enumerate(self.cnf.MIME_TYPES):
             label = Gtk.Label(label=name, xalign=1)
             grid.attach(label, left=0, top=i, width=1, height=1)
 
@@ -94,7 +94,7 @@ class Settings(Gtk.Window):
             chooser.set_heading(name) # heading for show_dialog_item
             chooser.set_show_default_item(True)
 
-            cfg = os.path.basename(rc_app.get(name, ''))
+            cfg = os.path.basename(cnf_app.get(name, ''))
             index = 0
             for n, row in enumerate(chooser.get_model()):
                 desktopAppInfo = row[0]
@@ -105,14 +105,14 @@ class Settings(Gtk.Window):
                     break
 
             chooser.signal = None
-            if not self.rc.preferences['use-system-defaults']:
+            if not self.cnf.preferences['use-system-defaults']:
                 chooser.set_active(index)
                 chooser.signal = chooser.connect("changed", self._chooser_changed)
 
             chooser.selected_item = index
             self.appchooser_widget.append(chooser)
 
-        if self.rc.preferences['use-system-defaults']:
+        if self.cnf.preferences['use-system-defaults']:
             grid.set_sensitive(False)
 
         # print(selected.get_id())
@@ -230,8 +230,8 @@ class Settings(Gtk.Window):
         if event.keyval == 65307: self.on_destroy(event) # Esc
 
 
-def main(rc):
-    win = Settings(rc)
+def main(cnf):
+    win = Settings(cnf)
     win.set_position(Gtk.WindowPosition.CENTER)
     win.show_all()
     return win
@@ -241,10 +241,10 @@ def sample():
     import sys
     sys.path.append(sys.path[0]+'/../')
 
-    import config
+    import setting
     from gi.repository import Pango
 
-    root = main(config.main())
+    root = main(setting.main())
 
     # in isolation testing, make Esc quit Gtk mainloop
     root.on_destroy = Gtk.main_quit

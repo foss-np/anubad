@@ -16,14 +16,13 @@ except:
     from ttk import *
     from ConfigParser import ConfigParser
 
-rc = ConfigParser()
-rc.read(PWD + 'config')
-PATH_GLOSS = os.path.expanduser(rc.get('gloss "foss"', 'path') + 'en2np/')
+cnf = ConfigParser()
+cnf.read(PWD + 'config')
+PATH_GLOSS = os.path.expanduser(cnf.get('gloss "foss"', 'path') + 'en2np/')
+tmp = cnf.get('fonts', 'viewer').split()
+def_FONT = [ ' '.join(tmp[:-1]), tmp[-1] ]
 
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
-
-tmp = rc.get('fonts', 'viewer').split()
-def_FONT = [ ' '.join(tmp[:-1]), tmp[-1] ]
 
 #  ____
 # | __ ) _ __ _____      _____  ___ _ __

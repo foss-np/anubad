@@ -14,7 +14,7 @@ import linecache
 from subprocess import Popen
 from subprocess import check_output
 
-import config
+import setting
 
 def plugin_open_dir(app):
     b_OPEN = Gtk.ToolButton(icon_name=Gtk.STOCK_OPEN)
@@ -23,8 +23,8 @@ def plugin_open_dir(app):
 
     def _browse(*arg):
         app.home.toolbar.t_COPY.set_active(False)
-        path  = home.rc.glossary_list['foss']['pairs'][0]
-        explorer = home.rc.apps['file-manager']
+        path  = app.cnf.glossary_list['foss']['pairs'][0]
+        explorer = app.cnf.apps['file-manager']
         print("pid:", Popen([explorer, path]).pid)
 
     b_OPEN.connect("clicked", _browse)
@@ -38,7 +38,7 @@ def plugin_open_src(app):
         model, pathlst = treeSelection.get_selected_rows()
 
         if len(pathlst) == 0:
-            path  = app.rc.glossary_list['foss']['pairs'][0]
+            path  = app.cnf.glossary_list['foss']['pairs'][0]
             gloss = app.home.core.Glossary.instances[path]
             src   = path + 'main.tra'
             line  = gloss.counter
@@ -58,7 +58,7 @@ def plugin_open_src(app):
                 except ValueError:
                     line = None
 
-        cmd = app.rc.editor_goto_line_uri(src, line)
+        cmd = app.cnf.editor_goto_line_uri(src, line)
         print("pid:", src, Popen(cmd).pid)
 
     def _on_key_release(widget, event):

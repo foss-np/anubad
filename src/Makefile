@@ -21,5 +21,5 @@ mysettings.conf:
 core:
 	./core.py
 
-config-test:
-	./config.py
+setting:
+	./setting.py

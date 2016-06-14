@@ -144,10 +144,11 @@ class Notebook(Gtk.Notebook):
 
 
 class Explorer(Gtk.Window):
-    def __init__(self, rc, parent=None):
+    def __init__(self, core, cnf):
         Gtk.Window.__init__(self, title="Explorer")
         self.parent = parent
-        self.rc = rc
+
+        self.cnf  = cnf
 
         self.track_FONT = set()
 
@@ -191,18 +192,16 @@ class Explorer(Gtk.Window):
         return scroll
 
 
-def main():
-    import config
-    rc = config.main()
+def main(core, cnf):
+    win = Explorer(core, cnf)
 
-    core.load_from_config(rc)
+    import setting
 
     global fonts
-    fonts = {
-        'browser': Pango.font_description_from_string(rc.fonts['viewer'])
-    }
+    cnf = setting.main()
+    core.load_from_config(cnf)
 
-    root = Explorer(rc=rc)
+    root = main(core, cnf)
     return root
 
 

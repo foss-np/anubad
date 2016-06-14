@@ -262,8 +262,8 @@ class Glossary(dict):
         return FULL, FUZZ
 
 
-def load_from_config(rc):
-    for gloss in sorted(rc.glossary_list.values(), key=lambda v: v['priority']):
+def load_from_config(cnf):
+    for gloss in sorted(cnf.glossary_list.values(), key=lambda v: v['priority']):
         # while loop for reloading
         n = 0
         while n < len(gloss['pairs']):
@@ -273,8 +273,8 @@ def load_from_config(rc):
                 print(e)
                 # if not hasattr(e, 'meta_info'):
                 # TODO robustness and show error in gui
-                if not rc.core['gloss-fix']: return
-                cmd = rc.editor_goto_line_uri(*e.meta_info)
+                if not cnf.core['gloss-fix']: return
+                cmd = cnf.editor_goto_line_uri(*e.meta_info)
                 # NOTE: we need something to hang on till we edit
                 ## vvvv DON'T USES Popen vvvv
                 if os.system(' '.join(cmd)): exit()
@@ -286,10 +286,10 @@ def load_from_config(rc):
 if __name__ == '__main__':
     fp3 = fp4 = sys.stderr
 
-    import config
-    rc = config.main()
+    import setting
+    cnf = setting.main()
 
-    load_from_config(rc)
+    load_from_config(cnf)
 
     from pprint import pprint
     pprint(Glossary.search('hello'))

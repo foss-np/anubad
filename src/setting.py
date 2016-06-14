@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-config file parser with with robust error handeling
-"""
+"""Application Settings handler"""
 
 import os
 import configparser
@@ -14,7 +12,7 @@ SIZE_HIST  = 1024
 SIZE_CACHE = 20
 
 
-class RC(configparser.ConfigParser):
+class Settings(configparser.ConfigParser):
     MIME_TYPES = (
         ("file-manager", "inode/directory"),
         ("editor", "text/plain"),
@@ -136,21 +134,21 @@ class RC(configparser.ConfigParser):
 
 
 def main(PWD=""):
-    rc = RC()
-    rc.read(PWD + FILE_CONF_DEFAULTS)
-    rc.read(FILE_CONF)
-    rc.load()
-    return rc
+    cnf = Settings()
+    cnf.read(PWD + FILE_CONF_DEFAULTS)
+    cnf.read(FILE_CONF)
+    cnf.load()
+    return cnf
 
 
 if __name__ == '__main__':
-    rc = main()
+    cnf = main()
     from pprint import pprint
 
-    pprint(rc.apps)
-    pprint(rc.core)
-    pprint(rc.fonts)
-    pprint(rc.gui)
-    pprint(rc.preferences)
+    pprint(cnf.apps)
+    pprint(cnf.core)
+    pprint(cnf.fonts)
+    pprint(cnf.gui)
+    pprint(cnf.preferences)
 
-    pprint(rc.glossary_list)
+    pprint(cnf.glossary_list)

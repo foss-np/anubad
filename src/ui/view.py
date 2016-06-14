@@ -163,7 +163,7 @@ class Display(Gtk.Overlay):
     def _on_clicked(self, event):
         if event.button != 1: return
         if event.type != Gdk.EventType.BUTTON_RELEASE: return
-        cmd = self._parent.rc.editor_goto_line_uri(path, line)
+        cmd = self._parent.cnf.editor_goto_line_uri(path, line)
         print("pid:", path, Popen(cmd).pid)
 
 
@@ -253,7 +253,7 @@ class Display(Gtk.Overlay):
             if event.type == Gdk.EventType.BUTTON_RELEASE: #and event.button == 1:
                 cmd = [
                     'setsid',
-                    self._parent.rc.apps['browser'],
+                    self._parent.cnf.apps['browser'],
                     "https://en.wikipedia.org/wiki/%s"%key
                 ]
                 print("pid:", Popen(cmd).pid)

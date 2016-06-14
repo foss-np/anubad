@@ -18,7 +18,7 @@ from gi.repository import Gtk
 from gi.repository import GLib, Gio
 from gi.repository import GdkPixbuf
 
-import config
+import setting
 import core
 import ui.home
 PWD = ui.home.PWD
@@ -85,13 +85,13 @@ class App(Gtk.Application):
     def do_startup(self):
         Gtk.Application.do_startup(self)
 
-        self.rc = config.main(PWD)
-        apply_rc_changes(self.rc, self.opts)
+        self.cnf = setting.main(PWD)
+        apply_setting_changes(self.cnf, self.opts)
 
-        verify_mime(self.rc)
-        core.load_from_config(self.rc)
+        verify_mime(self.cnf)
+        core.load_from_config(self.cnf)
 
-        self.plugins = { k: v for k, v in scan_plugins(self.rc) }
+        self.plugins = { k: v for k, v in scan_plugins(self.cnf) }
         self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.png')
 
 
@@ -99,17 +99,17 @@ class App(Gtk.Application):
         if self.home == None:
             self.home = self.create_home_window()
             load_plugins(self, self.plugins)
-            if self.rc.preferences['hide-on-startup']: return
+            if self.cnf.preferences['hide-on-startup']: return
 
         self.home.show()
-        self.home.parse_geometry(self.rc.gui['geometry'])
+        self.home.parse_geometry(self.cnf.gui['geometry'])
         self.home.present()
 
 
     def do_shutdown(self):
-        if self.home and self.rc.preferences['enable-history-file']:
+        if self.home and self.cnf.preferences['enable-history-file']:
             print("shutdown: update history")
-            fp = open(os.path.expanduser(config.FILE_HIST), mode='w+')
+            fp = open(os.path.expanduser(setting.FILE_HIST), mode='w+')
             fp.write('\n'.join(self.home.search_entry.HISTORY))
             fp.close()
         self.quit()
@@ -126,7 +126,7 @@ class App(Gtk.Application):
 
 
     def create_home_window(self):
-        home = ui.home.Home(core, self.rc)
+        home = ui.home.Home(core, self.cnf)
         self.add_window(home)
         home.set_icon(self.pixbuf_logo)
         home.set_title(__PKG_NAME__)
@@ -135,12 +135,12 @@ class App(Gtk.Application):
         self.add_about_to_toolbar(home.toolbar)
         home.engines.append((lambda q: q[0] == '>', self.commander.gui_adaptor))
 
-        if self.rc.preferences['show-on-taskbar']    : home.set_skip_taskbar_hint(True)
-        if self.rc.preferences['show-on-system-tray']:
-            self.tray = TrayIcon(self, self.rc.preferences['hide-on-startup'])
-        if self.rc.preferences['enable-history-file']:
+        if self.cnf.preferences['show-on-taskbar']    : home.set_skip_taskbar_hint(True)
+        if self.cnf.preferences['show-on-system-tray']:
+            self.tray = TrayIcon(self, self.cnf.preferences['hide-on-startup'])
+        if self.cnf.preferences['enable-history-file']:
             home.search_entry.HISTORY += open(
-                os.path.expanduser(config.FILE_HIST),
+                os.path.expanduser(setting.FILE_HIST),
                 encoding = "UTF-8"
             ).read().splitlines()
             home.search_entry.CURRENT = len(home.search_entry.HISTORY)
@@ -183,27 +183,27 @@ class App(Gtk.Application):
         bar.b_ABOUT.connect("clicked", about_dialog)
 
 
-def verify_mime(rc):
-    for name, _type in rc.MIME_TYPES:
-        if not rc.preferences['use-system-defaults']:
-            if rc.apps[name]: continue
+def verify_mime(cnf):
+    for name, _type in cnf.MIME_TYPES:
+        if not cnf.preferences['use-system-defaults']:
+            if cnf.apps[name]: continue
         desktopAppInfo = Gio.app_info_get_default_for_type(_type, 0)
-        rc.apps[name] = desktopAppInfo.get_executable()
+        cnf.apps[name] = desktopAppInfo.get_executable()
 
 
-def apply_rc_changes(rc, opts):
-    rc.core['no-thread']                   = opts.nothread
-    rc.preferences['enable-plugins']      *= not opts.noplugins
-    rc.preferences['hide-on-startup']      = opts.hide
-    rc.preferences['show-on-system-tray'] *= not opts.notray
-    rc.preferences['enable-history-file'] *= not opts.nohistfile
-    if rc.preferences['show-on-system-tray']:
-        rc.preferences['show-on-taskbar'] *= opts.notaskbar
+def apply_setting_changes(cnf, opts):
+    cnf.core['no-thread']                   = opts.nothread
+    cnf.preferences['enable-plugins']      *= not opts.noplugins
+    cnf.preferences['hide-on-startup']      = opts.hide
+    cnf.preferences['show-on-system-tray'] *= not opts.notray
+    cnf.preferences['enable-history-file'] *= not opts.nohistfile
+    if cnf.preferences['show-on-system-tray']:
+        cnf.preferences['show-on-taskbar'] *= opts.notaskbar
 
 
-def scan_plugins(rc):
-    if not rc.preferences['enable-plugins']: return
-    path_plugins = PWD + rc.core['plugins']
+def scan_plugins(cnf):
+    if not cnf.preferences['enable-plugins']: return
+    path_plugins = PWD + cnf.core['plugins']
     if not os.path.isdir(path_plugins): return
     if path_plugins == PWD: return
     sys.path.append(path_plugins)

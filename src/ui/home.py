@@ -65,16 +65,16 @@ def circle(iterable):
 class Home(Gtk.Window):
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
-    def __init__(self, core, rc):
+    def __init__(self, core, cnf):
         Gtk.Window.__init__(self)
 
         self.core     = core
-        self.tray     = rc.preferences['show-on-system-tray']
-        self.nothread = rc.core['no-thread']
+        self.tray     = cnf.preferences['show-on-system-tray']
+        self.nothread = cnf.core['no-thread']
 
         self.fonts = {
-            'viewer': Pango.font_description_from_string(rc.fonts['viewer']),
-            'search': Pango.font_description_from_string(rc.fonts['viewer']),
+            'viewer': Pango.font_description_from_string(cnf.fonts['viewer']),
+            'search': Pango.font_description_from_string(cnf.fonts['viewer']),
         }
 
         self.track_FONT = set()
@@ -560,12 +560,6 @@ class Home(Gtk.Window):
         self.copy_buffer = text
 
 
-    def preference(self, widget):
-        s = ui.preferences.Settings(self.rc, parent=self)
-        s.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
-        s.show_all()
-
-
     def on_destroy(self, event, *args):
         """Override the default handler for the delete-event signal"""
         # Show our message dialog
@@ -649,23 +643,23 @@ class Home(Gtk.Window):
             elif event.keyval == 65363: self._jump_history(+1) # Right-arrow
 
 
-def main(core, rc):
+def main(core, cnf):
     core.fp3 = fp5
     core.fp4 = fp6
 
-    win = Home(core, rc)
+    win = Home(core, cnf)
     win.show_all()
     return win
 
 
 def sample():
     import core
-    import config
+    import setting
 
-    rc = config.main(PWD)
-    core.load_from_config(rc)
+    cnf = setting.main(PWD)
+    core.load_from_config(cnf)
 
-    root = main(core, rc)
+    root = main(core, cnf)
     root.connect('delete-event', Gtk.main_quit)
 
     # in isolation testing, make Esc quit Gtk mainloop
