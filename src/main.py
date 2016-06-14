@@ -126,7 +126,7 @@ class App(Gtk.Application):
 
 
     def create_home_window(self):
-        home = ui.home.main(core, self.rc)
+        home = ui.home.Home(core, self.rc)
         self.add_window(home)
         home.set_icon(self.pixbuf_logo)
         home.set_title(__PKG_NAME__)
@@ -192,6 +192,7 @@ def verify_mime(rc):
 
 
 def apply_rc_changes(rc, opts):
+    rc.core['no-thread']                   = opts.nothread
     rc.preferences['enable-plugins']      *= not opts.noplugins
     rc.preferences['hide-on-startup']      = opts.hide
     rc.preferences['show-on-system-tray'] *= not opts.notray
@@ -254,6 +255,12 @@ def create_arg_parser():
         action  = "store_true",
         default = False,
         help    = "Hide from taskbar")
+
+    parser.add_argument(
+        "--nothread",
+        action  = "store_true",
+        default = False,
+        help    = "Don't thread application")
 
     return parser
 

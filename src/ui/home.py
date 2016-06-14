@@ -10,7 +10,9 @@ sys.path.append(PWD)
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
+from gi.repository import GObject
 
+from multiprocessing.pool import ThreadPool
 from collections import OrderedDict
 
 import ui.preferences
@@ -66,8 +68,10 @@ class Home(Gtk.Window):
     def __init__(self, core, rc):
         Gtk.Window.__init__(self)
 
-        self.core  = core
-        self.tray  = rc.preferences['show-on-system-tray']
+        self.core     = core
+        self.tray     = rc.preferences['show-on-system-tray']
+        self.nothread = rc.core['no-thread']
+
         self.fonts = {
             'viewer': Pango.font_description_from_string(rc.fonts['viewer']),
             'search': Pango.font_description_from_string(rc.fonts['viewer']),
@@ -84,6 +88,7 @@ class Home(Gtk.Window):
         self.cache_cursor = 0
         self.copy_buffer = ""
 
+        self.pool = ThreadPool(processes=1)
         self.engines = [ # not using dict() since we are traversing it
             (lambda q: q[0] == '#',  self.core.Glossary.search_hashtag),
             (lambda q: q[0] == '\\', lambda q: self.core.Glossary.search(q[1:])),
@@ -427,6 +432,22 @@ class Home(Gtk.Window):
         return query
 
 
+    def do_search_pulse(self, query, async_ret):
+        """Search Pulse Function
+
+        Executing the Gtk.TextViewer in threading crashes. To avoid
+        crashing remaining segment which make changes in
+        Gtk.TextViewer is moved out of thread and executed after
+        results are ready.
+
+        """
+        self.search_entry.progress_pulse()
+        if not async_ret.ready(): return True
+        self.fit_output(query, async_ret.get())
+        self.search_entry.set_progress_fraction(0)
+        return False
+
+
     def search_and_reflect(self, query=None):
         if query is None:
             query = self.search_entry.get_text()
@@ -443,8 +464,12 @@ class Home(Gtk.Window):
                 engine = func
                 break
 
+        if self.nothread:
+            self.fit_output(query, engine(query))
+            return
 
-        self.fit_output(engine(query))
+        async_ret = self.pool.apply_async(engine, (query,))
+        timeout_id = GObject.timeout_add(400, self.do_search_pulse, query, async_ret)
 
 
     def fit_output(self, query, output):
@@ -633,9 +658,10 @@ def main(core, rc):
     return win
 
 
-if __name__ == '__main__':
+def sample():
     import core
     import config
+
     rc = config.main(PWD)
     core.load_from_config(rc)
 
@@ -644,4 +670,8 @@ if __name__ == '__main__':
 
     # in isolation testing, make Esc quit Gtk mainloop
     root.handle_esc = Gtk.main_quit
+
+
+if __name__ == '__main__':
+    sample()
     Gtk.main()

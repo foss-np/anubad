@@ -67,6 +67,7 @@ class RC(configparser.ConfigParser):
         return {
             'debugly'   : core.get('debugly', ''),
             'plugins'   : core.get('plugins', ''),
+            'no-thread' : core.getboolean('no-thread', False),
             'gloss-fix' : core.getboolean('gloss-fix', False),
         }
 
