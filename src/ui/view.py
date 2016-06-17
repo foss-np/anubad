@@ -334,7 +334,7 @@ def sample():
 
 
 if __name__ == '__main__':
-    sample()
+    root = sample()
 
     import doctest
     doctest.testmod()

@@ -3,7 +3,8 @@
 import os, sys
 from collections import OrderedDict
 
-fp3 = fp4 = open(os.devnull, 'w')
+fp3 = fp4 = sys.stderr
+
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
 pos_map = {
     'n'    : "noun",
@@ -35,7 +36,7 @@ def edit_distance(s1, s2):
 
 class Glossary(dict):
     instances = OrderedDict()
-    hashtag = set() # for auto-complete
+    hashtags = dict() # for auto-complete
 
     def __init__(self, path):
         self.counter = 0
@@ -55,8 +56,9 @@ class Glossary(dict):
             name, dot, ext = _file.rpartition('.')
             if ext not in FILE_TYPES: continue
             src = self.fullpath + _file
-            print("loading: *" + src[-40:], file=fp4)
-            self[_file] = self.load_entries(src)
+            count, *self[_file] = self.load_entries(src)
+            self.counter += count
+            print("loaded: *%s %5d"%(src[-40:], count), file=fp4)
 
 
     def load_entries(self, src):
@@ -92,8 +94,7 @@ class Glossary(dict):
                     raise e
 
                 if pos == '_#':
-                    # if len(val) < 3: print(val, i, parsed_info)
-                    __class__.hashtag.add(val)
+                    __class__.hashtags[val] = __class__.hashtags.get(val, 0) + 1
                     has_hashtag = True
                     continue
 
@@ -117,9 +118,7 @@ class Glossary(dict):
 
             liststore[word] = (i, has_hashtag, parsed_info)
 
-        print(i, file=fp4)
-        self.counter += i
-        return (liststore, invert)
+        return i, liststore, invert
 
 
     @staticmethod
@@ -263,7 +262,7 @@ class Glossary(dict):
 
 
 def load_from_config(cnf):
-    for gloss in sorted(cnf.glossary_list.values(), key=lambda v: v['priority']):
+    for gloss in sorted(cnf.glossary_list, key=lambda v: v['priority']):
         # while loop for reloading
         n = 0
         while n < len(gloss['pairs']):
@@ -284,8 +283,6 @@ def load_from_config(cnf):
 
 
 if __name__ == '__main__':
-    fp3 = fp4 = sys.stderr
-
     import setting
     cnf = setting.main()
 

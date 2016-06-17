@@ -31,7 +31,7 @@ class Settings(configparser.ConfigParser):
 
     def singleton_init(self):
         configparser.ConfigParser.__init__(self)
-        self.glossary_list = dict()
+        self.glossary_list = []
         self.apps,        self['apps']        = dict(), dict()
         self.core,        self['core']        = dict(), dict()
         self.fonts,       self['fonts']       = dict(), dict()
@@ -52,8 +52,8 @@ class Settings(configparser.ConfigParser):
         for section in self.sections():
             if 'gloss' in section:
                 name = section.split('"')[1]
-                obj  = self.extract_gloss(self[section])
-                self.glossary_list[name] = obj
+                obj  = self.extract_gloss(name, self[section])
+                self.glossary_list.append(obj)
 
         self.fonts = self.extract_fonts()
         self.gui = self.extract_gui()
@@ -86,9 +86,10 @@ class Settings(configparser.ConfigParser):
         }
 
 
-    def extract_gloss(self, obj):
+    def extract_gloss(self, name, obj):
         path = obj.get('path')
         return {
+            'name'        : name,
             'pairs'       : [ path + p + '/' for p in obj.get('pairs').split() ],
             'description' : obj.get('description', ''),
             'priority'    : obj.getboolean('priority', 5),

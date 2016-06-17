@@ -3,9 +3,9 @@
 import os, sys
 
 __filepath__ = os.path.abspath(__file__)
-PWD = os.path.dirname(__filepath__) + '/../'
+sys.path.append(os.path.dirname(__filepath__))
 
-sys.path.append(PWD)
+fp3 = fp4 = sys.stderr
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -15,25 +15,9 @@ from gi.repository import GObject
 from multiprocessing.pool import ThreadPool
 from collections import OrderedDict
 
-import ui.preferences
-import ui.sidebar
-import ui.view
-import ui.relations
-
-fp_DEVNULL = open(os.devnull, 'w')
-VERBOSE = int(os.environ.get("VERBOSE", 0))
-for i in range(3, 7):
-    if VERBOSE > 0:
-        print(
-            "VERBOSE: %d fp%d enabled"%(VERBOSE, i),
-            file=sys.stderr
-        )
-        stream = "sys.stderr"
-        VERBOSE -= 1
-    else:
-        stream = "fp_DEVNULL"
-    exec("fp%d = %s"%(i, stream))
-
+import sidebar
+import view
+import relations
 
 def treeview_signal_safe_toggler(func):
     '''Gtk.TreeView() :changed: signal should be disable before new
@@ -89,6 +73,7 @@ class Home(Gtk.Window):
         self.copy_buffer = ""
 
         self.pool = ThreadPool(processes=1)
+
         self.engines = [ # not using dict() since we are traversing it
             (lambda q: q[0] == '#',  self.core.Glossary.search_hashtag),
             (lambda q: q[0] == '\\', lambda q: self.core.Glossary.search(q[1:])),
@@ -100,7 +85,6 @@ class Home(Gtk.Window):
         self.connect('key_release_event', self.on_key_release)
         self.connect('focus-in-event', lambda *e: self.search_entry.grab_focus())
         self.connect('focus-out-event', lambda *e: self._on_focus_out_event())
-        self.connect('delete-event', self.on_destroy)
 
         self.search_entry.grab_focus()
         # gdk_window = self.get_root_window()
@@ -191,13 +175,6 @@ class Home(Gtk.Window):
         bar.b_ADD.set_tooltip_markup("Add new word to Glossary, <u>Ctrl+i</u>")
         ##
         #
-        ##  Preference
-        bar.b_PREFERENCE = Gtk.ToolButton(icon_name=Gtk.STOCK_PREFERENCES)
-        bar.add(bar.b_PREFERENCE)
-        bar.b_PREFERENCE.connect("clicked", self.preference)
-        bar.b_PREFERENCE.set_tooltip_markup("Preferences")
-        ##
-        #
         bar.s_END = Gtk.SeparatorToolItem()
         bar.add(bar.s_END)
         return bar
@@ -256,28 +233,26 @@ class Home(Gtk.Window):
         self.search_entry.set_progress_pulse_step(0.4)
         self.search_entry.HISTORY = []
         self.search_entry.CURRENT = 0
-
-        ### liststore
-        liststore = Gtk.ListStore(str)
-        for item in sorted(self.core.Glossary.hashtag):
-            liststore.append([item])
-
         ### EntryComplete
-        entrycompletion = Gtk.EntryCompletion()
-        self.search_entry.set_completion(entrycompletion)
-        entrycompletion.set_model(liststore)
-        entrycompletion.set_text_column(0)
-        # entrycompletion.insert_action_markup(0, "<b><i>#Hashtag</i> Search</b>")
+        self.entrycompletion = Gtk.EntryCompletion()
+        self.search_entry.set_completion(self.entrycompletion)
+
+        #### liststore
+        liststore = Gtk.ListStore(str)
+        for tag in sorted(self.core.Glossary.hashtags):
+            liststore.append([tag])
+
+        self.entrycompletion.set_model(liststore)
+        self.entrycompletion.set_text_column(0)
         # NOTE: func only for exact match, but we have fuzzy
         ## entrycompletion.set_inline_completion(False) # default:0
         ## entrycompletion.set_popup_single_match(True) # default:1
 
-        def _match_func(gobj_completion, query, treeiter, liststore):
+        def _match_func(entrycompletion, query, treeiter, liststore):
             if not query[0] == '#': return False
-            c1 = entrycompletion.get_model()[treeiter][0]
-            return query[1:] in c1
+            return query[1:] in liststore[treeiter][0]
 
-        entrycompletion.set_match_func(_match_func, liststore)
+        self.entrycompletion.set_match_func(_match_func, liststore)
 
         ### Bindings
         def _on_key_release(widget, event):
@@ -298,8 +273,10 @@ class Home(Gtk.Window):
                 elif event.keyval == ord('p'): return self.search_entry_nav_history(-1)
                 elif event.keyval == ord('n'): return self.search_entry_nav_history(+1)
                 elif event.keyval == ord('c'):
-                    if not widget.get_selection_bounds(): widget.set_text("")
-                    else: self.toolbar.t_COPY.set_active(False)
+                    if widget.get_selection_bounds():
+                        self.toolbar.t_COPY.set_active(False)
+                        return
+                    widget.set_text("")
                 elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
                 elif event.keyval == ord('e'): widget.set_position(-1)
                 elif event.keyval == ord('a'):
@@ -335,7 +312,7 @@ class Home(Gtk.Window):
 
 
     def makeWidgets_sidebar(self):
-        self.sidebar = ui.sidebar.Bar(self)
+        self.sidebar = sidebar.Bar(self)
         treeSelection = self.sidebar.treeview.get_selection()
         self.sidebar.select_signal = treeSelection.connect("changed", self.sidebar_on_row_changed)
 
@@ -364,7 +341,7 @@ class Home(Gtk.Window):
 
 
     def makeWidgets_viewer(self):
-        self.viewer = ui.view.Display(self, PWD)
+        self.viewer = view.Display(self)
         self.viewer.textview.modify_font(self.fonts['viewer'])
         self.track_FONT.add(self.viewer.textview)
 
@@ -416,7 +393,7 @@ class Home(Gtk.Window):
 
 
     def makeWidgets_relations(self):
-        self.relatives = ui.relations.Relatives()
+        self.relatives = relations.Relatives()
         return self.relatives
 
 
@@ -514,7 +491,7 @@ class Home(Gtk.Window):
             self.sidebar.add_suggestion(key, all_FUZZ[key])
 
         if len(self.clips) == 0: return
-        print("clip:", self.clips, file=fp3)
+        print("clip:", self.clips, file=fp4)
         self.clips_circle = circle(self.clips)
         self._circular_search(+1)
         self.search_entry.grab_focus()
@@ -558,34 +535,6 @@ class Home(Gtk.Window):
         start, stop = self.viewer.find_and_highlight(text, begin)
         self.viewer.jump_to(start)
         self.copy_buffer = text
-
-
-    def on_destroy(self, event, *args):
-        """Override the default handler for the delete-event signal"""
-        # Show our message dialog
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            modal=True,
-            buttons=Gtk.ButtonsType.OK_CANCEL
-        )
-
-        dialog.props.text = 'Are you sure you want to quit?'
-        def on_key_release(widget, event):
-            if Gdk.ModifierType.CONTROL_MASK & event.state:
-                if event.keyval in (ord('q'), ord('Q'),  ord('c'), ord('C')):
-                    dialog.destroy()
-                    self.destroy()
-                    Gtk.main_quit()
-
-        dialog.connect('key_release_event', on_key_release)
-
-        response = dialog.run()
-        dialog.destroy()
-
-        if response == Gtk.ResponseType.OK:
-            return False
-
-        return True
 
 
     def handle_esc(self):
@@ -644,19 +593,18 @@ class Home(Gtk.Window):
 
 
 def main(core, cnf):
-    core.fp3 = fp5
-    core.fp4 = fp6
-
     win = Home(core, cnf)
     win.show_all()
     return win
 
 
 def sample():
-    import core
+    sys.path.append(sys.path[0]+'/../')
     import setting
+    import core
+    core.fp3 = core.fp4 = open(os.devnull, 'w')
 
-    cnf = setting.main(PWD)
+    cnf = setting.main()
     core.load_from_config(cnf)
 
     root = main(core, cnf)

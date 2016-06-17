@@ -106,7 +106,13 @@ class adaptor:
 
 
 def plugin_main(app, fullpath):
-    path = app.cnf.glossary_list['foss']['pairs'][0]
+    for gloss in app.cnf.glossary_list:
+        if "foss" in gloss['name']:
+            break
+    else:
+        return False
+
+    path = gloss['pairs'][0]
     gloss = app.home.core.Glossary.instances[path]
     liststore, ulta = gloss['numbers.tra']
 

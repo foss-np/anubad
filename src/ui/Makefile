@@ -1,11 +1,5 @@
 default: home
 
-verbose3:
-	VERBOSE=3 ./home.py
-
-verbose4:
-	VERBOSE=4 ./home.py
-
 explorer:
 	./explorer.py
 

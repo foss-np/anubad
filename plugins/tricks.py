@@ -23,7 +23,7 @@ def plugin_open_dir(app):
 
     def _browse(*arg):
         app.home.toolbar.t_COPY.set_active(False)
-        path  = app.cnf.glossary_list['foss']['pairs'][0]
+        path  = app.cnf.glossary_list[0]['pairs'][0]
         explorer = app.cnf.apps['file-manager']
         print("pid:", Popen([explorer, path]).pid)
 
@@ -38,7 +38,7 @@ def plugin_open_src(app):
         model, pathlst = treeSelection.get_selected_rows()
 
         if len(pathlst) == 0:
-            path  = app.cnf.glossary_list['foss']['pairs'][0]
+            path  = app.cnf.glossary_list[0]['pairs'][0]
             gloss = app.home.core.Glossary.instances[path]
             src   = path + 'main.tra'
             line  = gloss.counter

@@ -6,6 +6,12 @@ __PKG_NAME__ = "anubad - अनुवाद"
 __PKG_DESC__ = "A Glossary Browser"
 
 import os, sys
+
+__filepath__ = os.path.realpath(__file__)
+PWD = os.path.dirname(__filepath__) + '/'
+
+sys.path.append(PWD)
+
 import argparse
 import signal
 import traceback
@@ -14,14 +20,30 @@ import importlib
 import gi
 gi.require_version('Gtk', '3.0')
 
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 from gi.repository import GLib, Gio
 from gi.repository import GdkPixbuf
 
 import setting
 import core
 import ui.home
-PWD = ui.home.PWD
+fp_DEVNULL = open(os.devnull, 'w')
+VERBOSE = int(os.environ.get("VERBOSE", 0))
+for i in range(3, 7):
+    if VERBOSE > 0:
+        print(
+            "VERBOSE: %d fp%d enabled"%(VERBOSE, i),
+            file=sys.stderr
+        )
+        stream = "sys.stderr"
+        VERBOSE -= 1
+    else:
+        stream = "fp_DEVNULL"
+    exec("fp%d = %s"%(i, stream))
+
+core.fp3 = ui.home.fp3 = fp3
+core.fp4 = ui.home.fp4 = fp4
+
 
 class TrayIcon(Gtk.StatusIcon):
     def __init__(self, app, visible):
@@ -97,7 +119,7 @@ class App(Gtk.Application):
 
     def do_activate(self):
         if self.home == None:
-            self.home = self.create_home_window()
+            self.home = self.home_create_window()
             load_plugins(self, self.plugins)
             if self.cnf.preferences['hide-on-startup']: return
 
@@ -125,14 +147,14 @@ class App(Gtk.Application):
         return 0
 
 
-    def create_home_window(self):
+    def home_create_window(self):
         home = ui.home.Home(core, self.cnf)
         self.add_window(home)
         home.set_icon(self.pixbuf_logo)
         home.set_title(__PKG_NAME__)
-        home.connect('delete-event', lambda *a: self.quit())
+        home.connect('delete-event', self.home_on_destroy)
 
-        self.add_about_to_toolbar(home.toolbar)
+        self.add_buttons_on_toolbar(home.toolbar)
         home.engines.append((lambda q: q[0] == '>', self.commander.gui_adaptor))
 
         if self.cnf.preferences['show-on-taskbar']    : home.set_skip_taskbar_hint(True)
@@ -148,6 +170,32 @@ class App(Gtk.Application):
         return home
 
 
+    def home_on_destroy(self, event, *args):
+        # Show our message dialog
+        dialog = Gtk.MessageDialog(
+            transient_for=self.home,
+            modal=True,
+            buttons=Gtk.ButtonsType.OK_CANCEL
+        )
+
+        dialog.props.text = 'Are you sure you want to quit?'
+        def on_key_release(widget, event):
+            if Gdk.ModifierType.CONTROL_MASK & event.state:
+                if event.keyval in (ord('q'), ord('Q'),  ord('c'), ord('C')):
+                    dialog.destroy()
+                    self.quit()
+
+        dialog.connect('key_release_event', on_key_release)
+
+        response = dialog.run()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.OK:
+            return False
+
+        return True
+
+
     def insert_plugin_item_on_toolbar(self, widget):
         bar = self.home.toolbar
         if hasattr(bar, "s_PLUGINS"):
@@ -161,7 +209,7 @@ class App(Gtk.Application):
         bar.insert(widget, i+1)
 
 
-    def add_about_to_toolbar(self, bar):
+    def add_buttons_on_toolbar(self, bar):
         bar.b_ABOUT = Gtk.ToolButton(icon_name=Gtk.STOCK_ABOUT)
         bar.add(bar.b_ABOUT)
         bar.b_ABOUT.show()
