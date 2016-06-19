@@ -17,7 +17,7 @@ from subprocess import check_output
 import setting
 
 def plugin_open_dir(app):
-    b_OPEN = Gtk.ToolButton(icon_name=Gtk.STOCK_OPEN)
+    b_OPEN = Gtk.ToolButton(icon_name="folder")
     app.insert_plugin_item_on_toolbar(b_OPEN)
     b_OPEN.set_tooltip_markup("Open Glossary Directory")
 

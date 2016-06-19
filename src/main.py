@@ -114,6 +114,7 @@ class App(Gtk.Application):
         core.load_from_config(self.cnf)
 
         self.plugins = { k: v for k, v in scan_plugins(self.cnf) }
+        # NOTE: since 'accessories-dictionary' logo sucks
         self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.png')
 
 
@@ -210,7 +211,7 @@ class App(Gtk.Application):
 
 
     def add_buttons_on_toolbar(self, bar):
-        bar.b_ABOUT = Gtk.ToolButton(icon_name=Gtk.STOCK_ABOUT)
+        bar.b_ABOUT = Gtk.ToolButton(icon_name="help-about")
         bar.add(bar.b_ABOUT)
         bar.b_ABOUT.show()
         bar.b_ABOUT.set_tooltip_markup("About")

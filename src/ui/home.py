@@ -113,7 +113,7 @@ class Home(Gtk.Window):
 
         self.cache.append(results)
         self.cache_cursor = len(self.cache) - 1
-        self.toolbar.bm_BACKWARD.set_sensitive(True)
+        self.toolbar.mb_BACKWARD.set_sensitive(True)
         self.toolbar.b_FORWARD.set_sensitive(False)
         return results
 
@@ -141,20 +141,20 @@ class Home(Gtk.Window):
         bar = Gtk.Toolbar()
         #
         ## Button Back Button
-        bar.bm_BACKWARD = Gtk.MenuToolButton(icon_name=Gtk.STOCK_GO_BACK)
-        bar.add(bar.bm_BACKWARD)
-        bar.bm_BACKWARD.connect("clicked", lambda e: self._jump_history(-1))
-        bar.bm_BACKWARD.set_tooltip_markup("Previous, <u>Alt+←</u>")
-        bar.bm_BACKWARD.set_sensitive(False)
+        bar.mb_BACKWARD = Gtk.MenuToolButton(icon_name="go-previous")
+        bar.add(bar.mb_BACKWARD)
+        bar.mb_BACKWARD.connect("clicked", lambda e: self._jump_history(-1))
+        bar.mb_BACKWARD.set_tooltip_markup("Previous, <u>Alt+←</u>")
+        bar.mb_BACKWARD.set_sensitive(False)
         ### History
         # TODO: find the widget flag
         self.hist_menu_toggle_state = False
         self.history_menu = Gtk.Menu() # NOTE: DUMMY MENU For Menu activation
-        bar.bm_BACKWARD.set_menu(self.history_menu)
-        bar.bm_BACKWARD.connect("show-menu", lambda e: self._show_history(e))
+        bar.mb_BACKWARD.set_menu(self.history_menu)
+        bar.mb_BACKWARD.connect("show-menu", lambda e: self._show_history(e))
         ##
         ## Button Forward Button
-        bar.b_FORWARD = Gtk.ToolButton(icon_name=Gtk.STOCK_GO_FORWARD)
+        bar.b_FORWARD = Gtk.ToolButton(icon_name="go-next")
         bar.add(bar.b_FORWARD)
         bar.b_FORWARD.connect("clicked", lambda e: self._jump_history(+1))
         bar.b_FORWARD.set_tooltip_markup("Next, <u>Alt+→</u>")
@@ -164,12 +164,12 @@ class Home(Gtk.Window):
         bar.add(Gtk.SeparatorToolItem())
         ##
         ## Smart Copy Toggle Button
-        bar.t_COPY = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_COPY)
+        bar.t_COPY = Gtk.ToggleToolButton(icon_name='edit-copy')
         bar.add(bar.t_COPY)
         bar.t_COPY.set_active(True)
         ##
         ## Add Button
-        bar.b_ADD = Gtk.ToolButton(icon_name=Gtk.STOCK_ADD)
+        bar.b_ADD = Gtk.ToolButton(icon_name="list-add")
         bar.add(bar.b_ADD)
         # bar.b_ADD.connect("clicked", lambda w: self.add_to_gloss())
         bar.b_ADD.set_tooltip_markup("Add new word to Glossary, <u>Ctrl+i</u>")

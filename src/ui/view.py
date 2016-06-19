@@ -46,7 +46,7 @@ class Display(Gtk.Overlay):
         self.scroll.set_hexpand(True)
         self.scroll.set_vexpand(True)
 
-        self.tb_clean = Gtk.ToolButton(icon_name=Gtk.STOCK_CLEAR)
+        self.tb_clean = Gtk.ToolButton(icon_name='gtk-clear')
         self.add_overlay(self.tb_clean)
 
         self.tb_clean.set_valign(Gtk.Align.START)

@@ -10,7 +10,7 @@ def espeak(word, tone="nepali"):
 def plugin_main(app, fullpath):
     from gi.repository import Gtk
 
-    b_ESPEAK = Gtk.ToolButton(icon_name=Gtk.STOCK_MEDIA_PLAY)
+    b_ESPEAK = Gtk.ToggleToolButton(icon_name="media-playback-start")
     app.insert_plugin_item_on_toolbar(b_ESPEAK)
     b_ESPEAK.set_tooltip_markup("Say it")
     b_ESPEAK.connect("clicked", lambda w: espeak(app.home.copy_buffer))

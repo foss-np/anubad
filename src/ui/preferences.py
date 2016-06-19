@@ -146,12 +146,12 @@ class Settings(Gtk.Window):
     def makeWidgets_behavious(self):
         bar = Gtk.Toolbar()
         ## Auto Transliterate Button
-        # bar.t_Trans = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_CONVERT)
+        # bar.t_Trans = Gtk.ToggleToolButton(icon_name="")
         # bar.add(bar.t_Trans)
         # bar.t_Trans.set_active(True)
         ##
         ## Spell-check Toggle Button
-        bar.t_Spell = Gtk.ToggleToolButton(icon_name=Gtk.STOCK_SPELL_CHECK)
+        bar.t_Spell = Gtk.ToggleToolButton(icon_name='tools-check-spelling')
         bar.add(bar.t_Spell)
         bar.t_Spell.set_active(True)
         ##
@@ -163,15 +163,16 @@ class Settings(Gtk.Window):
         # layout.set_row_spacing(5)
         # layout.set_column_spacing(5)
 
-        self.b_cancel = Gtk.Button.new_from_stock(Gtk.STOCK_CANCEL)
+
+        self.b_cancel = Gtk.Button.new_with_mnemonic("_Cancel")
         layout.add(self.b_cancel)
         self.b_cancel.connect("clicked", lambda *a: self.on_destroy(*a))
 
-        self.b_apply = Gtk.Button.new_from_stock(Gtk.STOCK_APPLY)
+        self.b_apply = Gtk.Button.new_with_mnemonic("_Apply")
         layout.add(self.b_apply)
         self.b_apply.connect("clicked", lambda *a: self.on_destroy(*a))
 
-        self.b_ok = Gtk.Button.new_from_stock(Gtk.STOCK_REFRESH)
+        self.b_ok = Gtk.Button.new_with_mnemonic("_Refresh")
         layout.add(self.b_ok)
 
         return layout
@@ -185,11 +186,6 @@ class Settings(Gtk.Window):
         self.font_button.set_font_name(def_FONT)
         self.font_button.connect('font-set', self._change_font)
 
-        # SHOW HIDE GLOSS
-        # toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GOTO_TOP), 0)
-        # toolbar.insert(Gtk.ToolButton.new_from_stock(Gtk.STOCK_GOTO_BOTTOM), 0)
-        # layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_CLOSE))
-        # layout.add(Gtk.ToolButton.new_from_stock(Gtk.STOCK_APPLY))
         return layout
 
 
