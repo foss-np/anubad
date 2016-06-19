@@ -26,6 +26,8 @@ from gi.repository import GdkPixbuf
 
 import setting
 import core
+import commander
+
 import ui.home
 fp_DEVNULL = open(os.devnull, 'w')
 VERBOSE = int(os.environ.get("VERBOSE", 0))
@@ -106,6 +108,7 @@ class App(Gtk.Application):
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
+        self.commander = commander.Engine(app)
 
         self.cnf = setting.main(PWD)
         apply_setting_changes(self.cnf, self.opts)
@@ -141,9 +144,15 @@ class App(Gtk.Application):
     def do_command_line(self, command_line):
         options = command_line.get_options_dict()
         argv = command_line.get_arguments()
+
         if len(argv) == 0:
             self.activate()
             return 0
+
+        self.commander.execute(argv)
+
+        if options.contains("test"):
+            print("Test argument recieved")
 
         return 0
 

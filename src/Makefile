@@ -23,3 +23,6 @@ core:
 
 setting:
 	./setting.py
+
+commander:
+	./commander.py
