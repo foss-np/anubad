@@ -15,6 +15,7 @@ from gi.repository import GObject
 from multiprocessing.pool import ThreadPool
 from collections import OrderedDict
 
+import searchbar
 import sidebar
 import view
 import relations
@@ -50,7 +51,7 @@ class Home(Gtk.Window):
     clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
     def __init__(self, core, cnf):
-        Gtk.Window.__init__(self)
+        Gtk.Window.__init__(self, name="Home")
 
         self.core     = core
         self.tray     = cnf.preferences['show-on-system-tray']
@@ -83,10 +84,10 @@ class Home(Gtk.Window):
         self.makeWidgets()
         self.connect('key_press_event', self.on_key_press)
         self.connect('key_release_event', self.on_key_release)
-        self.connect('focus-in-event', lambda *e: self.search_entry.grab_focus())
+        self.connect('focus-in-event', lambda *e: self.searchbar.entry.grab_focus())
         self.connect('focus-out-event', lambda *e: self._on_focus_out_event())
 
-        self.search_entry.grab_focus()
+        self.searchbar.entry.grab_focus()
         # gdk_window = self.get_root_window()
         # gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.WATCH))
         self.set_default_size(600, 550)
@@ -119,21 +120,24 @@ class Home(Gtk.Window):
 
 
     def makeWidgets(self):
-        self.layout = Gtk.Grid()
+        self.layout = Gtk.Grid(orientation=1)
         self.add(self.layout)
 
         self.toolbar = self.makeWidgets_toolbar()
-        self.layout.attach(self.toolbar, left=0, top=0, width=5, height=1)
-        self.layout.attach(self.makeWidgets_searchbar(), left=0, top=1, width=5, height=1)
+        self.layout.add(self.toolbar)
+
+        self.layout.add(self.makeWidgets_searchbar())
 
         hpaned = Gtk.Paned()
-        self.layout.attach(hpaned, left=0, top=2, width=5, height=2)
+        self.layout.add(hpaned)
+
         hpaned.add1(self.makeWidgets_sidebar())
         hpaned.add2(self.makeWidgets_viewer())
         hpaned.set_position(165)
 
         self.relations = self.makeWidgets_relations()
-        self.layout.attach(self.relations, left=0, top=5, width=5, height=2)
+        self.layout.add(self.relations)
+        self.relations.set_hexpand(True)
         self.layout.show_all()
 
 
@@ -215,100 +219,38 @@ class Home(Gtk.Window):
 
 
     def makeWidgets_searchbar(self):
-        layout = Gtk.HBox()
-
-        ## Label
-        label = Gtk.Label()
-        label.set_markup("<b>Query</b>")
-        layout.pack_start(label, expand=False, fill=False, padding=60)
-
-        ## Entry
-        tool_tip = "<b>Search:</b> \t⌨ [<i>Enter</i>]"
-        self.search_entry = Gtk.SearchEntry()
-        layout.pack_start(self.search_entry, expand=True, fill=True, padding=2)
-
-        ### Search Entry Conf
-        self.search_entry.set_tooltip_markup(tool_tip)
-        self.search_entry.set_max_length(32)
-        self.search_entry.set_progress_pulse_step(0.4)
-        self.search_entry.HISTORY = []
-        self.search_entry.CURRENT = 0
-        ### EntryComplete
-        self.entrycompletion = Gtk.EntryCompletion()
-        self.search_entry.set_completion(self.entrycompletion)
+        self.searchbar = searchbar.Bar()
 
         #### liststore
         liststore = Gtk.ListStore(str)
         for tag in sorted(self.core.Glossary.hashtags):
             liststore.append([tag])
 
-        self.entrycompletion.set_model(liststore)
-        self.entrycompletion.set_text_column(0)
-        # NOTE: func only for exact match, but we have fuzzy
-        ## entrycompletion.set_inline_completion(False) # default:0
-        ## entrycompletion.set_popup_single_match(True) # default:1
+        self.searchbar.add_hashtag_completion(liststore)
 
-        def _match_func(entrycompletion, query, treeiter, liststore):
-            if not query[0] == '#': return False
-            return query[1:] in liststore[treeiter][0]
+        def _on_key_press(widget, event): # Tab
+            if event.keyval == 65289:
+                self.sidebar.treeview.grab_focus()
+                return True
+            elif event.keyval == ord('c'):
+                if widget.get_selection_bounds():
+                    self.toolbar.t_COPY.set_active(False)
+                    return
+                widget.set_text("")
 
-        self.entrycompletion.set_match_func(_match_func, liststore)
+        self.searchbar.entry.connect('key_press_event', _on_key_press)
 
-        ### Bindings
         def _on_key_release(widget, event):
             # NOTE to stop propagation of signal return True
             if   event is None: self.search_and_reflect()
             elif event.keyval == 65293: self.search_and_reflect() # <enter> return
 
-        self.search_entry.connect('key_release_event', _on_key_release)
+        self.searchbar.entry.connect('key_release_event', _on_key_release)
 
-        def _on_key_press(widget, event):
-            # NOTE to stop propagation of signal return True
-            if   event.keyval == 65362: return self.search_entry_nav_history(-1) # Up-arrow
-            elif event.keyval == 65364: return self.search_entry_nav_history(+1) # Down-arrow
-            elif event.keyval == 65289: self.sidebar.treeview.grab_focus(); return True # Tab
-            elif Gdk.ModifierType.CONTROL_MASK & event.state:
-                if   event.keyval == 65365: return self.search_entry_nav_history(-1) # Pg-Up
-                elif event.keyval == 65366: return self.search_entry_nav_history(+1) # Pg-Dn
-                elif event.keyval == ord('p'): return self.search_entry_nav_history(-1)
-                elif event.keyval == ord('n'): return self.search_entry_nav_history(+1)
-                elif event.keyval == ord('c'):
-                    if widget.get_selection_bounds():
-                        self.toolbar.t_COPY.set_active(False)
-                        return
-                    widget.set_text("")
-                elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
-                elif event.keyval == ord('e'): widget.set_position(-1)
-                elif event.keyval == ord('a'):
-                    if not widget.get_selection_bounds(): return
-                    widget.set_position(0)
-                    return True
+        self.searchbar.entry.modify_font(self.fonts['search'])
+        self.track_FONT.add(self.searchbar.entry)
+        return self.searchbar
 
-        self.search_entry.connect('key_press_event', _on_key_press)
-
-        ### font
-        self.search_entry.modify_font(self.fonts['search'])
-        self.track_FONT.add(self.search_entry)
-
-        ## Search Button
-        self.b_search = Gtk.Button(label="Search")
-        layout.pack_start(self.b_search, expand=False, fill=False, padding=1)
-        self.b_search.connect('clicked', lambda w: _on_key_release(w, None))
-        self.b_search.set_tooltip_markup(tool_tip)
-
-        return layout
-
-
-    def search_entry_nav_history(self, diff):
-        length = len(self.search_entry.HISTORY)
-        if length == 0: return True
-        i = self.search_entry.CURRENT + diff
-        if i >= length: return True
-        if i == -1: return True
-        self.search_entry.set_text(self.search_entry.HISTORY[i])
-        self.search_entry.set_position(-1)
-        self.search_entry.CURRENT = i
-        return True
 
 
     def makeWidgets_sidebar(self):
@@ -319,7 +261,7 @@ class Home(Gtk.Window):
         def _on_key_press(widget, event):
             # NOTE to stop propagation of signal return True
             if event.keyval == 65289: # Tab
-                self.search_entry.grab_focus()
+                self.searchbar.entry.grab_focus()
                 return True
 
         self.sidebar.connect("key_press_event", _on_key_press)
@@ -388,7 +330,7 @@ class Home(Gtk.Window):
         if not bounds: return
         begin, end = bounds
         query = self.viewer.textbuffer.get_text(begin, end, True)
-        self.search_entry.set_text(query)
+        self.searchbar.entry.set_text(query)
         self.search_and_reflect(query)
 
 
@@ -404,7 +346,7 @@ class Home(Gtk.Window):
         if pathlst:
             *c, query = model[pathlst[0]]
         else:
-            query = self.search_entry.get_text().strip().lower()
+            query = self.searchbar.entry.get_text().strip().lower()
 
         return query
 
@@ -418,21 +360,21 @@ class Home(Gtk.Window):
         results are ready.
 
         """
-        self.search_entry.progress_pulse()
+        self.searchbar.entry.progress_pulse()
         if not async_ret.ready(): return True
         self.fit_output(query, async_ret.get())
-        self.search_entry.set_progress_fraction(0)
+        self.searchbar.entry.set_progress_fraction(0)
         return False
 
 
     def search_and_reflect(self, query=None):
         if query is None:
-            query = self.search_entry.get_text()
+            query = self.searchbar.entry.get_text()
 
         if not query: return
 
-        self.search_entry.HISTORY.append(query)
-        self.search_entry.CURRENT = len(self.search_entry.HISTORY)
+        self.searchbar.entry.HISTORY.append(query)
+        self.searchbar.entry.CURRENT = len(self.searchbar.entry.HISTORY)
 
         # choosing engines
         engine = self.engine_default
@@ -494,7 +436,7 @@ class Home(Gtk.Window):
         print("clip:", self.clips, file=fp4)
         self.clips_circle = circle(self.clips)
         self._circular_search(+1)
-        self.search_entry.grab_focus()
+        self.searchbar.entry.grab_focus()
 
 
     def _view_item(self, word, ID, src, parsed_info):
@@ -522,7 +464,7 @@ class Home(Gtk.Window):
 
     def _circular_search(self, diff):
         if not self.clips_circle:
-            self.search_entry.grab_focus()
+            self.searchbar.entry.grab_focus()
             return
 
         self.toolbar.t_COPY.set_active(True)
@@ -550,7 +492,7 @@ class Home(Gtk.Window):
         if  Gdk.ModifierType.CONTROL_MASK & event.state:
             if event.keyval == 65379: # Insert
                 if    self.viewer.textbuffer.get_selection_bounds(): self.toolbar.t_COPY.set_active(False)
-                elif  self.search_entry.get_selection_bounds()     : self.toolbar.t_COPY.set_active(False)
+                elif  self.searchbar.entry.get_selection_bounds()  : self.toolbar.t_COPY.set_active(False)
                 else: self._circular_search(+1)
             elif event.keyval == ord('b'): self._circular_search(+1)
             elif event.keyval == ord('B'): self._circular_search(-1)
@@ -562,12 +504,12 @@ class Home(Gtk.Window):
         elif event.keyval == 65365: self.viewer.textview.grab_focus(); return # Pg-Up
         elif event.keyval == 65366: self.viewer.textview.grab_focus(); return # Pg-Dn
 
-        if self.search_entry.is_focus(): return
+        if self.searchbar.entry.is_focus(): return
 
         if event.keyval > 127: return # ignore non-printable values
-        self.search_entry.grab_focus()
-        pos = self.search_entry.get_position()
-        self.search_entry.set_position(pos + 1)
+        self.searchbar.entry.grab_focus()
+        pos = self.searchbar.entry.get_position()
+        self.searchbar.entry.set_position(pos + 1)
 
 
     def on_key_release(self, widget, event):
@@ -585,7 +527,7 @@ class Home(Gtk.Window):
                 clip = __class__.clipboard.wait_for_text()
                 if clip is None: return
                 query = clip.strip().lower()
-                self.search_entry.set_text(clip)
+                self.searchbar.entry.set_text(clip)
                 self.search_and_reflect(clip)
         elif Gdk.ModifierType.MOD1_MASK & event.state:
             if event.keyval == 65361: self._jump_history(-1) # Left-arrow
@@ -594,7 +536,7 @@ class Home(Gtk.Window):
 
 def main(core, cnf):
     win = Home(core, cnf)
-    win.show_all()
+    win.show()
     return win
 
 

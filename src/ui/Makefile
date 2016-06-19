@@ -1,22 +1,25 @@
 default: home
 
-explorer:
-	./explorer.py
-
-display:
-	./view.py
+searchbar:
+	./searchbar.py
 
 sidebar:
 	./sidebar.py
 
-add:
-	./add.py
-
-preferences:
-	./preferences.py
+display:
+	./view.py
 
 relations:
 	./relations.py
 
 home:
 	./home.py
+
+preferences:
+	./preferences.py
+
+explorer:
+	./explorer.py
+
+add:
+	./add.py

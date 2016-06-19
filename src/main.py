@@ -133,7 +133,7 @@ class App(Gtk.Application):
         if self.home and self.cnf.preferences['enable-history-file']:
             print("shutdown: update history")
             fp = open(os.path.expanduser(setting.FILE_HIST), mode='w+')
-            fp.write('\n'.join(self.home.search_entry.HISTORY))
+            fp.write('\n'.join(self.home.searchbar.entry.HISTORY))
             fp.close()
         self.quit()
 
@@ -162,11 +162,11 @@ class App(Gtk.Application):
         if self.cnf.preferences['show-on-system-tray']:
             self.tray = TrayIcon(self, self.cnf.preferences['hide-on-startup'])
         if self.cnf.preferences['enable-history-file']:
-            home.search_entry.HISTORY += open(
+            home.searchbar.entry.HISTORY += open(
                 os.path.expanduser(setting.FILE_HIST),
                 encoding = "UTF-8"
             ).read().splitlines()
-            home.search_entry.CURRENT = len(home.search_entry.HISTORY)
+            home.searchbar.entry.CURRENT = len(home.searchbar.entry.HISTORY)
 
         return home
 

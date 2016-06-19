@@ -14,8 +14,6 @@ import linecache
 from subprocess import Popen
 from subprocess import check_output
 
-import setting
-
 def plugin_open_dir(app):
     b_OPEN = Gtk.ToolButton(icon_name="folder")
     app.insert_plugin_item_on_toolbar(b_OPEN)
@@ -70,10 +68,14 @@ def plugin_open_src(app):
 
 def engine_shell(home, query):
     # TODO handle error, exit != 0
-    home.search_entry.set_text("$ ")
-    home.search_entry.set_position(2)
-    return check_output(query.split(), universal_newlines=True)
+    home.searchbar.entry.set_text("$ ")
+    home.searchbar.entry.set_position(2)
+    try:
+        output = check_output(query.split(), universal_newlines=True)
+    except:
+        return
 
+    return output
 
 
 def engine_dump(home, query):
@@ -94,8 +96,8 @@ def engine_python(app, query):
     #     if not hasattr(app.home, query):
     #         output = "doesn't have anything like that"
     # except
-    app.home.search_entry.set_text(">>> ")
-    app.home.search_entry.set_position(4)
+    app.home.searchbar.entry.set_text(">>> ")
+    app.home.searchbar.entry.set_position(4)
     return "python engine not implemented"
 
 
