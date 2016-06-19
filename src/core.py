@@ -265,9 +265,10 @@ def load_from_config(cnf):
     for gloss in sorted(cnf.glossary_list, key=lambda v: v['priority']):
         # while loop for reloading
         n = 0
+        path = gloss['path']
         while n < len(gloss['pairs']):
             try:
-                g = Glossary(gloss['pairs'][n])
+                g = Glossary(path + gloss['pairs'][n] + '/')
             except Exception as e:
                 print(e)
                 # if not hasattr(e, 'meta_info'):

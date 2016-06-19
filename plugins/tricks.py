@@ -21,9 +21,28 @@ def plugin_open_dir(app):
 
     def _browse(*arg):
         app.home.toolbar.t_COPY.set_active(False)
-        path  = app.cnf.glossary_list[0]['pairs'][0]
-        explorer = app.cnf.apps['file-manager']
-        print("pid:", Popen([explorer, path]).pid)
+        dialog = Gtk.Dialog(parent = app.home)
+
+        for i, gloss in enumerate(app.cnf.glossary_list):
+            dialog.add_button(gloss['name'], i)
+
+        dialog.connect( # quit when Esc is pressed
+            'key_press_event',
+            lambda w, e: dialog.destroy() if e.keyval == 65307 else None
+        )
+
+        dialog.connect(
+            "response",
+            lambda w, _id: print(
+                "pid:",
+                Popen([
+                    app.cnf.apps['file-manager'],
+                    app.cnf.glossary_list[_id]["path"]
+                ]).pid
+            )
+        )
+        dialog.run()
+        dialog.destroy()
 
     b_OPEN.connect("clicked", _browse)
     b_OPEN.show()

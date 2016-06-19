@@ -87,12 +87,12 @@ class Settings(configparser.ConfigParser):
 
 
     def extract_gloss(self, name, obj):
-        path = obj.get('path')
         return {
             'name'        : name,
-            'pairs'       : [ path + p + '/' for p in obj.get('pairs').split() ],
+            'path'        : obj.get('path', ''),
+            'pairs'       : obj.get('pairs', '').split(),
             'description' : obj.get('description', ''),
-            'priority'    : obj.getboolean('priority', 5),
+            'priority'    : obj.getboolean('priority', 9),
             'read-only'   : obj.getboolean('read-only', True),
             'fetch'       : obj.get('fetch', True),
         }

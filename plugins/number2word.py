@@ -112,8 +112,8 @@ def plugin_main(app, fullpath):
     else:
         return False
 
-    path = gloss['pairs'][0]
-    gloss = app.home.core.Glossary.instances[path]
+    path = gloss['path']
+    gloss = app.home.core.Glossary.instances[path + 'en2ne/']
     liststore, ulta = gloss['numbers.tra']
 
     n2w = adaptor(liststore, path + 'numbers.tra')
