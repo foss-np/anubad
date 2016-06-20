@@ -140,6 +140,17 @@ class Home(Gtk.Window):
         self.relations.set_hexpand(True)
         self.layout.show_all()
 
+        self.infobar = Gtk.InfoBar()
+        self.layout.add(self.infobar)
+
+        self.infobar.LABEL = Gtk.Label()
+        content = self.infobar.get_content_area()
+        content.add(self.infobar.LABEL)
+
+        self.infobar.set_show_close_button(True)
+        self.infobar.set_default_response(Gtk.ResponseType.CLOSE)
+        self.infobar.connect("response", lambda w, id: w.hide())
+
 
     def makeWidgets_toolbar(self):
         bar = Gtk.Toolbar()
@@ -394,6 +405,8 @@ class Home(Gtk.Window):
 
     def fit_output(self, query, output):
         if output is None:
+            self.infobar.LABEL.set_markup("<b>%s</b> did not gave any output"%query)
+            self.infobar.show_all()
             return
 
         if type(output) == tuple: return self._view_results({ query: output })
@@ -401,8 +414,12 @@ class Home(Gtk.Window):
             begin = self.viewer.textbuffer.get_start_iter()
             self.viewer.textbuffer.place_cursor(begin)
             self.viewer.insert_at_cursor("\n")
-            if output == '': self.viewer.not_found(query)
-            else: self.viewer.insert_at_cursor(output)
+            if output != '':
+                self.viewer.insert_at_cursor(output)
+                return
+
+            self.infobar.LABEL.set_markup("<b>%s</b> did not gave any output"%query)
+            self.infobar.show_all()
             return
 
         self._view_results(output)

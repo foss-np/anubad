@@ -280,6 +280,9 @@ def load_plugins(app, plugins):
                 print("plugin:", name, file=sys.stderr)
         except Exception as e:
             traceback.print_exception(*sys.exc_info())
+            app.home.infobar.set_message_type(Gtk.MessageType.WARNING)
+            app.home.infobar.LABEL.set_markup("Error occured during loading plugin <b>%s</b>"%name)
+            app.home.infobar.show_all()
 
 
 def create_arg_parser():
