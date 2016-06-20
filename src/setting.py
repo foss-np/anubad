@@ -29,6 +29,11 @@ class Settings(configparser.ConfigParser):
         return cls.__instance__
 
 
+    def __init__(self):
+        # NOTE: object, aren't properly created for some unknown cause
+        # until init was declared.
+        pass
+
     def singleton_init(self):
         configparser.ConfigParser.__init__(self)
         self.glossary_list = []
