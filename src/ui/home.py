@@ -423,7 +423,11 @@ class Home(Gtk.Window):
 
             for key, val in FULL.items():
                 self.sidebar.add_suggestion(key, val)
-                self._view_item(*key, val)
+                word, ID, src = key
+                # NOTE: unpacking variable, seems some python version
+                # only supports named args followed by *expression
+                # ref: https://github.com/foss-np/anubad/issues/11
+                self._view_item(word, ID, src, val)
                 treeSelection.select_path(self.sidebar.count - 1)
 
         self.viewer.textbuffer.insert_at_cursor("\n")
