@@ -228,15 +228,16 @@ class Home(Gtk.Window):
 
         self.searchbar.add_hashtag_completion(liststore)
 
-        def _on_key_press(widget, event): # Tab
-            if event.keyval == 65289:
+        def _on_key_press(widget, event):
+            if event.keyval == 65289: # Tab
                 self.sidebar.treeview.grab_focus()
                 return True
-            elif event.keyval == ord('c'):
-                if widget.get_selection_bounds():
-                    self.toolbar.t_COPY.set_active(False)
-                    return
-                widget.set_text("")
+            elif Gdk.ModifierType.CONTROL_MASK & event.state:
+                if event.keyval == ord('c'):
+                    if widget.get_selection_bounds():
+                        self.toolbar.t_COPY.set_active(False)
+                        return
+                    widget.set_text("")
 
         self.searchbar.entry.connect('key_press_event', _on_key_press)
 
@@ -392,6 +393,9 @@ class Home(Gtk.Window):
 
 
     def fit_output(self, query, output):
+        if output is None:
+            return
+
         if type(output) == tuple: return self._view_results({ query: output })
         if type(output) == str:
             begin = self.viewer.textbuffer.get_start_iter()
@@ -534,7 +538,7 @@ class Home(Gtk.Window):
                 self.searchbar.entry.set_text(clip)
                 self.search_and_reflect(clip)
         elif Gdk.ModifierType.MOD1_MASK & event.state:
-            if event.keyval == 65361: self._jump_history(-1) # Left-arrow
+            if   event.keyval == 65361: self._jump_history(-1) # Left-arrow
             elif event.keyval == 65363: self._jump_history(+1) # Right-arrow
 
 
