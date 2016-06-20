@@ -57,8 +57,6 @@ class Display(Gtk.Overlay):
         self.textview.set_editable(False)
         self.textview.set_cursor_visible(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
-        # NOTE: vvv problem with old gtk
-        self.textview.set_top_margin(-15) # hack for next search separation '\n'
         self.textview.set_left_margin(10)
         self.textview.set_right_margin(20)
 
