@@ -71,6 +71,7 @@ class Glossary(dict):
             print("error: in file", src, file=sys.stderr)
             return
 
+        i = 0 # NOTE: if file is empty
         for i, line in enumerate(data.splitlines(), 1):
             try:
                 word, defination = line.split('; ')

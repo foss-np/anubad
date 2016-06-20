@@ -30,7 +30,11 @@ class Bar(Gtk.VBox):
         # if key in self.dictstore.values(): return
         self.count += 1
         self.treemodel.append((self.count, key[0]))
-        self.dictstore[self.count] = (*key, value)
+        word, ID, src = key
+        # NOTE: unpacking variable, seems some python version
+        # only supports named args followed by *expression
+        # ref: https://github.com/foss-np/anubad/issues/11
+        self.dictstore[self.count] = (word, ID, src, value)
 
 
     def get_suggestion(self, index):

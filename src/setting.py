@@ -97,7 +97,7 @@ class Settings(configparser.ConfigParser):
             'path'        : obj.get('path', ''),
             'pairs'       : obj.get('pairs', '').split(),
             'description' : obj.get('description', ''),
-            'priority'    : obj.getboolean('priority', 9),
+            'priority'    : obj.get('priority', '9'),
             'read-only'   : obj.getboolean('read-only', True),
             'fetch'       : obj.get('fetch', True),
         }

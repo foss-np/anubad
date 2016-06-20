@@ -231,6 +231,7 @@ class Home(Gtk.Window):
 
     def makeWidgets_searchbar(self):
         self.searchbar = searchbar.Bar()
+        self.searchbar.button.connect('clicked', lambda *a: self.search_and_reflect())
 
         #### liststore
         liststore = Gtk.ListStore(str)

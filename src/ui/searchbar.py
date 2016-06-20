@@ -26,15 +26,12 @@ class Bar(Gtk.HBox):
         self.entry.connect('key_press_event', self.on_key_press)
 
         ## Search Button
-        # self.b_search = Gtk.Button.new_with_mnemonic('_Search')
-        self.b_search = Gtk.Button.new_from_icon_name("pan-down-symbolic", Gtk.IconSize.BUTTON)
-        self.b_search.set_label('_Search')
-        self.b_search.set_use_underline(True)
-        self.pack_start(self.b_search, expand=False, fill=False, padding=1)
-        self.b_search.connect('clicked', lambda w: _on_key_release(w, None))
+        self.button = Gtk.Button.new_with_mnemonic('_Search')
+        self.button.set_use_underline(True)
+        self.pack_start(self.button, expand=False, fill=False, padding=1)
 
         self.entry.set_tooltip_markup(tool_tip)
-        self.b_search.set_tooltip_markup(tool_tip)
+        self.button.set_tooltip_markup(tool_tip)
 
 
     def makeWidget_entry(self):
@@ -68,13 +65,13 @@ class Bar(Gtk.HBox):
 
     def on_key_press(self, widget, event):
         # NOTE to stop propagation of signal return True
-        if   event.keyval == 65362: return self.entry_nav_history(-1) # Up-arrow
-        elif event.keyval == 65364: return self.entry_nav_history(+1) # Down-arrow
+        if   event.keyval == 65362: return self.nav_history(-1) # Up-arrow
+        elif event.keyval == 65364: return self.nav_history(+1) # Down-arrow
         elif Gdk.ModifierType.CONTROL_MASK & event.state:
-            if   event.keyval == 65365: return self.search_entry_nav_history(-1) # Pg-Up
-            elif event.keyval == 65366: return self.search_entry_nav_history(+1) # Pg-Dn
-            elif event.keyval == ord('p'): return self.search_entry_nav_history(-1)
-            elif event.keyval == ord('n'): return self.search_entry_nav_history(+1)
+            if   event.keyval == 65365: return self.nav_history(-1) # Pg-Up
+            elif event.keyval == 65366: return self.nav_history(+1) # Pg-Dn
+            elif event.keyval == ord('p'): return self.nav_history(-1)
+            elif event.keyval == ord('n'): return self.nav_history(+1)
             elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
             elif event.keyval == ord('e'): widget.set_position(-1)
             elif event.keyval == ord('a'):
@@ -83,7 +80,7 @@ class Bar(Gtk.HBox):
                 return True
 
 
-    def entry_nav_history(self, diff):
+    def nav_history(self, diff):
         length = len(self.entry.HISTORY)
         if length == 0: return True
         i = self.entry.CURRENT + diff
