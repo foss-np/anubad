@@ -234,9 +234,10 @@ class Home(Gtk.Window):
         self.searchbar.button.connect('clicked', lambda *a: self.search_and_reflect())
 
         #### liststore
-        liststore = Gtk.ListStore(str)
-        for tag in sorted(self.core.Glossary.hashtags):
-            liststore.append([tag])
+        # BUG: left cell align is not working, so "%4d"
+        liststore = Gtk.ListStore(str, str)
+        for k, v in sorted(self.core.Glossary.hashtags.items()):
+            liststore.append([k, "%4d"%v])
 
         self.searchbar.add_hashtag_completion(liststore)
 

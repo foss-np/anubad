@@ -46,7 +46,12 @@ class Bar(Gtk.HBox):
 
 
     def add_hashtag_completion(self, liststore):
-        self.entrycompletion = Gtk.EntryCompletion()
+        area = Gtk.CellAreaBox()
+        textrender = Gtk.CellRendererText(scale=0.85)
+        area.pack_end(textrender, expand=False, align=False, fixed=True)
+        area.attribute_connect(textrender, "text", 1)
+
+        self.entrycompletion = Gtk.EntryCompletion.new_with_area(area)
         self.entry.set_completion(self.entrycompletion)
 
         self.entrycompletion.set_model(liststore)

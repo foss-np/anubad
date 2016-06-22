@@ -228,19 +228,24 @@ class Glossary(dict):
 
 
     @staticmethod
-    def search_hashtag(query):
-        FUZZ = dict()
+    def search_hashtag(tag):
+        query = tag[1:]
+        FULL, FUZZ = OrderedDict(), dict()
         for path, instance in __class__.instances.items():
             for name, (liststore, invert) in instance.items():
                 for word, (ID, *has_hashtag, info) in liststore.items():
+                    if query == word:
+                        FULL[(word, ID, path + name)] = info
+                        continue
                     if len(has_hashtag) == 0: continue
                     if has_hashtag[0] is False: continue
                     for pos, val in info:
                         if "_#" != pos: continue
+                        # TODO: #animal.reptile.snake, #snake will match same
                         if query not in val: continue
                         FUZZ[(word, ID, path + name)] = info
 
-        return dict(), FUZZ
+        return FULL, FUZZ
 
 
     @staticmethod
