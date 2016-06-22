@@ -18,19 +18,10 @@ class Settings(Gtk.Window):
         return cls.__instance__
 
 
-    def singleton_init(self, cnf, parent=None):
-        Gtk.Window.__init__(
-            self,
-            # parent=parent, # creates the warning
-            application=parent.app if hasattr(parent, "app") else None,
-            title="Settings"
-        )
+    def singleton_init(self, cnf):
+        Gtk.Window.__init__(self, title="Preferences")
 
-        self.parent = parent
         self.cnf = cnf
-
-        self.set_transient_for(parent)
-
         self.makeWidgets()
 
         self.connect('key_release_event', self.key_binds)

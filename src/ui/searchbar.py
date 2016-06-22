@@ -100,9 +100,18 @@ def sample():
         'key_release_event',
         lambda w, e: Gtk.main_quit() if e.keyval == 65307 else None
     )
-    root.set_default_size(300, 200)
 
-    sidebar = Bar(root)
+    sidebar = Bar()
+    sidebar.entry.HISTORY = 'first second third fourth'.split()
+    sidebar.entry.CURRENT = 3
+    liststore = Gtk.ListStore(str, str)
+    liststore.append(["#animal", '9'])
+    liststore.append(["#animal.bird", '8'])
+    liststore.append(["#animal.reptile", '4'])
+    liststore.append(["#animal.reptile.snake", '1'])
+
+    sidebar.add_hashtag_completion(liststore)
+
     root.add(sidebar)
     root.show_all()
     return root

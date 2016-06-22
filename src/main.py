@@ -82,10 +82,6 @@ class TrayIcon(Gtk.StatusIcon):
         menuitem_visibility.connect("activate", self.toggle_visibility)
         menu.append(menuitem_visibility)
 
-        menuitem_notify = Gtk.MenuItem("Disable Notification")
-        # menuitem_toggle.connect("activate", self.toggle_notify)
-        menu.append(menuitem_notify)
-
         menuitem_quit = Gtk.MenuItem("Quit")
         menuitem_quit.connect("activate", lambda *a: self.app.quit())
         menu.append(menuitem_quit)

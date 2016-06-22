@@ -558,6 +558,10 @@ class Home(Gtk.Window):
         elif Gdk.ModifierType.MOD1_MASK & event.state:
             if   event.keyval == 65361: self._jump_history(-1) # Left-arrow
             elif event.keyval == 65363: self._jump_history(+1) # Right-arrow
+            elif event.keyval == ord('x'):
+                self.searchbar.entry.set_text("> ")
+                self.searchbar.entry.set_position(2)
+
 
 
 def main(core, cnf):
