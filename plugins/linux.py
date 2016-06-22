@@ -11,19 +11,22 @@ gi.require_version('Keybinder', '3.0')
 
 from gi.repository import Gtk, Keybinder, Notify
 
+from subprocess import Popen
+from subprocess import check_output
+
 notification = Notify.Notification()
 
 def grab_notify(apps, *args):
     clip = check_output(["xclip", "-o"], universal_newlines=True)
     if clip is None: return
     query = clip.strip().lower()
-    apps.root.search_entry.set_text(clip)
-    apps.root.search_and_reflect()
+    apps.home.search_entry.set_text(clip)
+    apps.home.search_and_reflect()
     notifier(apps)
 
 
 def notifier(app, *args):
-    buffer = app.root.viewer.textbuffer
+    buffer = app.home.viewer.textbuffer
 
     insert = buffer.get_insert()
     beg    = buffer.get_start_iter()
@@ -46,7 +49,7 @@ def notifier(app, *args):
 
 def plugin_main(app, fullpath):
     Keybinder.init()
-    Keybinder.bind("<Ctrl><Alt>v", lambda *a: grab_notify(app.root))
+    Keybinder.bind("<Ctrl><Alt>v", lambda *a: grab_notify(app))
     Keybinder.bind("<Ctrl><Alt>m", lambda *a: notifier(app))
     Notify.init("anubad")
     notification.set_icon_from_pixbuf(app.pixbuf_logo)

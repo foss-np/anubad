@@ -113,7 +113,7 @@ def plugin_main(app, fullpath):
         return False
 
     path = gloss['path']
-    gloss = app.home.core.Glossary.instances[path + 'en2ne/']
+    gloss = app.home.core.Glossary.instances[path + 'en2np/']
     liststore, ulta = gloss['numbers.tra']
 
     n2w = adaptor(liststore, path + 'numbers.tra')
@@ -125,11 +125,11 @@ def main():
     import sys
     sys.path.append(sys.path[0]+'/../src/')
 
-    import config
-    rc = config.main()
+    import setting
+    cnf = setting.main()
 
     import core
-    path = rc.glossary_list['foss']['pairs'][0]
+    path = cnf.glossary_list['foss']['pairs'][0]
     gloss = core.Glossary(path)
 
     liststore, ulta = gloss['numbers.tra']
