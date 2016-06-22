@@ -271,8 +271,14 @@ def scan_plugins(cnf):
     for file_name in os.listdir(path_plugins):
         if '#' in file_name: continue # just for ignoring backup files
         if file_name[-3:] not in ".py": continue
-        namespace = importlib.__import__(file_name[:-3])
-        yield file_name[:-3], namespace
+        name = file_name[:-3]
+        try:
+            namespace = importlib.__import__(name)
+        except:
+            traceback.print_exception(*sys.exc_info())
+            namespace = None
+
+        yield name, namespace
 
 
 def load_plugins(app, plugins):
