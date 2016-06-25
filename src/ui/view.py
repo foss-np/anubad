@@ -63,14 +63,14 @@ class Display(Gtk.Overlay):
         buffer = self.textview.get_buffer()
         self.textbuffer = buffer
 
-        self.tag_bold = buffer.create_tag("bold", weight=Pango.Weight.BOLD)
-        self.tag_li = buffer.create_tag("li", foreground="gray", weight=Pango.Weight.BOLD)
-        self.tag_pos = buffer.create_tag("pos", foreground="red")
-        self.tag_trans = buffer.create_tag("trans", foreground="blue")
+        self.tag_li      = buffer.create_tag("li", foreground="gray", weight=Pango.Weight.BOLD)
+        self.tag_pos     = buffer.create_tag("pos", foreground="red")
+        self.tag_bold    = buffer.create_tag("bold", weight=Pango.Weight.BOLD)
+        self.tag_trans   = buffer.create_tag("trans", foreground="blue")
+        self.tag_found   = buffer.create_tag("found", background="yellow")
+        self.tag_source  = buffer.create_tag("source", foreground="gray", scale=.65)
         self.tag_example = buffer.create_tag("example", foreground="blue", style=Pango.Style.ITALIC)
-        self.tag_source = buffer.create_tag("source", foreground="gray", scale=.65)
-        self.tag_found = buffer.create_tag("found", background="yellow")
-        self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD)
+        self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD, scale=.85)
 
 
     def jump_to(self, textIter):

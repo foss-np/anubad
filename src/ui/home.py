@@ -270,7 +270,10 @@ class Home(Gtk.Window):
     def makeWidgets_sidebar(self):
         self.sidebar = sidebar.Bar(self)
         treeSelection = self.sidebar.treeview.get_selection()
-        self.sidebar.select_signal = treeSelection.connect("changed", self.sidebar_on_row_changed)
+        self.sidebar.select_signal = treeSelection.connect(
+            "changed",
+            self.sidebar_on_row_changed
+        )
 
         def _on_key_press(widget, event):
             # NOTE to stop propagation of signal return True
@@ -562,7 +565,6 @@ class Home(Gtk.Window):
             elif event.keyval == ord('x'):
                 self.searchbar.entry.set_text("> ")
                 self.searchbar.entry.set_position(2)
-
 
 
 def main(core, cnf):

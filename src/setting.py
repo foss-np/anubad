@@ -37,11 +37,11 @@ class Settings(configparser.ConfigParser):
     def singleton_init(self):
         configparser.ConfigParser.__init__(self)
         self.glossary_list = []
-        self.apps,        self['apps']        = dict(), dict()
-        self.core,        self['core']        = dict(), dict()
-        self.fonts,       self['fonts']       = dict(), dict()
-        self.gui,         self['gui']         = dict(), dict()
-        self.preferences, self['preferences'] = dict(), dict()
+        self.apps,        self['apps']        = None, dict()
+        self.core,        self['core']        = None, dict()
+        self.fonts,       self['fonts']       = None, dict()
+        self.gui,         self['gui']         = None, dict()
+        self.preferences, self['preferences'] = None, dict()
 
 
     def read(self, conf_file):
@@ -60,18 +60,18 @@ class Settings(configparser.ConfigParser):
                 obj  = self.extract_gloss(name, self[section])
                 self.glossary_list.append(obj)
 
+        self.gui   = self.extract_gui()
+        self.apps  = self.extract_apps()
         self.fonts = self.extract_fonts()
-        self.gui = self.extract_gui()
-        self.apps = self.extract_apps()
 
 
     def extract_core(self):
         core = self['core']
         return {
-            'debugly'   : core.get('debugly', ''),
-            'plugins'   : core.get('plugins', ''),
-            'no-thread' : core.getboolean('no-thread', False),
-            'gloss-fix' : core.getboolean('gloss-fix', False),
+            'debugly'        : core.get('debugly', ''),
+            'plugins-folder' : core.get('plugins-folder', ''),
+            'no-thread'      : core.getboolean('no-thread', False),
+            'gloss-fix'      : core.getboolean('gloss-fix', False),
         }
 
 
@@ -125,6 +125,16 @@ class Settings(configparser.ConfigParser):
             'editor'       : apps.get('editor'),
             'browser'      : apps.get('browser'),
         }
+
+
+    def apply_args_request(self, opts):
+        self.core['no-thread']                   = opts.nothread
+        self.preferences['enable-plugins']      *= not opts.noplugins
+        self.preferences['hide-on-startup']      = opts.hide
+        self.preferences['show-on-system-tray'] *= not opts.notray
+        self.preferences['enable-history-file'] *= not opts.nohistfile
+        if self.preferences['show-on-system-tray']:
+            self.preferences['show-on-taskbar'] *= opts.notaskbar
 
 
     def editor_goto_line_uri(self, path, line=None):

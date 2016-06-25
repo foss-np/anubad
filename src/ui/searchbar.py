@@ -100,7 +100,6 @@ class Bar(Gtk.HBox):
         length = len(self.entry.HISTORY)
         if length == 0: return True
         i = self.entry.CURRENT + diff
-        # print("history_seek:", self.search_entry.CURRENT, '+', diff, ':', i, '==', length)
         if i >= length: return True
         if i == -1: return True
         self.entry.set_text(self.entry.HISTORY[i])

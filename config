@@ -1,5 +1,5 @@
 [core]
-plugins = ../plugins/
+plugins-folder = ../plugins/
 
 [gloss "foss"]
 name = foss

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 #^^^ not using env for process name
 
+__version__  = 0.97
 __PKG_ID__   = "apps.anubad"
 __PKG_NAME__ = "anubad - अनुवाद"
 __PKG_DESC__ = "A Glossary Browser"
@@ -179,7 +180,6 @@ class App(Gtk.Application):
 
 
     def home_on_destroy(self, event, *args):
-        # Show our message dialog
         dialog = Gtk.MessageDialog(
             transient_for=self.home,
             modal=True,
@@ -190,8 +190,7 @@ class App(Gtk.Application):
         def on_key_release(widget, event):
             if Gdk.ModifierType.CONTROL_MASK & event.state:
                 if event.keyval in (ord('q'), ord('Q'),  ord('c'), ord('C')):
-                    dialog.destroy()
-                    self.quit()
+                    dialog.emit('response', Gtk.ResponseType.OK)
 
         dialog.connect('key_release_event', on_key_release)
 
@@ -199,6 +198,7 @@ class App(Gtk.Application):
         dialog.destroy()
 
         if response == Gtk.ResponseType.OK:
+            self.quit()
             return False
 
         return True
@@ -228,7 +228,7 @@ class App(Gtk.Application):
             about.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
             about.set_logo(self.pixbuf_logo)
             about.set_program_name(__PKG_NAME__)
-            about.set_comments("\nTranslation Glossary\n")
+            about.set_comments("\nTranslation Glossary and more\n")
             about.set_website("http://anubad.herokuapp.com")
             about.set_website_label("Web Version")
             about.set_authors(open(PWD + '../AUTHORS').read().splitlines())
@@ -247,19 +247,9 @@ def verify_mime(cnf):
         cnf.apps[name] = desktopAppInfo.get_executable()
 
 
-def apply_setting_changes(cnf, opts):
-    cnf.core['no-thread']                   = opts.nothread
-    cnf.preferences['enable-plugins']      *= not opts.noplugins
-    cnf.preferences['hide-on-startup']      = opts.hide
-    cnf.preferences['show-on-system-tray'] *= not opts.notray
-    cnf.preferences['enable-history-file'] *= not opts.nohistfile
-    if cnf.preferences['show-on-system-tray']:
-        cnf.preferences['show-on-taskbar'] *= opts.notaskbar
-
-
 def scan_plugins(cnf):
     if not cnf.preferences['enable-plugins']: return
-    path_plugins = PWD + cnf.core['plugins']
+    path_plugins = PWD + cnf.core['plugins-folder']
     if not os.path.isdir(path_plugins): return
     if path_plugins == PWD: return
     sys.path.append(path_plugins)
