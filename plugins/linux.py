@@ -20,7 +20,7 @@ def grab_notify(apps, *args):
     clip = check_output(["xclip", "-o"], universal_newlines=True)
     if clip is None: return
     query = clip.strip().lower()
-    apps.home.search_entry.set_text(clip)
+    apps.home.searchbar.entry.set_text(clip)
     apps.home.search_and_reflect()
     notifier(apps)
 

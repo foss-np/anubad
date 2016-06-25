@@ -9,7 +9,7 @@ and power users, not really required plugins.
 """
 
 __platform__ = 'posix'
-__version__  = '0.1'
+__version__  = '0.2'
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
 
@@ -23,37 +23,66 @@ import linecache
 from subprocess import Popen
 from subprocess import check_output
 
+
+def browse_gloss(app):
+    dialog = Gtk.MessageDialog(transient_for=app.home)
+
+    dialog.props.text = 'Click on the file you want to open.'
+    layout = dialog.get_content_area()
+
+    scroll = Gtk.ScrolledWindow()
+    layout.add(scroll)
+    scroll.set_min_content_height(250)
+    scroll.set_hexpand(True)
+    scroll.set_vexpand(True)
+
+    treemodel = Gtk.TreeStore(str, str)
+    for key, instance in app.home.core.Glossary.instances.items():
+        root = treemodel.append(None, ["folder", key])
+        for _file in instance:
+            treemodel.append(root, ["text-x-generic", _file])
+
+
+    treeview = Gtk.TreeView(treemodel)
+    scroll.add(treeview)
+
+    def on_row_activate(widget, treepath, treecol):
+        model    = widget.get_model()
+        treeiter = model.get_iter(treepath)
+        path     = model.get_value(treeiter, 1)
+        parent   = model.iter_parent(treeiter)
+        if parent:
+            path = model.get_value(parent, 1) + path
+            print(Popen([app.cnf.apps['editor'], path]).pid)
+            dialog.destroy()
+            return
+
+        print(Popen([app.cnf.apps['file-manager'], path]).pid)
+
+
+    treeview.append_column(Gtk.TreeViewColumn("image", Gtk.CellRendererPixbuf(), icon_name=0))
+    treeview.append_column(Gtk.TreeViewColumn("gloss", Gtk.CellRendererText(), text=1))
+    treeview.expand_all()
+    treeview.set_headers_visible(False)
+    treeview.set_search_column(1)
+    treeview.connect("row-activated", on_row_activate)
+
+    layout.show_all()
+    dialog.run()
+    dialog.destroy()
+
+
 def plugin_open_dir(app):
+    def _on_key_release(widget, event):
+        if Gdk.ModifierType.MOD1_MASK & event.state:
+            if event.keyval == ord('o'): browse_gloss(app)
+
+    app.home.connect('key_release_event', _on_key_release)
+
     b_OPEN = Gtk.ToolButton(icon_name="folder")
     app.insert_plugin_item_on_toolbar(b_OPEN)
     b_OPEN.set_tooltip_markup("Open Glossary Directory")
-
-    def _browse(*arg):
-        app.home.toolbar.t_COPY.set_active(False)
-        dialog = Gtk.Dialog(parent = app.home)
-
-        for i, gloss in enumerate(app.cnf.glossary_list):
-            dialog.add_button(gloss['name'], i)
-
-        dialog.connect( # quit when Esc is pressed
-            'key_press_event',
-            lambda w, e: dialog.destroy() if e.keyval == 65307 else None
-        )
-
-        dialog.connect(
-            "response",
-            lambda w, _id: print(
-                "pid:",
-                Popen([
-                    app.cnf.apps['file-manager'],
-                    app.cnf.glossary_list[_id]["path"]
-                ]).pid
-            )
-        )
-        dialog.run()
-        dialog.destroy()
-
-    b_OPEN.connect("clicked", _browse)
+    b_OPEN.connect("clicked", lambda *a: browse_gloss(app))
     b_OPEN.show()
 
 
@@ -63,26 +92,21 @@ def plugin_open_src(app):
         treeSelection = app.home.sidebar.treeview.get_selection()
         model, pathlst = treeSelection.get_selected_rows()
 
-        if len(pathlst) == 0:
-            path  = app.cnf.glossary_list[0]['pairs'][0]
-            gloss = app.home.core.Glossary.instances[path]
-            src   = path + 'main.tra'
-            line  = gloss.counter
-        else:
-            word, ID, src, parsed_info  = app.home.sidebar.get_suggestion(pathlst[0])
-            # print(row, file=fp6)
+        if len(pathlst) == 0: browse_gloss(app); return
+        word, ID, src, parsed_info  = app.home.sidebar.get_suggestion(pathlst[0])
+        # print(row, file=fp6)
 
-            ## handel invert map
-            ## TODO: change the style
-            if type(ID) == int: line = ID
-            else: # else tuple
-                try:
-                    i = app.home.clips.index(app.home.copy_buffer)
-                    # print(i, file=fp6)
-                    # print(ID, i)
-                    line = ID[i]
-                except ValueError:
-                    line = None
+        ## handel invert map
+        ## TODO: change the style
+        if type(ID) == int: line = ID
+        else: # else tuple
+            try:
+                i = app.home.clips.index(app.home.copy_buffer)
+                # print(i, file=fp6)
+                # print(ID, i)
+                line = ID[i]
+            except ValueError:
+                line = None
 
         cmd = app.cnf.editor_goto_line_uri(src, line)
         print("pid:", src, Popen(cmd).pid)
