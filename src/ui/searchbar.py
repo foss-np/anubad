@@ -24,6 +24,7 @@ class Bar(Gtk.HBox):
         tool_tip = "<b>Search:</b> \t⌨ [<i>Enter</i>]"
         self.pack_start(self.makeWidget_entry(), expand=True, fill=True, padding=2)
         self.entry.connect('key_press_event', self.on_key_press)
+        self.entry.connect("focus", self.stop_focus_nav)
 
         ## Search Button
         self.button = Gtk.Button.new_with_mnemonic('_Search')
@@ -36,13 +37,18 @@ class Bar(Gtk.HBox):
 
     def makeWidget_entry(self):
         self.entry = Gtk.SearchEntry()
-
         self.entry.set_placeholder_text('type here ...')
         self.entry.set_max_length(32)
         self.entry.set_progress_pulse_step(0.4)
         self.entry.HISTORY = []
         self.entry.CURRENT = 0
         return self.entry
+
+
+    def stop_focus_nav(self, widget, direction):
+        # NOTE: avoid losing focus of entry
+        if direction == Gtk.DirectionType.UP   : return True
+        if direction == Gtk.DirectionType.DOWN : return True
 
 
     def add_hashtag_completion(self, liststore):
@@ -56,6 +62,7 @@ class Bar(Gtk.HBox):
 
         self.entrycompletion.set_model(liststore)
         self.entrycompletion.set_text_column(0)
+        self.entrycompletion.set_inline_selection(True)
 
         # NOTE just to fix the bug of size
         # self.entrycompletion.insert_action_markup(0, "")
@@ -70,13 +77,17 @@ class Bar(Gtk.HBox):
 
     def on_key_press(self, widget, event):
         # NOTE to stop propagation of signal return True
-        if   event.keyval == 65362: return self.nav_history(-1) # Up-arrow
-        elif event.keyval == 65364: return self.nav_history(+1) # Down-arrow
-        elif Gdk.ModifierType.CONTROL_MASK & event.state:
-            if   event.keyval == 65365: return self.nav_history(-1) # Pg-Up
-            elif event.keyval == 65366: return self.nav_history(+1) # Pg-Dn
-            elif event.keyval == ord('p'): return self.nav_history(-1)
-            elif event.keyval == ord('n'): return self.nav_history(+1)
+        if   event.keyval == 65362: self.nav_history(-1) # Up-arrow
+        elif event.keyval == 65364: self.nav_history(+1) # Down-arrow
+        if  Gdk.ModifierType.CONTROL_MASK & event.state:
+            if   event.keyval == 65365: self.nav_history(-1) # Pg-Up
+            elif event.keyval == 65366: self.nav_history(+1) # Pg-Dn
+            elif event.keyval == ord('p'): self.nav_history(-1)
+            elif event.keyval == ord('n'): self.nav_history(+1)
+            # elif event.keyval == ord('s'):
+            elif event.keyval == ord('r'):
+                # self.entrycompletion.insert_action_markup(0, "<b>reverse-i-search:</b>")
+                self.reverse_search()
             elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
             elif event.keyval == ord('e'): widget.set_position(-1)
             elif event.keyval == ord('a'):
@@ -95,7 +106,6 @@ class Bar(Gtk.HBox):
         self.entry.set_text(self.entry.HISTORY[i])
         self.entry.set_position(-1)
         self.entry.CURRENT = i
-        return True
 
 
 def sample():
