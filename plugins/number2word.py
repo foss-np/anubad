@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 
+"""digits into words
+
+Convert the numbers into words.
+"""
+
+__version__  = '0.1'
+__authors__  = 'rho'
+__support__  = 'https://github.com/foss-np/anubad/'
+
+
 class num2word:
     def __init__(self, word_map, interval):
         self.word_map = word_map
@@ -118,7 +128,6 @@ def plugin_main(app, fullpath):
 
     n2w = adaptor(liststore, path + 'numbers.tra')
     app.home.engines.append((lambda q: q.isdigit(), n2w.gui_reflect))
-    return True
 
 
 def main():

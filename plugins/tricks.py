@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 
+"""tricks for power users
+
+
+Collection of extra functionality and fancy tricks, for developers,
+and power users, not really required plugins.
+
 """
-not really required plugins, tricks for developers.
-"""
+
+__platform__ = 'posix'
+__version__  = '0.1'
+__authors__  = 'rho'
+__support__  = 'https://github.com/foss-np/anubad/'
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -110,20 +119,10 @@ def engine_dump(home, query):
 
     return output
 
-def engine_python(app, query):
-    # try:
-    #     if not hasattr(app.home, query):
-    #         output = "doesn't have anything like that"
-    # except
-    app.home.searchbar.entry.set_text(">>> ")
-    app.home.searchbar.entry.set_position(4)
-    return "python engine not implemented"
 
 
 def plugin_main(app, fullpath):
     plugin_open_dir(app)
     plugin_open_src(app)
-    app.home.engines.insert(0, ((lambda q: q.startswith('>>>'), lambda q: engine_python(app, q[3:].strip()))))
     app.home.engines.append((lambda q: q[0] == '$', lambda q: engine_shell(app.home, q[1:].strip())))
     app.home.engines.append((lambda q: q.startswith('d:'), lambda q: engine_dump(app.home, q[2:].strip())))
-    return True

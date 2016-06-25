@@ -262,21 +262,58 @@ def scan_plugins(cnf):
             namespace = importlib.__import__(name)
         except:
             traceback.print_exception(*sys.exc_info())
-            namespace = None
+            continue
 
+        if not hasattr(namespace, 'plugin_main'):
+            del namespace
+            continue
+
+        plug = cnf.plugin_list.get(
+            name,
+            {
+                'registered' : False,
+                'disable'    : False,
+            }
+        )
+
+        plug['active']    = False
+        plug['error']     = False
+        plug['platform']  = getattr(namespace, '__platform__', os.name)
+        plug['for']       = getattr(namespace, '__for__', __version__)
+        plug['version']   = getattr(namespace, '__version__', 0)
+        plug['depends']   = getattr(namespace, '__depends__', '')
+        plug['authors']   = getattr(namespace, '__authors__', '')
+        plug['support']   = getattr(namespace, '__support__', '')
+
+        cnf.plugin_list[name] = plug
         yield name, namespace
 
 
-def load_plugins(app, plugins):
-    for i, (name, plug) in enumerate(plugins.items()):
+def load_plugins(app):
+    if not app.cnf.preferences['enable-plugins']: return
+    count = 0
+    for name, plug in app.cnf.plugin_list.items():
+        if plug['disable']:
+            print("plugin.skipped.config.disabled:", name)
+            continue
+
+        if plug['platform'] != os.name:
+            print("plugin.skipped.unmatch.platform:", name)
+            continue
+
         try:
-            if plug.plugin_main(app, PWD):
-                print("plugin:", name, file=sys.stderr)
+            if app.plugins[name].plugin_main(app, PWD): continue
+            plug['active'] = True
+            print("plugin.loaded:", name, file=sys.stderr)
+            count += 1
         except Exception as e:
+            plug['error'] = True
             traceback.print_exception(*sys.exc_info())
             app.home.infobar.set_message_type(Gtk.MessageType.WARNING)
             app.home.infobar.LABEL.set_markup("Error occured during loading plugin <b>%s</b>"%name)
             app.home.infobar.show_all()
+
+    return count
 
 
 def create_arg_parser():

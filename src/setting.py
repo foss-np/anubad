@@ -37,6 +37,7 @@ class Settings(configparser.ConfigParser):
     def singleton_init(self):
         configparser.ConfigParser.__init__(self)
         self.glossary_list = []
+        self.plugin_list   = dict()
         self.apps,        self['apps']        = None, dict()
         self.core,        self['core']        = None, dict()
         self.fonts,       self['fonts']       = None, dict()

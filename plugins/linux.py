@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 
-"""
-plugins specific to linux environment
+"""plugins specific to linux platform
+
+Display search results in notification and Global keybind to grab
+clipboard to anubad.
+
 """
 
-import gi
-gi.require_version('Gtk', '3.0')
-gi.require_version('Notify', '0.7')
-gi.require_version('Keybinder', '3.0')
-
-from gi.repository import Gtk, Keybinder, Notify
+__platform__ = 'posix'
+__version__  = '0.2'
+__depends__  = 'xclip, libkeybinder'
+__authors__  = 'rho'
+__support__  = 'https://github.com/foss-np/anubad/'
 
 from subprocess import Popen
 from subprocess import check_output
-
-notification = Notify.Notification()
 
 def grab_notify(apps, *args):
     clip = check_output(["xclip", "-o"], universal_newlines=True)
@@ -48,9 +48,17 @@ def notifier(app, *args):
 
 
 def plugin_main(app, fullpath):
+    import gi
+    gi.require_version('Notify', '0.7')
+    gi.require_version('Keybinder', '3.0')
+
+    from gi.repository import Keybinder, Notify
+
+    global notification
+    notification = Notify.Notification()
+
     Keybinder.init()
     Keybinder.bind("<Ctrl><Alt>v", lambda *a: grab_notify(app))
     Keybinder.bind("<Ctrl><Alt>m", lambda *a: notifier(app))
     Notify.init("anubad")
     notification.set_icon_from_pixbuf(app.pixbuf_logo)
-    return True
