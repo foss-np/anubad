@@ -1,4 +1,4 @@
-NAME=`basename $(PWD)`
+PKG_NAME = anubad
 
 default: all
 
@@ -11,13 +11,6 @@ verbose3:
 verbose4:
 	VERBOSE=4 ./main.py
 
-dist:
-	rm -f "$(NAME).7z"
-	7z a "$(NAME)" $(PWD)
-
-mysettings.conf:
-	touch mysettings.conf
-
 core:
 	./core.py
 
@@ -26,3 +19,10 @@ setting:
 
 commander:
 	./commander.py
+
+unlink:
+	rm -f /usr/local/bin/${PKG_NAME}
+
+link: unlink
+	ln -s "$(PWD)/main.py" /usr/local/bin/${PKG_NAME}
+

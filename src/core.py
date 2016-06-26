@@ -268,6 +268,7 @@ class Glossary(dict):
 
 
 def load_from_config(cnf):
+    count = 0
     for gloss in sorted(cnf.glossary_list, key=lambda v: v['priority']):
         # while loop for reloading
         n = 0
@@ -287,6 +288,8 @@ def load_from_config(cnf):
                 print('RELOAD')
                 continue
             n += 1
+            count += 1
+    return count
 
 
 if __name__ == '__main__':

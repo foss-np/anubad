@@ -4,7 +4,7 @@
 __version__  = 0.97
 __PKG_ID__   = "apps.anubad"
 __PKG_NAME__ = "anubad - अनुवाद"
-__PKG_DESC__ = "A Glossary Browser"
+__PKG_DESC__ = "Translation Glossary and More"
 
 import os, sys
 
@@ -108,10 +108,10 @@ class App(Gtk.Application):
         self.commander = commander.Engine(app)
 
         self.cnf = setting.main(PWD)
-        apply_setting_changes(self.cnf, self.opts)
+        self.cnf.apply_args_request(self.opts)
 
         verify_mime(self.cnf)
-        core.load_from_config(self.cnf)
+        self.no_of_gloss = core.load_from_config(self.cnf)
 
         self.plugins = { k: v for k, v in scan_plugins(self.cnf) }
         # NOTE: since 'accessories-dictionary' logo sucks
@@ -121,7 +121,7 @@ class App(Gtk.Application):
     def do_activate(self):
         if self.home == None:
             self.home = self.home_create_window()
-            load_plugins(self, self.plugins)
+            self.no_of_plugins = load_plugins(self)
             if self.cnf.preferences['hide-on-startup']: return
 
         self.home.show()
@@ -228,7 +228,7 @@ class App(Gtk.Application):
             about.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
             about.set_logo(self.pixbuf_logo)
             about.set_program_name(__PKG_NAME__)
-            about.set_comments("\nTranslation Glossary and more\n")
+            about.set_comments("%s\n\nv%s\n"%(__PKG_DESC__, __version__))
             about.set_website("http://anubad.herokuapp.com")
             about.set_website_label("Web Version")
             about.set_authors(open(PWD + '../AUTHORS').read().splitlines())

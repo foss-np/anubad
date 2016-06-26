@@ -46,26 +46,25 @@ def browse_gloss(app):
     treeview = Gtk.TreeView(treemodel)
     scroll.add(treeview)
 
-    def on_row_activate(widget, treepath, treecol):
+    def _on_row_activate(widget, treepath, treecol):
         model    = widget.get_model()
         treeiter = model.get_iter(treepath)
         path     = model.get_value(treeiter, 1)
         parent   = model.iter_parent(treeiter)
+        dialog.destroy()
         if parent:
             path = model.get_value(parent, 1) + path
             print(Popen([app.cnf.apps['editor'], path]).pid)
-            dialog.destroy()
             return
 
         print(Popen([app.cnf.apps['file-manager'], path]).pid)
-
 
     treeview.append_column(Gtk.TreeViewColumn("image", Gtk.CellRendererPixbuf(), icon_name=0))
     treeview.append_column(Gtk.TreeViewColumn("gloss", Gtk.CellRendererText(), text=1))
     treeview.expand_all()
     treeview.set_headers_visible(False)
     treeview.set_search_column(1)
-    treeview.connect("row-activated", on_row_activate)
+    treeview.connect("row-activated", _on_row_activate)
 
     layout.show_all()
     dialog.run()

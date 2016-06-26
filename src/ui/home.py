@@ -183,12 +183,6 @@ class Home(Gtk.Window):
         bar.add(bar.t_COPY)
         bar.t_COPY.set_active(True)
         ##
-        ## Add Button
-        bar.b_ADD = Gtk.ToolButton(icon_name="list-add")
-        bar.add(bar.b_ADD)
-        # bar.b_ADD.connect("clicked", lambda w: self.add_to_gloss())
-        bar.b_ADD.set_tooltip_markup("Add new word to Glossary, <u>Ctrl+i</u>")
-        ##
         #
         bar.s_END = Gtk.SeparatorToolItem()
         bar.add(bar.s_END)
