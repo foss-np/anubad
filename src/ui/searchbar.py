@@ -22,34 +22,45 @@ class Bar(Gtk.Box):
         label.set_markup("<b>Query</b>")
         self.pack_start(label, expand=False, fill=False, padding=60)
 
-        tool_tip = "<b>Search:</b> \t⌨ [<i>Enter</i>]"
-        self.pack_start(self.makeWidget_entry(), expand=True, fill=True, padding=2)
+        ## Search Entry
+        self.pack_start(self.makeWidget_entry_with_button(), expand=True, fill=True, padding=2)
         self.entry.connect('key_press_event', self.on_key_press)
-        self.entry.connect("focus", self.stop_focus_nav)
-
-        ## Search Button
-        self.button = Gtk.Button.new_with_mnemonic('_Search')
-        self.button.set_use_underline(True)
-        self.pack_start(self.button, expand=False, fill=False, padding=1)
-
-        self.entry.set_tooltip_markup(tool_tip)
-        self.button.set_tooltip_markup(tool_tip)
 
 
-    def makeWidget_entry(self):
+
+    def makeWidget_entry_with_button(self):
+        layout = Gtk.Box(name="search-entry")
+        layout.set_tooltip_markup("<b>Search:</b> \t⌨ [<i>Enter</i>]")
+
+        style_context = layout.get_style_context()
+        style_context.add_class(Gtk.STYLE_CLASS_LINKED)
+        layout.set_border_width(0)
+        layout.set_spacing(0)
+
+        ## Entry
         self.entry = Gtk.SearchEntry()
+        layout.pack_start(self.entry, expand=True, fill=True, padding=0)
         self.entry.set_placeholder_text('type here ...')
-        self.entry.set_max_length(32)
+        self.entry.set_max_length(36)
         self.entry.set_progress_pulse_step(0.4)
+        self.entry.set_icon_sensitive(0, True)
+        self.entry.set_icon_activatable(0, True)
         self.entry.HISTORY = []
         self.entry.CURRENT = 0
-        return self.entry
 
+        def _stop_focus_nav(widget, direction):
+            # NOTE: avoid losing focus of entry
+            if direction == Gtk.DirectionType.UP   : return True
+            if direction == Gtk.DirectionType.DOWN : return True
 
-    def stop_focus_nav(self, widget, direction):
-        # NOTE: avoid losing focus of entry
-        if direction == Gtk.DirectionType.UP   : return True
-        if direction == Gtk.DirectionType.DOWN : return True
+        self.entry.connect('focus', _stop_focus_nav)
+
+        ## Button
+        button = Gtk.Button.new_from_icon_name('characters-arrow-symbolic', Gtk.IconSize.MENU)
+        layout.pack_start(button, expand=False, fill=False, padding=0)
+        button.connect('clicked', lambda *a: self.entry.emit('activate'))
+
+        return layout
 
 
     def add_hashtag_completion(self, liststore):
@@ -80,15 +91,11 @@ class Bar(Gtk.Box):
         # NOTE to stop propagation of signal return True
         if   event.keyval == 65362: self.nav_history(-1) # Up-arrow
         elif event.keyval == 65364: self.nav_history(+1) # Down-arrow
-        if  Gdk.ModifierType.CONTROL_MASK & event.state:
+        elif Gdk.ModifierType.CONTROL_MASK & event.state:
             if   event.keyval == 65365: self.nav_history(-1) # Pg-Up
             elif event.keyval == 65366: self.nav_history(+1) # Pg-Dn
             elif event.keyval == ord('p'): self.nav_history(-1)
             elif event.keyval == ord('n'): self.nav_history(+1)
-            # elif event.keyval == ord('s'):
-            elif event.keyval == ord('r'):
-                # self.entrycompletion.insert_action_markup(0, "<b>reverse-i-search:</b>")
-                self.reverse_search()
             elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
             elif event.keyval == ord('e'): widget.set_position(-1)
             elif event.keyval == ord('a'):

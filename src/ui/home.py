@@ -225,7 +225,6 @@ class Home(Gtk.Window):
 
     def makeWidgets_searchbar(self):
         self.searchbar = searchbar.Bar()
-        self.searchbar.button.connect('clicked', lambda *a: self.search_and_reflect())
 
         #### liststore
         # BUG: left cell align is not working, so "%4d"
@@ -247,13 +246,7 @@ class Home(Gtk.Window):
                     widget.set_text("")
 
         self.searchbar.entry.connect('key_press_event', _on_key_press)
-
-        def _on_key_release(widget, event):
-            # NOTE to stop propagation of signal return True
-            if   event is None: self.search_and_reflect()
-            elif event.keyval == 65293: self.search_and_reflect() # <enter> return
-
-        self.searchbar.entry.connect('key_release_event', _on_key_release)
+        self.searchbar.entry.connect('activate', lambda *a: self.search_and_reflect())
 
         self.searchbar.entry.modify_font(self.fonts['search'])
         self.track_FONT.add(self.searchbar.entry)
