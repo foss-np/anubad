@@ -8,7 +8,7 @@ clipboard to anubad.
 """
 
 __platform__ = 'posix'
-__version__  = '0.2'
+__version__  = 0.2
 __depends__  = 'xclip, libkeybinder'
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
@@ -39,12 +39,11 @@ def notifier(app, *args):
     # print(f_text)
 
     notification.update(text)
-    #notification.update(text, body, icon)
+    # notification.update(text, body, icon)
     # notification.add_action(action, label, callback, *user_data)
     notification.show()
-
-    xcowsay = app.plugins['xcowsay']
-    xcowsay.popup(text)
+    # xcowsay = app.plugins['xcowsay']
+    # xcowsay.popup(text)
 
 
 def plugin_main(app, fullpath):

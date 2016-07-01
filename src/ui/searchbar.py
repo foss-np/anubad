@@ -8,10 +8,11 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
-class Bar(Gtk.HBox):
+class Bar(Gtk.Box):
     def __init__(self):
-        Gtk.HBox.__init__(self)
+        Gtk.Box.__init__(self, name="SearchBar")
         self.track_FONT = set()
+
         self.makeWidgets()
 
 

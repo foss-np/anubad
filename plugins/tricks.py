@@ -9,7 +9,7 @@ and power users, not really required plugins.
 """
 
 __platform__ = 'posix'
-__version__  = '0.2'
+__version__  = 0.2
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
 

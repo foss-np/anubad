@@ -4,7 +4,7 @@
 import os
 import configparser
 
-FILE_CONF_DEFAULTS = '../config'
+FILE_CONF_DEFAULT = '../config'
 FILE_CONF = '~/.config/anubad/config'
 FILE_HIST = '~/.cache/anubad/history'
 
@@ -38,10 +38,10 @@ class Settings(configparser.ConfigParser):
         configparser.ConfigParser.__init__(self)
         self.glossary_list = []
         self.plugin_list   = dict()
+        self.gui,         self['gui']         = None, dict()
         self.apps,        self['apps']        = None, dict()
         self.core,        self['core']        = None, dict()
         self.fonts,       self['fonts']       = None, dict()
-        self.gui,         self['gui']         = None, dict()
         self.preferences, self['preferences'] = None, dict()
 
 
@@ -57,28 +57,69 @@ class Settings(configparser.ConfigParser):
 
         for section in self.sections():
             if 'gloss' in section:
-                name = section.split('"')[1]
-                obj  = self.extract_gloss(name, self[section])
+                _id = section.split('"')[1]
+                obj = self.new_gloss(_id, self[section])
                 self.glossary_list.append(obj)
+                continue
+
+            if 'plugin' in section:
+                _id = section.split('"')[1]
+                obj = self.new_plugin(_id, self[section])
+                self.plugin_list[_id] = obj
+
 
         self.gui   = self.extract_gui()
         self.apps  = self.extract_apps()
         self.fonts = self.extract_fonts()
 
 
+    def new_gloss(self, _id, obj):
+        return {
+            'name'        : obj.get('name', _id),
+            'path'        : obj.get('path', ''),
+            'type'        : obj.get('type', 'local'),
+            'pairs'       : obj.get('pairs', '').split(),
+            'fetch'       : obj.get('fetch', None),
+            'version'     : obj.getfloat('version', 0),
+            'priority'    : obj.getint('priority', 9),
+            'read-only'   : obj.getboolean('read-only', True),
+            'description' : obj.get('description', ''),
+        }
+
+
+    def new_plugin(self, _id, obj=None):
+        # NOTE: this is just the wrapper for central var control
+        ## dict() should send var in its own datatype
+        get        = obj.get        if hasattr(obj, 'get') else lambda k, d: d
+        getint     = obj.getint     if hasattr(obj, 'getint') else lambda k, d: get(k, d)
+        getfloat   = obj.getfloat   if hasattr(obj, 'getfloat') else lambda k, d: get(k, d)
+        getboolean = obj.getboolean if hasattr(obj, 'getboolean') else lambda k, d: get(k, d)
+
+        return {
+            'name'       : get('name', _id),
+            'path'       : get('path', ''),
+            'fetch'      : get('fetch', None),
+            'version'    : getfloat('version', 0),
+            'disable'    : getboolean('disable', False),
+            'priority'   : getint('priority', 9),
+            'registered' : True if obj else False,
+            'active'     : False,
+            'error'      : False,
+        }
+
+
     def extract_core(self):
         core = self['core']
         return {
             'debugly'        : core.get('debugly', ''),
-            'plugins-folder' : core.get('plugins-folder', ''),
             'no-thread'      : core.getboolean('no-thread', False),
             'gloss-fix'      : core.getboolean('gloss-fix', False),
+            'plugins-folder' : core.get('plugins-folder', ''),
         }
 
 
     def extract_preferences(self):
         pref = self['preferences']
-
         return {
             'enable-history-file' : pref.getboolean('enable-entry-history', True),
             'show-on-system-tray' : pref.getboolean('show-on-system-tray', True),
@@ -89,18 +130,6 @@ class Settings(configparser.ConfigParser):
             'enable-plugins'      : pref.getboolean('enable-plugins', True),
             'append-at-end'       : pref.getboolean('append-at-end', False),
             'regex-search'        : pref.getboolean('regex-search', True),
-        }
-
-
-    def extract_gloss(self, name, obj):
-        return {
-            'name'        : name,
-            'path'        : obj.get('path', ''),
-            'pairs'       : obj.get('pairs', '').split(),
-            'description' : obj.get('description', ''),
-            'priority'    : obj.get('priority', '9'),
-            'read-only'   : obj.getboolean('read-only', True),
-            'fetch'       : obj.get('fetch', True),
         }
 
 
@@ -123,8 +152,8 @@ class Settings(configparser.ConfigParser):
         apps = self['apps']
         return {
             'file-manager' : apps.get('file-manager'),
-            'editor'       : apps.get('editor'),
             'browser'      : apps.get('browser'),
+            'editor'       : apps.get('editor'),
         }
 
 
@@ -152,7 +181,7 @@ class Settings(configparser.ConfigParser):
 
 def main(PWD=""):
     cnf = Settings()
-    cnf.read(PWD + FILE_CONF_DEFAULTS)
+    cnf.read(PWD + FILE_CONF_DEFAULT)
     cnf.read(FILE_CONF)
     cnf.load()
     return cnf

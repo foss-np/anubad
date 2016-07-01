@@ -5,7 +5,7 @@
 Convert the numbers into words.
 """
 
-__version__  = '0.1'
+__version__  = 0.1
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
 

@@ -252,67 +252,63 @@ def scan_plugins(cnf):
     path_plugins = PWD + cnf.core['plugins-folder']
     if not os.path.isdir(path_plugins): return
     if path_plugins == PWD: return
-    sys.path.append(path_plugins)
 
     for file_name in os.listdir(path_plugins):
         if '#' in file_name: continue # just for ignoring backup files
         if file_name[-3:] not in ".py": continue
-        name = file_name[:-3]
+        _id = file_name[:-3]
+        new_plug = cnf.plugin_list.get(
+            _id,
+            cnf.new_plugin(_id)
+        )
+
+        new_plug['path'] = path_plugins
+        cnf.plugin_list[_id] = new_plug
+
+
+    for key, plug in cnf.plugin_list.items():
+        if plug['path'] not in sys.path: sys.path.append(plug['path'])
+
         try:
-            namespace = importlib.__import__(name)
+            namespace = importlib.__import__(key)
         except:
             traceback.print_exception(*sys.exc_info())
+            cnf.plugin_list[key]['error'] = True
             continue
 
         if not hasattr(namespace, 'plugin_main'):
             del namespace
             continue
 
-        plug = cnf.plugin_list.get(
-            name,
-            {
-                'registered' : False,
-                'disable'    : False,
-            }
-        )
-
-        plug['active']    = False
-        plug['error']     = False
-        plug['platform']  = getattr(namespace, '__platform__', os.name)
-        plug['for']       = getattr(namespace, '__for__', __version__)
-        plug['version']   = getattr(namespace, '__version__', 0)
-        plug['depends']   = getattr(namespace, '__depends__', '')
-        plug['authors']   = getattr(namespace, '__authors__', '')
-        plug['support']   = getattr(namespace, '__support__', '')
-
-        cnf.plugin_list[name] = plug
-        yield name, namespace
+        yield key, namespace
 
 
 def load_plugins(app):
     if not app.cnf.preferences['enable-plugins']: return
     count = 0
-    for name, plug in app.cnf.plugin_list.items():
+    for key, namespace in app.plugins.items():
+        plug = app.cnf.plugin_list[key]
         if plug['disable']:
-            print("plugin.skipped.config.disabled:", name)
+            print("plugin.skipped.config.disabled:", key)
             continue
 
-        if plug['platform'] != os.name:
-            print("plugin.skipped.unmatch.platform:", name)
+        if getattr(plug, '__platform__', os.name) != os.name:
+            print("plugin.skipped.unmatch.platform:", key)
             continue
 
         try:
-            if app.plugins[name].plugin_main(app, PWD): continue
-            plug['active'] = True
-            print("plugin.loaded:", name, file=sys.stderr)
-            count += 1
+            if namespace.plugin_main(app, PWD): continue
         except Exception as e:
             plug['error'] = True
             traceback.print_exception(*sys.exc_info())
             app.home.infobar.set_message_type(Gtk.MessageType.WARNING)
-            app.home.infobar.LABEL.set_markup("Error occured during loading plugin <b>%s</b>"%name)
+            app.home.infobar.LABEL.set_markup("Error occured during loading plugin <b>%s</b>"%key)
             app.home.infobar.show_all()
+            continue
 
+        plug['active'] = True
+        print("plugin.loaded:", key, file=sys.stderr)
+        count += 1
     return count
 
 

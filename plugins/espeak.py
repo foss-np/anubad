@@ -7,7 +7,7 @@ Pronounce the selected word using espeak text to speech engine.
 """
 
 __platform__ = 'posix'
-__version__  = '0.1'
+__version__  = 0.1
 __depends__  = 'espeak'
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
