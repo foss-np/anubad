@@ -4,9 +4,12 @@
 import os
 import configparser
 
-FILE_CONF_DEFAULT = '../config'
-FILE_CONF = '~/.config/anubad/config'
-FILE_HIST = '~/.cache/anubad/history'
+PATH_INI  = '~/.config/'
+PATH_CACHE = '~/.cache/anubad/'
+
+FILE_INI          = PATH_INI + 'anubad.ini'
+FILE_HIST         = PATH_CACHE + 'history'
+FILE_DEFAULT_INI  = '../default.ini'
 
 SIZE_HIST  = 1024
 SIZE_CACHE = 20
@@ -183,8 +186,8 @@ class Settings(configparser.ConfigParser):
 
 def main(pwd=""):
     cnf = Settings(pwd)
-    cnf.read(pwd + FILE_CONF_DEFAULT)
-    cnf.read(FILE_CONF)
+    cnf.read(pwd + FILE_DEFAULT_INI)
+    cnf.read(FILE_INI)
     cnf.load()
     return cnf
 

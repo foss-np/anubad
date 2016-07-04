@@ -17,7 +17,7 @@ except:
     from ConfigParser import ConfigParser
 
 cnf = ConfigParser()
-cnf.read(PWD + 'config')
+cnf.read(PWD + 'default.ini')
 PATH_GLOSS = os.path.expanduser(cnf.get('gloss "foss"', 'path') + 'en2np/')
 tmp = cnf.get('fonts', 'viewer').split()
 def_FONT = [ ' '.join(tmp[:-1]), tmp[-1] ]
