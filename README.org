@@ -1,21 +1,15 @@
-#+TITLE: anubad
-#+DATE: Sunday, Apr 19 2015
+#+TITLE: Aanubad
+#+DATE: Tuesday, Jul 05 2016
 #+OPTIONS: num:t
 #+STARTUP: overview
 
 Translation Glossary and More
 
-anubad is glossary browsing traslation glossary, for
-localizers or any one
-
-
-[[http://i.creativecommons.org/l/by/3.0/88x31.png]]
-
-Copyright © 2013 - 2016 to the anubad Authors.
+=Anubad= is GUI for browsing translation glossary, for localizers or any one.
 
 [[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/00.png]]
 
-* Getting it
+* How to get it up and running
 
 
 ** Manual
@@ -28,15 +22,15 @@ Copyright © 2013 - 2016 to the anubad Authors.
    | gobject-introspection | python-gobject | pygi/base   |
    | GTK                   | Gtk+ >= 3      | pygi/       |
 
-   Latest version can be downloaded as [[https://github.com/foss-np/anubad/archive/master.zip][zip]] or [[https://github.com/foss-np/anubad/archive/master.tar.gz][tar]] or cloned.
+   Latest version can be downloaded as [[https://github.com/foss-np/anubad/archive/master.zip][zip]]
+   or [[https://github.com/foss-np/anubad/archive/master.tar.gz][tar]] or cloned.
 
    **NOTE:** see the quick demo =./demo.pyw=, only requires _python_.
 
-*** installation
+*** Installation
 
 
-
-*** run without installing
+*** Want to do a Quick Test, Run without installing
 
     If you are running experimental or doing some hacks, this might be
     best way to keep up.
@@ -46,18 +40,16 @@ Copyright © 2013 - 2016 to the anubad Authors.
       $ sudo make link
     #+end_src
 
-** Adding Glossary
-
-   to auto configure run..
+** Update Glossaries
 
    #+begin_src bash
      ./configure
    #+end_src
 
-   for more detail configuration see =src/gsettings= and
-   =src/mysettings=.
+   for more detail configuration see =src/gsettings= and =src/mysettings=.
 
-*** manually config
+*** Manually config
+
 * Usage
 
 
@@ -81,14 +73,15 @@ Copyright © 2013 - 2016 to the anubad Authors.
 *** EXAMPLES
 
     $ anubad search hello
+
 * Known Issues
 
-  Sometimes application tends crashes unexpectly, turn off the
+  Sometime application tend to crash unexpectedly. Turn off the
   threading if it happens often.
 
   use =--nothread= argument to start without threading
 
-  Make changes in config file to make change persistent adding,
+  Make changes in config file (=default.ini=) to persist the change by adding
   =no-thread = True= in =[core]= section.
 
   #+BEGIN_EXAMPLE
@@ -99,8 +92,7 @@ Copyright © 2013 - 2016 to the anubad Authors.
 
 * History
 
-  Anubad started as the graphical interface for browsing traslation
-  glossary.
+  Anubad started as the graphical interface for browsing translation glossary.
 
 ** Similar Projects
 
@@ -116,5 +108,10 @@ Copyright © 2013 - 2016 to the anubad Authors.
   If you wish to contribute this project, there is much thing you can
   do beyond programming, to get started read [[https://github.com/foss-np/anubad/tree/experimental/CONTRIBUTING.org][this]].
 
-  Any code Contributions to anubad should be made via of GitHub pull
+  Any code Contributions to anubad should be made via GitHub pull
   requests.
+
+[[http://i.creativecommons.org/l/by/3.0/88x31.png]]
+
+Copyright © 2013 - 2016 to the anubad Authors.
+
