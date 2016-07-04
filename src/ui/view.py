@@ -13,52 +13,38 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 from gi.repository import GdkPixbuf
 
+# NOTE: Gtk.Overlay is used instead Gtk.TextView.add_child_in_window()
+# doesn't move while expanding.
 class Display(Gtk.Overlay):
-    """
-    Display is charged Gtk.TextView
-    # TODO: Viewer object access TextView members
-    """
     hand_cursor = Gdk.Cursor(Gdk.CursorType.HAND2)
     regular_cursor = Gdk.Cursor(Gdk.CursorType.XTERM)
 
-    def __init__(self, parent=None, PWD=""):
-        Gtk.Overlay.__init__(self)
-        self._parent = parent # overlay has the parent field
-        self.PWD = PWD
+    def __init__(self, pwd=""):
+        Gtk.Overlay.__init__(self, name="Display")
+        self.PWD = pwd
         self.pixbuf_cache = dict()
 
         self.makeWidgets()
 
-        self.set_hexpand(True)
-        self.set_vexpand(True)
-
+        # self.textview.connect("motion-notify-event", self._on_hover)
         # self.textview.connect("event-after", self.event_after)
-        self.textview.connect("motion-notify-event", self._on_hover)
         # self.textview.connect("visibility-notify-event", self.visibility_notify_event)
-
         # self.textview.connect('enter-notify-event', self._enter)
         # self.textview.connect('leave-notify-event', self._leave)
 
 
     def makeWidgets(self):
-        self.scroll = Gtk.ScrolledWindow()
-        self.add(self.scroll)
-        self.scroll.set_hexpand(True)
-        self.scroll.set_vexpand(True)
+        self.add(self.makeWidget_textview())
 
-        self.tb_clean = Gtk.ToolButton(icon_name='gtk-clear')
-        self.add_overlay(self.tb_clean)
+        self.b_CLEAR = Gtk.ToolButton(
+            name      = 'overlay-widget',
+            icon_name = 'gtk-clear'
+        )
+        self.add_overlay(self.b_CLEAR)
+        self.b_CLEAR.set_valign(Gtk.Align.START)
+        self.b_CLEAR.set_halign(Gtk.Align.END)
 
-        self.tb_clean.set_valign(Gtk.Align.START)
-        self.tb_clean.set_halign(Gtk.Align.END)
-
-        self.textview = Gtk.TextView()
-        self.scroll.add(self.textview)
-        self.textview.set_editable(False)
-        self.textview.set_cursor_visible(False)
-        self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
-        self.textview.set_left_margin(10)
-        self.textview.set_right_margin(20)
+        # self.pack_start(self.makeWidget_toolbar(), expand=0, fill=1, padding=0)
 
         buffer = self.textview.get_buffer()
         self.textbuffer = buffer
@@ -71,6 +57,27 @@ class Display(Gtk.Overlay):
         self.tag_source  = buffer.create_tag("source", foreground="gray", scale=.65)
         self.tag_example = buffer.create_tag("example", foreground="blue", style=Pango.Style.ITALIC)
         self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD, scale=.85)
+
+
+    def makeWidget_textview(self):
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_hexpand(True)
+        scroll.set_vexpand(True)
+
+        self.textview = Gtk.TextView()
+        scroll.add(self.textview)
+
+        self.textview.set_editable(False)
+        self.textview.set_cursor_visible(False)
+        self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
+
+        self.textview.set_left_margin(10)
+        self.textview.set_right_margin(20)
+
+        return scroll
+
+
+
 
 
     def jump_to(self, textIter):
@@ -156,13 +163,6 @@ class Display(Gtk.Overlay):
 
         window = textview.get_window(Gtk.TextWindowType.WIDGET)
         window.set_cursor(cursor)
-
-
-    def _on_clicked(self, event):
-        if event.button != 1: return
-        if event.type != Gdk.EventType.BUTTON_RELEASE: return
-        cmd = self._parent.cnf.editor_goto_line_uri(path, line)
-        print("pid:", path, Popen(cmd).pid)
 
 
     def insert_result(self, word, parsed_info, src='\n'):
@@ -251,7 +251,7 @@ class Display(Gtk.Overlay):
             if event.type == Gdk.EventType.BUTTON_RELEASE: #and event.button == 1:
                 cmd = [
                     'setsid',
-                    self._parent.cnf.apps['browser'],
+                    self.cnf.apps['browser'],
                     "https://en.wikipedia.org/wiki/%s"%key
                 ]
                 print("pid:", Popen(cmd).pid)
@@ -267,7 +267,7 @@ class Display(Gtk.Overlay):
         start_offset = start.get_offset()
         # print(offset)
 
-        self.insert_image(start, self.PWD + '../assets/globe.svg')
+        self.insert_image(start, self.PWD + '../assets/wiki.svg')
 
         ## get stop offset
         start = self.textbuffer.get_iter_at_offset(start_offset)
@@ -277,16 +277,18 @@ class Display(Gtk.Overlay):
         self.textbuffer.apply_tag(tag, start, stop)
 
 
-    def insert_image(self, textIter, file):
+    def insert_image(self, textIter, path, size=16):
         # TODO: fall back if image does'nt exist
-        # self.insert_at_cursor(file)
+        if path not in self.pixbuf_cache:
+            if os.path.exists(path):
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, size, size)
+            else:
+                print(path, "icon not found")
+                return
 
-        if file not in self.pixbuf_cache:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file(file)
-            new = pixbuf.scale_simple(16, 16, GdkPixbuf.InterpType.BILINEAR)
-            self.pixbuf_cache[file] = new
+            self.pixbuf_cache[path] = pixbuf
 
-        self.textbuffer.insert_pixbuf(textIter, self.pixbuf_cache[file])
+        self.textbuffer.insert_pixbuf(textIter, self.pixbuf_cache[path])
 
 
     # def insert_link(self, text, href):

@@ -6,10 +6,9 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, Pango
 
-
-class Relatives(Gtk.Expander):
+class Relatives(Gtk.Box):
     types = (
-        '    Synonyms    ', #SPACE HACK for width
+        'Synonyms',
         'Antonyms',
         'Derivatives',
         'Relates to' ,#Pertainyms
@@ -25,14 +24,9 @@ class Relatives(Gtk.Expander):
     )
     pages = {}
 
-    def __init__(self, parent=None):
-        Gtk.Expander.__init__(self)
-        self.parent = parent
+    def __init__(self):
+        Gtk.Box.__init__(self, name="Relatives")
         self.makeWidgets()
-
-        self.set_label("Relatives")
-        self.set_expanded(True)
-        self.show_all()
 
 
     def makeWidgets(self):
@@ -44,9 +38,7 @@ class Relatives(Gtk.Expander):
 
         self.notebook.set_tab_pos(Gtk.PositionType.LEFT)
         self.notebook.set_scrollable(True)
-        self.notebook.set_show_border(True)
-        self.notebook.set_border_width(10)
-        #self.notebook.set_border(10)
+        self.notebook.set_show_border(False)
 
         for text in Relatives.types:
             obj = Gtk.ScrolledWindow()

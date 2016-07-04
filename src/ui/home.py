@@ -54,6 +54,7 @@ class Home(Gtk.Window):
         Gtk.Window.__init__(self, name="Home")
 
         self.core     = core
+        self.PWD      = cnf.PWD
         self.tray     = cnf.preferences['show-on-system-tray']
         self.nothread = cnf.core['no-thread']
 
@@ -120,73 +121,61 @@ class Home(Gtk.Window):
 
 
     def makeWidgets(self):
-        self.layout = Gtk.Grid(orientation=1)
-        self.add(self.layout)
+        layout = Gtk.Box(orientation=1)
+        self.add(layout)
 
-        self.toolbar = self.makeWidgets_toolbar()
-        self.layout.add(self.toolbar)
+        layout.add(self.makeWidget_toolbar())
+        layout.add(self.makeWidget_searchbar())
 
-        self.layout.add(self.makeWidgets_searchbar())
+        vpaned = Gtk.Paned(name="vpaned", orientation=1)
+        layout.pack_start(vpaned, expand=1, fill=1, padding=0)
 
-        hpaned = Gtk.Paned()
-        self.layout.add(hpaned)
+        hpaned = Gtk.Paned(name="hpaned")
+        vpaned.pack1(hpaned, resize=0, shrink=0)
 
-        hpaned.add1(self.makeWidgets_sidebar())
-        hpaned.add2(self.makeWidgets_viewer())
-        hpaned.set_position(165)
+        hpaned.pack1(self.makeWidget_sidebar(), resize=0, shrink=0)
+        hpaned.pack2(self.makeWidget_viewer(), resize=0, shrink=0)
+        hpaned.set_position(164)
 
-        self.relations = self.makeWidgets_relations()
-        self.layout.add(self.relations)
-        self.relations.set_hexpand(True)
-        self.layout.show_all()
+        vpaned.pack2(self.makeWidget_relations(), resize=0, shrink=1)
+        vpaned.set_position(250)
 
-        self.infobar = Gtk.InfoBar()
-        self.layout.add(self.infobar)
-
-        self.infobar.LABEL = Gtk.Label()
-        content = self.infobar.get_content_area()
-        content.add(self.infobar.LABEL)
-
-        self.infobar.set_show_close_button(True)
-        self.infobar.set_default_response(Gtk.ResponseType.CLOSE)
-        self.infobar.connect("response", lambda w, id: w.hide())
+        layout.show_all()
+        layout.add(self.makeWidget_infobar())
 
 
-    def makeWidgets_toolbar(self):
-        bar = Gtk.Toolbar()
-        #
+    def makeWidget_toolbar(self):
+        self.toolbar = Gtk.Toolbar()
+
         ## Button Back Button
-        bar.mb_BACKWARD = Gtk.MenuToolButton(icon_name="go-previous")
-        bar.add(bar.mb_BACKWARD)
-        bar.mb_BACKWARD.connect("clicked", lambda e: self._jump_history(-1))
-        bar.mb_BACKWARD.set_tooltip_markup("Previous, <u>Alt+←</u>")
-        bar.mb_BACKWARD.set_sensitive(False)
+        self.toolbar.mb_BACKWARD = Gtk.MenuToolButton(icon_name="go-previous")
+        self.toolbar.add(self.toolbar.mb_BACKWARD)
+        self.toolbar.mb_BACKWARD.connect("clicked", lambda e: self._jump_history(-1))
+        self.toolbar.mb_BACKWARD.set_tooltip_markup("Previous, <u>Alt+←</u>")
+        self.toolbar.mb_BACKWARD.set_sensitive(False)
         ### History
-        # TODO: find the widget flag
-        self.hist_menu_toggle_state = False
-        self.history_menu = Gtk.Menu() # NOTE: DUMMY MENU For Menu activation
-        bar.mb_BACKWARD.set_menu(self.history_menu)
-        bar.mb_BACKWARD.connect("show-menu", lambda e: self._show_history(e))
-        ##
+        self.toolbar.mb_BACKWARD.set_menu(Gtk.Menu())
+        self.toolbar.mb_BACKWARD.connect("show-menu", self._show_history)
+
         ## Button Forward Button
-        bar.b_FORWARD = Gtk.ToolButton(icon_name="go-next")
-        bar.add(bar.b_FORWARD)
-        bar.b_FORWARD.connect("clicked", lambda e: self._jump_history(+1))
-        bar.b_FORWARD.set_tooltip_markup("Next, <u>Alt+→</u>")
-        bar.b_FORWARD.set_sensitive(False)
-        ##
-        #
-        bar.add(Gtk.SeparatorToolItem())
-        ##
+        self.toolbar.b_FORWARD = Gtk.ToolButton(icon_name="go-next")
+        self.toolbar.add(self.toolbar.b_FORWARD)
+        self.toolbar.b_FORWARD.connect("clicked", lambda e: self._jump_history(+1))
+        self.toolbar.b_FORWARD.set_tooltip_markup("Next, <u>Alt+→</u>")
+        self.toolbar.b_FORWARD.set_sensitive(False)
+
+        self.toolbar.add(Gtk.SeparatorToolItem())
+
         ## Smart Copy Toggle Button
-        bar.t_COPY = Gtk.ToggleToolButton(icon_name='edit-copy')
-        bar.add(bar.t_COPY)
-        bar.t_COPY.set_active(True)
-        ##
-        #
-        bar.s_END = Gtk.SeparatorToolItem()
-        bar.add(bar.s_END)
-        return bar
+        self.toolbar.t_COPY = Gtk.ToggleToolButton(icon_name='edit-copy')
+        self.toolbar.add(self.toolbar.t_COPY)
+        self.toolbar.t_COPY.set_active(True)
+
+        ## End Separator
+        self.toolbar.s_END = Gtk.SeparatorToolItem()
+        self.toolbar.add(self.toolbar.s_END)
+
+        return self.toolbar
 
 
     def _jump_history(self, diff):
@@ -219,12 +208,17 @@ class Home(Gtk.Window):
             if len(self.cache) - i == self.cache_cursor:
                 rmi.set_active(True)
             self.history_menu.append(rmi)
+    def makeWidget_searchbar(self):
+        layout = Gtk.Grid()
 
-        self.history_menu.show_all()
+        label = Gtk.Label(name="searchbar-label")
+        layout.attach(label, left=0, top=0, width=2, height=1)
 
+        label.set_hexpand(True)
+        label.set_markup("<b>Query</b>")
 
-    def makeWidgets_searchbar(self):
         self.searchbar = searchbar.Bar()
+        layout.attach(self.searchbar, left=2, top=0, width=4, height=1)
 
         #### liststore
         # BUG: left cell align is not working, so "%4d"
@@ -248,14 +242,14 @@ class Home(Gtk.Window):
         self.searchbar.entry.connect('key_press_event', _on_key_press)
         self.searchbar.entry.connect('activate', lambda *a: self.search_and_reflect())
 
+        self.searchbar.set_hexpand(True)
         self.searchbar.entry.modify_font(self.fonts['search'])
         self.track_FONT.add(self.searchbar.entry)
-        return self.searchbar
+        return layout
 
 
-
-    def makeWidgets_sidebar(self):
-        self.sidebar = sidebar.Bar(self)
+    def makeWidget_sidebar(self):
+        self.sidebar = sidebar.Bar()
         treeSelection = self.sidebar.treeview.get_selection()
         self.sidebar.select_signal = treeSelection.connect(
             "changed",
@@ -269,9 +263,7 @@ class Home(Gtk.Window):
                 return True
 
         self.sidebar.connect("key_press_event", _on_key_press)
-
-        for obj in self.sidebar.track_FONT:
-            obj.modify_font(self.fonts['viewer'])
+        self.sidebar.treeview.modify_font(self.fonts['viewer'])
         return self.sidebar
 
 
@@ -286,32 +278,28 @@ class Home(Gtk.Window):
         self._circular_search(+1)
 
 
-    def makeWidgets_viewer(self):
-        self.viewer = view.Display(self)
+    def makeWidget_viewer(self):
+        self.viewer = view.Display(self.PWD)
         self.viewer.textview.modify_font(self.fonts['viewer'])
         self.track_FONT.add(self.viewer.textview)
 
-        self.viewer.tb_clean.connect("clicked", self.viewer_clean)
-        self.viewer.textview.connect("button-release-event", self.viewer_after_click)
-        self.viewer.textview.connect("event", self.viewer_on_activity)
+        def _on_button_press(textview, event):
+            if event.type != Gdk.EventType._2BUTTON_PRESS: return
+            bounds = self.viewer.textbuffer.get_selection_bounds()
+            if not bounds: return
+            begin, end = bounds
+            query = self.viewer.textbuffer.get_text(begin, end, True)
+            self.searchbar.entry.set_text(query)
+            self.search_and_reflect(query)
+
+        self.viewer.textview.connect("button-press-event", _on_button_press)
+        self.viewer.textview.connect("button-release-event", self.on_button_release)
+        self.viewer.b_CLEAR.connect("clicked", self.viewer_clean)
+
         return self.viewer
 
 
-    def viewer_clean(self, widget=None):
-        if self.viewer.textbuffer.get_char_count() > 1:
-            self.copy_buffer = ""
-            self.clips_circle = None
-            self.view_current.clear()
-            self.viewer.textbuffer.set_text("\n")
-            treeSelection = self.sidebar.treeview.get_selection()
-            treeSelection.unselect_all()
-            return
-
-        self.sidebar.clear()
-        self.clips.clear()
-
-
-    def viewer_after_click(self, textview, eventbutton):
+    def on_button_release(self, textview, eventbutton):
         bound = self.viewer.textbuffer.get_selection_bounds()
         if bound:
             begin, end = bound
@@ -328,19 +316,37 @@ class Home(Gtk.Window):
         self.copy_buffer = text
 
 
-    def viewer_on_activity(self, textview, event):
-        if event.type != Gdk.EventType._2BUTTON_PRESS: return
-        bounds = self.viewer.textbuffer.get_selection_bounds()
-        if not bounds: return
-        begin, end = bounds
-        query = self.viewer.textbuffer.get_text(begin, end, True)
-        self.searchbar.entry.set_text(query)
-        self.search_and_reflect(query)
+    def viewer_clean(self, widget=None):
+        if self.viewer.textbuffer.get_char_count() > 1:
+            self.view_current.clear()
+            self.viewer.textbuffer.set_text("\n")
+            self.copy_buffer = ""
+            self.clips_circle = None
+            treeSelection = self.sidebar.treeview.get_selection()
+            treeSelection.unselect_all()
+            return
+
+        self.sidebar.clear()
+        self.clips.clear()
 
 
-    def makeWidgets_relations(self):
+    def makeWidget_relations(self):
         self.relatives = relations.Relatives()
         return self.relatives
+
+
+    def makeWidget_infobar(self):
+        self.infobar = Gtk.InfoBar()
+
+        self.infobar.LABEL = Gtk.Label()
+        content = self.infobar.get_content_area()
+        content.add(self.infobar.LABEL)
+
+        self.infobar.set_show_close_button(True)
+        self.infobar.set_default_response(Gtk.ResponseType.CLOSE)
+        self.infobar.connect("response", lambda w, id: w.hide())
+
+        return self.infobar
 
 
     def get_active_query(self):

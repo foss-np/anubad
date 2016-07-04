@@ -29,13 +29,15 @@ class Settings(configparser.ConfigParser):
         return cls.__instance__
 
 
-    def __init__(self):
+    def __init__(self, pwd=""):
         # NOTE: object, aren't properly created for some unknown cause
         # until init was declared.
         pass
 
-    def singleton_init(self):
+
+    def singleton_init(self, pwd=""):
         configparser.ConfigParser.__init__(self)
+        self.PWD = pwd
         self.glossary_list = []
         self.plugin_list   = dict()
         self.gui,         self['gui']         = None, dict()
@@ -179,9 +181,9 @@ class Settings(configparser.ConfigParser):
         return cmd
 
 
-def main(PWD=""):
-    cnf = Settings()
-    cnf.read(PWD + FILE_CONF_DEFAULT)
+def main(pwd=""):
+    cnf = Settings(pwd)
+    cnf.read(pwd + FILE_CONF_DEFAULT)
     cnf.read(FILE_CONF)
     cnf.load()
     return cnf

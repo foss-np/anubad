@@ -4,26 +4,21 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
-class Bar(Gtk.VBox):
-    def __init__(self, parent=None):
-        Gtk.HBox.__init__(self)
-        self.parent = parent
-        self.track_FONT = set()
+class Bar(Gtk.Box):
+    def __init__(self):
+        Gtk.Box.__init__(self, name="SideBar")
+
         self.count = 0
         self.dictstore = dict()
         self.makeWidgets()
 
 
     def makeWidgets(self):
-        self.pack_start(self.makeWidgets_treeview(), True, True, 0)
-        self.track_FONT.add(self.treeview)
+        self.pack_start(self.makeWidget_treeview(), expand=1, fill=1, padding=0)
+
         treeselection = self.treeview.get_selection()
         treeselection.set_mode(Gtk.SelectionMode.MULTIPLE)
 
-        self.cb_filter = Gtk.ComboBoxText()
-        self.pack_start(self.cb_filter, False, False, 0)
-        self.cb_filter.append_text("All")
-        self.cb_filter.set_active(0)
 
 
     def add_suggestion(self, key, value):
@@ -48,7 +43,7 @@ class Bar(Gtk.VBox):
         self.count = 0
 
 
-    def makeWidgets_treeview(self):
+    def makeWidget_treeview(self):
         scroll = Gtk.ScrolledWindow()
         scroll.set_hexpand(True)
         scroll.set_vexpand(True)

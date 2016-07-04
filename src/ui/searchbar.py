@@ -11,37 +11,23 @@ from gi.repository import Gtk, Gdk
 class Bar(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self, name="SearchBar")
-        self.track_FONT = set()
 
+        style_context = self.get_style_context()
+        style_context.add_class(Gtk.STYLE_CLASS_LINKED)
         self.makeWidgets()
 
 
+
     def makeWidgets(self):
-        ## Label
-        label = Gtk.Label()
-        label.set_markup("<b>Query</b>")
-        self.pack_start(label, expand=False, fill=False, padding=60)
-
-        ## Search Entry
-        self.pack_start(self.makeWidget_entry_with_button(), expand=True, fill=True, padding=2)
-        self.entry.connect('key_press_event', self.on_key_press)
-
-
-
-    def makeWidget_entry_with_button(self):
-        layout = Gtk.Box(name="search-entry")
-        layout.set_tooltip_markup("<b>Search:</b> \t⌨ [<i>Enter</i>]")
-
-        style_context = layout.get_style_context()
-        style_context.add_class(Gtk.STYLE_CLASS_LINKED)
-        layout.set_border_width(0)
-        layout.set_spacing(0)
+        self.set_tooltip_markup("<b>Search:</b> \t⌨ [<i>Enter</i>]")
 
         ## Entry
         self.entry = Gtk.SearchEntry()
-        layout.pack_start(self.entry, expand=True, fill=True, padding=0)
+        self.pack_start(self.entry, expand=True, fill=True, padding=0)
+
         self.entry.set_placeholder_text('type here ...')
-        self.entry.set_max_length(36)
+        self.entry.set_input_hints(Gtk.InputHints.SPELLCHECK) # TODO: make it work
+        self.entry.set_max_length(100)
         self.entry.set_progress_pulse_step(0.4)
         self.entry.set_icon_sensitive(0, True)
         self.entry.set_icon_activatable(0, True)
@@ -54,13 +40,13 @@ class Bar(Gtk.Box):
             if direction == Gtk.DirectionType.DOWN : return True
 
         self.entry.connect('focus', _stop_focus_nav)
+        self.entry.connect('key_press_event', self.on_key_press)
 
         ## Button
         button = Gtk.Button.new_from_icon_name('characters-arrow-symbolic', Gtk.IconSize.MENU)
-        layout.pack_start(button, expand=False, fill=False, padding=0)
+        self.pack_start(button, expand=False, fill=False, padding=0)
         button.connect('clicked', lambda *a: self.entry.emit('activate'))
 
-        return layout
 
 
     def add_hashtag_completion(self, liststore):
