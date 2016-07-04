@@ -1,8 +1,13 @@
 #+TITLE: anubad
 #+DATE: Sunday, Apr 19 2015
-#+STARTUP: showall
+#+OPTIONS: num:t
+#+STARTUP: overview
 
-A Graphical Interface for glossary browsing.
+Translation Glossary and More
+
+anubad is glossary browsing traslation glossary, for
+localizers or any one
+
 
 [[http://i.creativecommons.org/l/by/3.0/88x31.png]]
 
@@ -10,38 +15,36 @@ Copyright © 2013 - 2016 to the anubad Authors.
 
 [[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot4.png]]
 
-
-* Installation
-
-** Requirement
-
-   *ms-windows* : download [[http://sourceforge.net/projects/pygobjectwin32/files/][pygi installer]]
-
-   *linux*      : distro specific package manager
-
-   |                       | linux          | ms-windows** |
-   |-----------------------+----------------+--------------|
-   | python                | python >= 3.00 | [[https://www.python.org/downloads/][python 3.xx]]  |
-   | gobject-introspection | python-gobject | pygi/base    |
-   | GTK                   | Gtk+ >= 3      | pygi/        |
-   | Pango                 |                |              |
-   | Keybinder             | libkeybinder3  | pygi/GIR     |
-
-   ** Might have some icon issues, and features may not work***.
-
-   *** Seriously we don't have developers *HELP*
+* Getting it
 
 
-** how to get it
+** Manual
 
-   Download the latest verion from [[https://github.com/foss-np/anubad/archive/master.zip][zip]] or [[https://github.com/foss-np/anubad/archive/master.tar.gz][tar]]
+   Make sure these requirements are fullfilled.
 
-   #+begin_src bash
-   # OR CLONE the repo
-   git clone https://github.com/foss-np/anubad
-   #+end_src
+   | requirements          | linux          | ms-windows  |
+   |-----------------------+----------------+-------------|
+   | python                | python >= 3.00 | [[https://www.python.org/downloads/][python 3.xx]] |
+   | gobject-introspection | python-gobject | pygi/base   |
+   | GTK                   | Gtk+ >= 3      | pygi/       |
 
-** config
+   Latest version can be downloaded as [[https://github.com/foss-np/anubad/archive/master.zip][zip]] or [[https://github.com/foss-np/anubad/archive/master.tar.gz][tar]] or cloned.
+
+*** installation
+
+
+
+*** run without installing
+
+    If you are running experimental or doing some hacks, this might be
+    best way to keep up.
+
+    #+begin_src bash
+      $ cd anubad/src/
+      $ sudo make link
+    #+end_src
+
+** Adding Glossary
 
    to auto configure run..
 
@@ -53,42 +56,63 @@ Copyright © 2013 - 2016 to the anubad Authors.
    =src/mysettings=.
 
 *** manually config
-
-    For ms-windows and others without =gnu-bash= and =gnu-make=.
-
-    1. Create a folder =gloss= at =/path/to/anubad/=.
-    2. Download np-l10n-glossary [[https://github.com/foss-np/np-l10n-glossary/archive/current.zip][zip]]/[[https://github.com/foss-np/np-l10n-glossary/archive/current.tar.gz][tar]] (=clone= always works)
-    3. Extract the downloaded file.
-    4. Rename extracted =np-l10n-glossary-current= to =foss=
-    5. Copy =/path/to/anubad/src/gsettings.conf= to
-       =/path/to/anubad/src/mysettings.conf=.
-
 * Usage
-** quick-demo
-
-   Earlier design was more focused on making the code run with various
-   platforms including python 2 and 3 compatibility, which is written
-   in python /tkinter/ which is no longer in development due font
-   rendering issues, and poor system intergation
-
-   #+begin_src bash
-     /path/to/anubad/demo.pyw
-   #+end_src
 
 
-** Gtk application
+** command line options
 
-   #+begin_src bash
-     cd /path/to/anubad/
-     make
-     # or direcly run
-     /path/to/anubad/src/app.py
-     # if problem occurs run
-     /path/to/anubad/src/main.py
-   #+end_src
+   anubad [OPTIONS] [COMMANDS]
+
+*** OPTIONS
+    #+BEGIN_EXAMPLE
+      optional arguments:
+        -h, --help    show this help message and exit
+        --noplugins   Disable plugins loading
+        --hide        Hide on startup
+        --notray      Hide from notification tray
+        --nohistfile  Disable history file
+        --notaskbar   Hide from taskbar
+        --nothread    Don't thread application
+    #+END_EXAMPLE
+
+
+*** EXAMPLES
+
+    $ anubad search hello
+* Known Issues
+
+  Sometimes application tends crashes unexpectly, turn off the
+  threading if it happens often.
+
+  use =--nothread= argument to start without threading
+
+  Make changes in config file to make change persistent adding,
+  =no-thread = True= in =[core]= section.
+
+  #+BEGIN_EXAMPLE
+    [core]
+    no-thread = True
+  #+END_EXAMPLE
+
+
+* History
+
+  Anubad started as the graphical interface for browsing traslation
+  glossary.
+
+** Similar Projects
+
+   | Name             |                                             |
+   |------------------+---------------------------------------------|
+   | Artha            | A cross-platform thesaurus based on WordNet |
+   | Stardict         | An International dictionary software        |
+   | Gnome Dictionary | A default gnome application                 |
+
 
 * Development & Contribution
 
-  Please Use the =dev= branch to send any changes.
+  If you wish to contribute this project, there is much thing you can
+  do beyond programming, to get started read [[https://github.com/foss-np/anubad/tree/experimental/CONTRIBUTING.org][this]].
 
-  All the modules are independent and can be executed separetly.
+  Any code Contributions to anubad should be made via of GitHub pull
+  requests.

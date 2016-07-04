@@ -1,0 +1,46 @@
+#+TITLE: Guideline for Contributing
+#+DATE: Friday, Jun 24 2016
+#+OPTIONS: num:t
+#+STARTUP: overview
+
+
+* Getting Started
+
+** Prequisites
+
+   See README [[https://github.com/foss-np/anubad/tree/experimental#manual][#manual]]
+
+** Coding Style
+
+   Our coding style is based loosly based on [[https://www.python.org/dev/peps/pep-0008/][PEP 8]] but using *4*
+   *spaces* for indentation is must, we encourage move beyond the PEP
+   8 and code more pythonic way.
+
+** Guidelines for new GNOME developers
+
+   Beyond the prerequisites mentioned above, several tools avaliable
+   for assisting the development of *GNOME* application.
+
+*** Recommended tools
+
+    [[https://wiki.gnome.org/Apps/Devhelp][DevHelp]]: An API documentation browser for *GNOME*.
+
+    [[http://glade.gnome.org/][Glade]]: A user interface designer for *GTK+ Applications*.
+
+    and a Good Text Editor or IDE (Integrated Development
+    Environment).
+
+* Repository
+
+  There are mainly 3 branches,
+
+  | branch       | Description                         |
+  |--------------+-------------------------------------|
+  | master       | current stable working version      |
+  | dev          | version for developers              |
+  | experimental | unstable branch with latest changes |
+
+  start with =dev= branch to begin development, =master= branch is
+  usually stable branch for normal users. If you want to be upto date
+  with latest development use =experimental= which might be really
+  *unstable*.
