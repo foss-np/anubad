@@ -16,6 +16,8 @@ class Bar(Gtk.Box):
         style_context.add_class(Gtk.STYLE_CLASS_LINKED)
         self.makeWidgets()
 
+        ### Make popovers
+        self.pop_reverse = INavHistory(self.entry)
 
 
     def makeWidgets(self):
@@ -82,6 +84,8 @@ class Bar(Gtk.Box):
             elif event.keyval == 65366: self.nav_history(+1) # Pg-Dn
             elif event.keyval == ord('p'): self.nav_history(-1)
             elif event.keyval == ord('n'): self.nav_history(+1)
+            elif event.keyval == ord('s'): self.pop_reverse.show_with_reverse(False)
+            elif event.keyval == ord('r'): self.pop_reverse.show_with_reverse(True)
             elif event.keyval == ord('k'): widget.delete_text(widget.get_position(), -1)
             elif event.keyval == ord('e'): widget.set_position(-1)
             elif event.keyval == ord('a'):
@@ -99,6 +103,88 @@ class Bar(Gtk.Box):
         self.entry.set_text(self.entry.HISTORY[i])
         self.entry.set_position(-1)
         self.entry.CURRENT = i
+
+
+class INavHistory(Gtk.Popover):
+    def __init__(self, parent):
+        Gtk.Popover.__init__(
+            self,
+            name        = "INav",
+            modal       = True,
+            relative_to = parent,
+        )
+        self.parent = parent
+        self.nav_position = iter(tuple())
+
+        self.set_border_width(2)
+        self.set_position(Gtk.PositionType.BOTTOM)
+
+        self.makeWidgets()
+        self.connect("focus", lambda *a: True) # don't loose focus
+        self.connect("key_press_event", self.on_key_press)
+        self.connect("key_release_event", self.on_key_release)
+        self.connect("closed", lambda *a: self.hide())
+
+
+    def makeWidgets(self):
+        self.layout = Gtk.HBox()
+        self.add(self.layout)
+
+        icon = Gtk.Image.new_from_icon_name('document-open-recent', Gtk.IconSize.MENU)
+        self.layout.add(icon)
+
+        self.label = Gtk.Label()
+        self.layout.add(self.label)
+
+        self.entry = Gtk.Entry()
+        self.layout.add(self.entry)
+        self.entry.set_has_frame(False)
+        self.entry.set_overwrite_mode(True)
+        self.entry.connect('changed', self.on_change)
+        self.layout.show_all()
+
+
+    def on_change(self, widget):
+        query = widget.get_text()
+        if query == "":
+            # TODO insert last query before nav search
+            self.parent.set_text("")
+            return
+
+        def interator():
+            for history in reversed(self.parent.HISTORY):
+                index = history.find(query)
+                if index < 0: continue
+                self.parent.set_text(history)
+                self.parent.select_region(index, index+len(query))
+                yield history
+
+        self.nav_position = interator()
+        next(self.nav_position, None)
+        self.cache = query
+
+
+    def on_key_press(self, widget, event):
+        if   event.keyval == 65361: self.hide() # left-arrow
+        elif event.keyval == 65363: self.hide() # right-arrow
+        elif event.keyval == 65293: self.hide() # <enter> return
+        elif Gdk.ModifierType.CONTROL_MASK & event.state:
+            if   event.keyval == ord('g'): self.hide()
+            elif event.keyval == ord('s'): next(self.nav_position, None)
+            elif event.keyval == ord('r'): next(self.nav_position, None)
+
+
+    def on_key_release(self, widget, event):
+        if   event.keyval == 65362: self.hide() # Up-arrow
+        elif event.keyval == 65364: self.hide() # Down-arrow
+        elif event.keyval == 65289: self.hide() # Tab
+
+
+    def show_with_reverse(self, reverse):
+        print("inav: show")
+        if reverse: self.label.set_markup(" <b>reverse-i-search:</b> ")
+        else: self.label.set_markup(" <b>forward-i-search:</b> ")
+        self.show()
 
 
 def sample():
