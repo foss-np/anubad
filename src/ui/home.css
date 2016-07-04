@@ -1,0 +1,33 @@
+#INav entry{
+    border: none;
+    font-family: Monospace;
+    font-style: italic;
+    box-shadow: none;
+}
+
+#Home #hpaned {
+    margin-top: 3px;
+    background-color: lightgray;
+    border-style: dotted;
+    border-top-width: 1px;
+}
+
+#overlay-widget button{
+    border-width: 0px;
+    margin: 0px;
+    background-image: none;
+    box-shadow: none;
+}
+
+#Display toolbar {
+    background-color: lightgray;
+    border-style: double;
+    border-width: 1px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+#Relatives notebook tab {
+    margin-left: 59px;
+    border-width: 0px;
+}
