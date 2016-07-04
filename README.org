@@ -13,7 +13,7 @@ localizers or any one
 
 Copyright © 2013 - 2016 to the anubad Authors.
 
-[[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/screenshot4.png]]
+[[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/00.png]]
 
 * Getting it
 
@@ -29,6 +29,8 @@ Copyright © 2013 - 2016 to the anubad Authors.
    | GTK                   | Gtk+ >= 3      | pygi/       |
 
    Latest version can be downloaded as [[https://github.com/foss-np/anubad/archive/master.zip][zip]] or [[https://github.com/foss-np/anubad/archive/master.tar.gz][tar]] or cloned.
+
+   **NOTE:** see the quick demo =./demo.pyw=, only requires _python_.
 
 *** installation
 

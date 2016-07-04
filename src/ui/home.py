@@ -66,7 +66,7 @@ class Home(Gtk.Window):
         self.track_FONT = set()
 
         self.css_provider = Gtk.CssProvider()
-        self.css_provider.load_from_path('ui/home.css')
+        self.css_provider.load_from_path(self.PWD + 'ui/home.css')
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(),
             self.css_provider,

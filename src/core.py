@@ -200,9 +200,9 @@ class Glossary(dict):
                 try:
                     symbol, index = operator.pop()
                 except Exception as e:
-                    print(e)
                     print(raw)
-                    exit()
+                    raise
+
                 if c != symbol:
                     print('buffer: "%s"'%buffer, 'got: "%s"'%c, 'expected: "%s"'%symbol)
                     raise Exception("error: unbalanced paranthesis")

@@ -106,6 +106,8 @@ class App(Gtk.Application):
     def do_startup(self):
         Gtk.Application.do_startup(self)
         self.commander = commander.Engine(app)
+        self.commander.rc['version'] = lambda *a: str(__version__)
+        self.commander.rc['help'] = lambda *a: self.on_help()
 
         self.cnf = setting.main(PWD)
         self.cnf.apply_args_request(self.opts)
@@ -218,7 +220,18 @@ class App(Gtk.Application):
         bar.insert(widget, i+1)
 
 
+    def on_help(self):
+        screen = self.home.get_screen();
+        Gtk.show_uri(screen, "help:anubad", Gtk.get_current_event_time());
+
+
     def add_buttons_on_toolbar(self, bar):
+        bar.b_HELP = Gtk.ToolButton(icon_name="help-contents")
+        bar.add(bar.b_HELP)
+        bar.b_HELP.show()
+        bar.b_HELP.set_tooltip_markup("Help")
+        bar.b_HELP.connect('clicked', lambda w: self.on_help())
+
         bar.b_ABOUT = Gtk.ToolButton(icon_name="help-about")
         bar.add(bar.b_ABOUT)
         bar.b_ABOUT.show()
