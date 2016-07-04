@@ -122,6 +122,7 @@ class App(Gtk.Application):
         if self.home == None:
             self.home = self.home_create_window()
             self.no_of_plugins = load_plugins(self)
+            welcome_message(self)
             if self.cnf.preferences['hide-on-startup']: return
 
         self.home.show()
@@ -237,6 +238,30 @@ class App(Gtk.Application):
             about.destroy()
 
         bar.b_ABOUT.connect("clicked", about_dialog)
+
+
+def welcome_message(app):
+    viewer = app.home.viewer
+
+    end = viewer.textbuffer.get_end_iter()
+    logo = app.pixbuf_logo.scale_simple(32, 32, GdkPixbuf.InterpType.BILINEAR)
+    viewer.textbuffer.insert_pixbuf(end, logo)
+    viewer.insert_at_cursor("\nanubad", viewer.tag_bold)
+    viewer.insert_at_cursor(" v%s"%__version__, viewer.tag_hashtag)
+    viewer.insert_at_cursor("\n%s\n\n"%__PKG_DESC__, viewer.tag_source)
+
+    viewer.insert_at_cursor("%2d glossary loaded\n"%app.no_of_gloss)
+    viewer.insert_at_cursor("%2d plugins loaded\n"%app.no_of_plugins)
+    viewer.insert_at_cursor("For help click ")
+
+    end    = viewer.textbuffer.get_end_iter()
+    anchor = viewer.textbuffer.create_child_anchor(end)
+    b_help = Gtk.ToolButton(icon_name='help-contents')
+    b_help.connect('clicked', lambda w: app.on_help())
+    b_help.show()
+    viewer.textview.add_child_at_anchor(b_help, anchor)
+    viewer.insert_at_cursor(" or press")
+    viewer.insert_at_cursor(" F1", viewer.tag_bold)
 
 
 def verify_mime(cnf):
