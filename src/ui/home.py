@@ -217,16 +217,16 @@ class Home(Gtk.Window):
                 rmi.set_active(True)
             self.history_menu.append(rmi)
     def makeWidget_searchbar(self):
-        layout = Gtk.Grid()
+        layout = Gtk.Box()
 
         label = Gtk.Label(name="searchbar-label")
-        layout.attach(label, left=0, top=0, width=2, height=1)
+        layout.add(label)
 
-        label.set_hexpand(True)
+        # label.set_hexpand(True)
         label.set_markup("<b>Query</b>")
 
         self.searchbar = searchbar.Bar()
-        layout.attach(self.searchbar, left=2, top=0, width=4, height=1)
+        layout.add(self.searchbar)
 
         #### liststore
         # BUG: left cell align is not working, so "%4d"
@@ -250,7 +250,7 @@ class Home(Gtk.Window):
         self.searchbar.entry.connect('key_press_event', _on_key_press)
         self.searchbar.entry.connect('activate', lambda *a: self.search_and_reflect())
 
-        self.searchbar.set_hexpand(True)
+        # self.searchbar.set_hexpand(True)
         self.searchbar.entry.modify_font(self.fonts['search'])
         self.track_FONT.add(self.searchbar.entry)
         return layout

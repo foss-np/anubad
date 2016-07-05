@@ -1,3 +1,17 @@
+#SearchBar button {
+    padding: 0px 8px
+}
+
+#SearchBar button label {
+    font-size: 12px;
+    font-weight: bold;
+    padding: 0px
+}
+
+#searchbar-label {
+    margin: 0px 60px;
+}
+
 #INav entry{
     border: none;
     font-family: Monospace;

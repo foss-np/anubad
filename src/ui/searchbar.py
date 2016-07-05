@@ -45,7 +45,7 @@ class Bar(Gtk.Box):
         self.entry.connect('key_press_event', self.on_key_press)
 
         ## Button
-        button = Gtk.Button.new_from_icon_name('characters-arrow-symbolic', Gtk.IconSize.MENU)
+        button = Gtk.Button('→')
         self.pack_start(button, expand=False, fill=False, padding=0)
         button.connect('clicked', lambda *a: self.entry.emit('activate'))
 
