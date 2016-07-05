@@ -15,10 +15,10 @@ from gi.repository import GObject
 from multiprocessing.pool import ThreadPool
 from collections import OrderedDict
 
-import searchbar
-import sidebar
-import view
-import relations
+import _searchbar
+import _sidebar
+import _view
+import _relations
 
 def treeview_signal_safe_toggler(func):
     '''Gtk.TreeView() :changed: signal should be disable before new
@@ -225,7 +225,7 @@ class Home(Gtk.Window):
         # label.set_hexpand(True)
         label.set_markup("<b>Query</b>")
 
-        self.searchbar = searchbar.Bar()
+        self.searchbar = _searchbar.Bar()
         layout.add(self.searchbar)
 
         #### liststore
@@ -250,14 +250,14 @@ class Home(Gtk.Window):
         self.searchbar.entry.connect('key_press_event', _on_key_press)
         self.searchbar.entry.connect('activate', lambda *a: self.search_and_reflect())
 
-        # self.searchbar.set_hexpand(True)
+        self.searchbar.set_hexpand(True)
         self.searchbar.entry.modify_font(self.fonts['search'])
         self.track_FONT.add(self.searchbar.entry)
         return layout
 
 
     def makeWidget_sidebar(self):
-        self.sidebar = sidebar.Bar()
+        self.sidebar = _sidebar.Bar()
         treeSelection = self.sidebar.treeview.get_selection()
         self.sidebar.select_signal = treeSelection.connect(
             "changed",
@@ -287,7 +287,7 @@ class Home(Gtk.Window):
 
 
     def makeWidget_viewer(self):
-        self.viewer = view.Display(self.PWD)
+        self.viewer = _view.Display(self.PWD)
         self.viewer.textview.modify_font(self.fonts['viewer'])
         self.track_FONT.add(self.viewer.textview)
 
@@ -339,7 +339,7 @@ class Home(Gtk.Window):
 
 
     def makeWidget_relations(self):
-        self.relatives = relations.Relatives()
+        self.relatives = _relations.Relatives()
         return self.relatives
 
 
@@ -518,6 +518,19 @@ class Home(Gtk.Window):
         self.iconify()
 
 
+    def insert_plugin_item_on_toolbar(self, widget):
+        bar = self.toolbar
+        if hasattr(bar, "s_PLUGINS"):
+            i = bar.get_item_index(bar.s_PLUGINS)
+        else:
+            bar.s_PLUGINS = Gtk.SeparatorToolItem()
+            i = bar.get_item_index(bar.s_END)
+            bar.insert(bar.s_PLUGINS, i)
+            bar.s_PLUGINS.show()
+
+        bar.insert(widget, i+1)
+
+
     def on_key_press(self, widget, event):
         # NOTE to stop propagation of signal return True
         if  Gdk.ModifierType.CONTROL_MASK & event.state:
@@ -575,12 +588,13 @@ def main(core, cnf):
 
 
 def sample():
-    sys.path.append(sys.path[0]+'/../')
+    pwd = sys.path[0]+'/../'
+    sys.path.append(pwd)
     import setting
     import core
     core.fp3 = core.fp4 = open(os.devnull, 'w')
 
-    cnf = setting.main()
+    cnf = setting.main(pwd)
     core.load_from_config(cnf)
 
     root = main(core, cnf)

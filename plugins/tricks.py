@@ -33,8 +33,6 @@ def browse_gloss(app):
     scroll = Gtk.ScrolledWindow()
     layout.add(scroll)
     scroll.set_min_content_height(250)
-    scroll.set_hexpand(True)
-    scroll.set_vexpand(True)
 
     treemodel = Gtk.TreeStore(str, str)
     for key, instance in app.home.core.Glossary.instances.items():
@@ -79,7 +77,7 @@ def plugin_open_dir(app):
     app.home.connect('key_release_event', _on_key_release)
 
     b_OPEN = Gtk.ToolButton(icon_name="folder")
-    app.insert_plugin_item_on_toolbar(b_OPEN)
+    app.home.insert_plugin_item_on_toolbar(b_OPEN)
     b_OPEN.set_tooltip_markup("Open Glossary Directory")
     b_OPEN.connect("clicked", lambda *a: browse_gloss(app))
     b_OPEN.show()

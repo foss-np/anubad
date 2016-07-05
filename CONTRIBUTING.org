@@ -11,9 +11,13 @@
 
 ** Coding Style
 
-   Our coding style is loosly based on [[https://www.python.org/dev/peps/pep-0008/][PEP 8]]. *4* *spaces* for
-   indentation is the must. We encourage move beyond the PEP 8 and
-   code more pythonic way.
+   - our coding style is loosly based on [[https://www.python.org/dev/peps/pep-0008/][PEP 8]]
+   - *4* *spaces* for indentation is the [[https://github.com/Stitchpunk/atari-ai][must]]
+   - try to fit each line with in *80* columns margin
+   - if your indent more than 5 level, something not right
+
+   We encourage move beyond the [[https://www.python.org/dev/peps/pep-0008/][PEP 8]] and code more pythonic and human
+   readable form.
 
 ** Guidelines for new GNOME developers
 
@@ -32,27 +36,30 @@
 
   There are mainly 3 branches,
 
-  | Branch       | Description                         |
-  |--------------+-------------------------------------|
-  | master       | current stable working version      |
-  | dev          | version for developers              |
-  | experimental | unstable branch with latest changes |
+  | Branch       | Description                   |
+  |--------------+-------------------------------|
+  | master       | stable working version        |
+  | dev          | version for power users       |
+  | experimental | version for hackers/developer |
+
 
   Start with =dev= branch to begin development, =master= branch is
-  usually stable branch for common users.
+  usually *stable* branch for /common users/.
 
   If you want to be upto date with latest development use
-  =experimental= which might be really *unstable*.
+  =experimental= which might be really :fire: *unstable* :fire:.
 
 ** Organization
 
    #+BEGIN_EXAMPLE
      anubad/
      ├── CONTRIBUTING.org      # this file
+     ├── Makefile.am           # for gnome-style build
      ├── autogen.sh            # for gnome-style build
      ├── configure.ac          # for gnome-style build
-     ├── Makefile.am           # for gnome-style build
      ├── default.ini           # default configuration file
+     ├── demo.pyw              # legacy version of anubad
+     :
      ├── assets/               # icons
      ├── help/                 # help files
      ├── plugins/              # default plugin folder
@@ -72,6 +79,23 @@
              :
              └── Makefile      # lists runnable recipies
    #+END_EXAMPLE
+
+   file naming convention in repository
+
+   | Pattern          | Description                          |
+   |------------------+--------------------------------------|
+   | plugins/*.{c,py} | plugin codes                         |
+   | src/*.{c,py}     | anubad source codes                  |
+   | src/ui/_*.css    | css file for /Window/ with same name |
+   | src/ui/_*.py     | widgets componets of /Window/        |
+
+
+* Design
+
+  Reference:
+  - https://developer.gnome.org/gtk3/stable/chap-css-overview.html
+  - https://gist.github.com/ptomato/0fb634ef4098bb89026f
+
 * Tricks
 
   assortment developer friendly interface-engines.

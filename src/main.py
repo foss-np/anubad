@@ -116,13 +116,17 @@ class App(Gtk.Application):
         self.no_of_gloss = core.load_from_config(self.cnf)
 
         self.plugins = { k: v for k, v in scan_plugins(self.cnf) }
-        # NOTE: since 'accessories-dictionary' logo sucks
+        # NOTE: since new 'accessories-dictionary' logo sucks, wtf aspect ratio
         self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.png')
 
 
     def do_activate(self):
         if self.home == None:
-            self.home = self.home_create_window()
+            self.home = create_home_window(self.cnf, self.pixbuf_logo)
+            self.add_window(self.home)
+            self.home.engines.append((lambda q: q[0] == '>', self.commander.gui_adaptor))
+            if self.cnf.preferences['show-on-system-tray']:
+                self.tray = TrayIcon(self, self.cnf.preferences['hide-on-startup'])
             self.no_of_plugins = load_plugins(self)
             welcome_message(self)
             if self.cnf.preferences['hide-on-startup']: return
@@ -158,99 +162,79 @@ class App(Gtk.Application):
         return 0
 
 
-    def home_create_window(self):
-        home = ui.home.Home(core, self.cnf)
-        self.add_window(home)
-        home.set_icon(self.pixbuf_logo)
-        home.set_title(__PKG_NAME__)
-        home.connect('delete-event', self.home_on_destroy)
+def create_home_window(cnf, pixbuf_logo):
+    home = ui.home.Home(core, cnf)
+    home.set_icon(pixbuf_logo)
+    home.set_title(__PKG_NAME__)
+    home.connect('delete-event', confirm_exit)
 
-        self.add_buttons_on_toolbar(home.toolbar)
-        home.engines.append((lambda q: q[0] == '>', self.commander.gui_adaptor))
+    if cnf.preferences['show-on-taskbar']    : home.set_skip_taskbar_hint(True)
 
-        if self.cnf.preferences['show-on-taskbar']    : home.set_skip_taskbar_hint(True)
-        if self.cnf.preferences['show-on-system-tray']:
-            self.tray = TrayIcon(self, self.cnf.preferences['hide-on-startup'])
+    histfile = os.path.expanduser(setting.FILE_HIST)
+    if cnf.preferences['enable-history-file'] and os.path.exists(histfile):
+        home.searchbar.entry.HISTORY += open(
+            histfile, encoding = "UTF-8"
+        ).read().splitlines()
+        home.searchbar.entry.CURRENT = len(home.searchbar.entry.HISTORY)
 
-        histfile = os.path.expanduser(setting.FILE_HIST)
-        if self.cnf.preferences['enable-history-file'] and os.path.exists(histfile):
-            home.searchbar.entry.HISTORY += open(
-                histfile, encoding = "UTF-8"
-            ).read().splitlines()
-            home.searchbar.entry.CURRENT = len(home.searchbar.entry.HISTORY)
+    home.toolbar.b_HELP = Gtk.ToolButton(icon_name="help-contents")
+    home.toolbar.add(home.toolbar.b_HELP)
+    home.toolbar.b_HELP.show()
+    home.toolbar.b_HELP.set_tooltip_markup("Help")
+    home.toolbar.b_HELP.connect('clicked', lambda w: on_help(home))
 
-        return home
-
-
-    def home_on_destroy(self, event, *args):
-        dialog = Gtk.MessageDialog(
-            transient_for=self.home,
-            modal=True,
-            buttons=Gtk.ButtonsType.OK_CANCEL
-        )
-
-        dialog.props.text = 'Are you sure you want to quit?'
-        def on_key_release(widget, event):
-            if Gdk.ModifierType.CONTROL_MASK & event.state:
-                if event.keyval in (ord('q'), ord('Q'),  ord('c'), ord('C')):
-                    dialog.emit('response', Gtk.ResponseType.OK)
-
-        dialog.connect('key_release_event', on_key_release)
-
-        response = dialog.run()
-        dialog.destroy()
-
-        if response == Gtk.ResponseType.OK:
-            self.quit()
-            return False
-
-        return True
+    home.toolbar.b_ABOUT = Gtk.ToolButton(icon_name="help-about")
+    home.toolbar.add(home.toolbar.b_ABOUT)
+    home.toolbar.b_ABOUT.show()
+    home.toolbar.b_ABOUT.set_tooltip_markup("About")
+    home.toolbar.b_ABOUT.connect("clicked", lambda w: create_about_dialog(pixbuf_logo, home))
+    return home
 
 
-    def insert_plugin_item_on_toolbar(self, widget):
-        bar = self.home.toolbar
-        if hasattr(bar, "s_PLUGINS"):
-            i = bar.get_item_index(bar.s_PLUGINS)
-        else:
-            bar.s_PLUGINS = Gtk.SeparatorToolItem()
-            i = bar.get_item_index(bar.s_END)
-            bar.insert(bar.s_PLUGINS, i)
-            bar.s_PLUGINS.show()
+def confirm_exit(widget, event):
+    dialog = Gtk.MessageDialog(
+        transient_for=widget,
+        modal=True,
+        buttons=Gtk.ButtonsType.OK_CANCEL
+    )
 
-        bar.insert(widget, i+1)
+    dialog.props.text = 'Are you sure you want to quit?'
+    def on_key_release(widget, event):
+        if Gdk.ModifierType.CONTROL_MASK & event.state:
+            if event.keyval in (ord('q'), ord('Q'),  ord('c'), ord('C')):
+                dialog.emit('response', Gtk.ResponseType.OK)
+
+    dialog.connect('key_release_event', on_key_release)
+
+    response = dialog.run()
+    dialog.destroy()
+
+    if response == Gtk.ResponseType.OK:
+        # FIXME app.quit() coz not quitting when emitted
+        app.quit()
+        return False
+
+    return True
 
 
-    def on_help(self):
-        screen = self.home.get_screen();
-        Gtk.show_uri(screen, "help:anubad", Gtk.get_current_event_time());
+def create_about_dialog(pixbuf, parent=None):
+    about = Gtk.AboutDialog(title="about", parent=parent)
+    about.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
+    # about.set_logo_icon_name('accessories-dictionary')
+    about.set_logo(pixbuf)
+    about.set_program_name(__PKG_NAME__)
+    about.set_comments("%s\n\nv%s\n"%(__PKG_DESC__, __version__))
+    about.set_website("http://anubad.herokuapp.com")
+    about.set_website_label("Web Version")
+    about.set_authors(open(PWD + '../AUTHORS').read().splitlines())
+    about.set_license(open(PWD + '../LICENSE').read())
+    about.run()
+    about.destroy()
 
 
-    def add_buttons_on_toolbar(self, bar):
-        bar.b_HELP = Gtk.ToolButton(icon_name="help-contents")
-        bar.add(bar.b_HELP)
-        bar.b_HELP.show()
-        bar.b_HELP.set_tooltip_markup("Help")
-        bar.b_HELP.connect('clicked', lambda w: self.on_help())
-
-        bar.b_ABOUT = Gtk.ToolButton(icon_name="help-about")
-        bar.add(bar.b_ABOUT)
-        bar.b_ABOUT.show()
-        bar.b_ABOUT.set_tooltip_markup("About")
-
-        def about_dialog(widget):
-            about = Gtk.AboutDialog(title="anubad", parent=self.home)
-            about.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
-            about.set_logo(self.pixbuf_logo)
-            about.set_program_name(__PKG_NAME__)
-            about.set_comments("%s\n\nv%s\n"%(__PKG_DESC__, __version__))
-            about.set_website("http://anubad.herokuapp.com")
-            about.set_website_label("Web Version")
-            about.set_authors(open(PWD + '../AUTHORS').read().splitlines())
-            about.set_license(open(PWD + '../LICENSE').read())
-            about.run()
-            about.destroy()
-
-        bar.b_ABOUT.connect("clicked", about_dialog)
+def on_help(home):
+    screen = home.get_screen();
+    Gtk.show_uri(screen, "help:anubad", Gtk.get_current_event_time());
 
 
 def welcome_message(app):

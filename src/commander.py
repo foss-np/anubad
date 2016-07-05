@@ -4,6 +4,7 @@ import os, sys
 
 from gi.repository import Gio
 
+from pprint import pformat
 from subprocess import Popen
 import setting
 import core
@@ -61,8 +62,7 @@ class Engine:
 
 
     def set(self, args):
-        self.app.home.nothread = True
-        return "nothread: True"
+        return pformat(self.app.cnf.core)
 
 
     def hashtags(self, args):

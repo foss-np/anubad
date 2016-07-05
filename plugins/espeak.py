@@ -23,7 +23,7 @@ def plugin_main(app, fullpath):
     from gi.repository import Gtk
 
     b_ESPEAK = Gtk.ToolButton(icon_name="media-playback-start")
-    app.insert_plugin_item_on_toolbar(b_ESPEAK)
+    app.home.insert_plugin_item_on_toolbar(b_ESPEAK)
     b_ESPEAK.set_tooltip_markup("Say it")
 
     def on_click(widget):

@@ -1,16 +1,16 @@
 default: home
 
 searchbar:
-	./searchbar.py
+	./_searchbar.py
 
 sidebar:
-	./sidebar.py
+	./_sidebar.py
 
 display:
-	./view.py
+	./_view.py
 
 relations:
-	./relations.py
+	./_relations.py
 
 home:
 	./home.py

@@ -89,6 +89,8 @@ class Settings(configparser.ConfigParser):
             'priority'    : obj.getint('priority', 9),
             'read-only'   : obj.getboolean('read-only', True),
             'description' : obj.get('description', ''),
+            'active'      : False,
+            'error'       : True,
         }
 
 
@@ -117,7 +119,7 @@ class Settings(configparser.ConfigParser):
         core = self['core']
         return {
             'debugly'        : core.get('debugly', ''),
-            'no-thread'      : core.getboolean('no-thread', False),
+            'no-thread'      : core.getboolean('no-thread', True),
             'gloss-fix'      : core.getboolean('gloss-fix', False),
             'plugins-folder' : core.get('plugins-folder', ''),
         }
@@ -186,7 +188,9 @@ class Settings(configparser.ConfigParser):
 
 def main(pwd=""):
     cnf = Settings(pwd)
-    cnf.read(pwd + FILE_DEFAULT_INI)
+    global FILE_DEFAULT_INI
+    FILE_DEFAULT_INI = pwd + FILE_DEFAULT_INI
+    cnf.read(FILE_DEFAULT_INI)
     cnf.read(FILE_INI)
     cnf.load()
     return cnf
