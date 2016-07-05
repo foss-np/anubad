@@ -28,7 +28,7 @@
 
     A good *text-editor* or *IDE* (Integrated Development Environment)
 
-* Repository organization
+* Inside Repository
 
   There are mainly 3 branches,
 
@@ -39,5 +39,45 @@
   | experimental | unstable branch with latest changes |
 
   Start with =dev= branch to begin development, =master= branch is
-  always stable. If you want to be upto date with latest development
-  use =experimental= branch which might be *unstable*.
+  usually stable branch for common users.
+
+  If you want to be upto date with latest development use
+  =experimental= which might be really *unstable*.
+
+** Organization
+
+   #+BEGIN_EXAMPLE
+     anubad/
+     ├── CONTRIBUTING.org      # this file
+     ├── autogen.sh            # for gnome-style build
+     ├── configure.ac          # for gnome-style build
+     ├── Makefile.am           # for gnome-style build
+     ├── default.ini           # default configuration file
+     ├── assets/               # icons
+     ├── help/                 # help files
+     ├── plugins/              # default plugin folder
+     │   ├── espeak.py
+     │   :
+     │   └── number2word.py
+     ├── ...
+     :
+     └── src/                  # source code
+         ├── core.py
+         ├── main.py
+         :
+         ├── Makefile          # lists runnable recipies
+         └── ui
+             ├── home.py       # home ui component
+             ├── home.css      # css file for home.py
+             :
+             └── Makefile      # lists runnable recipies
+   #+END_EXAMPLE
+* Tricks
+
+  assortment developer friendly interface-engines.
+
+  | Modes                 | Search prefix |
+  |-----------------------+---------------|
+  | Dump mode             | 'd:'          |
+  | Command Line Access   | '$'           |
+  | Internal Command Mode | '>'           |

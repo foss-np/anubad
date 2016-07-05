@@ -5,11 +5,11 @@
 
 Translation Glossary and More
 
-=Anubad= is GUI for browsing translation glossary, for everyone.
-
 [[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/00.png]]
 
-* How to get it up and running
+*anubad* is GUI for browsing translation glossary, for everyone.
+
+* Getting it
 ** Manual
 
    Make sure these requirements are fullfilled.
@@ -23,32 +23,43 @@ Translation Glossary and More
    Latest version can be downloaded as [[https://github.com/foss-np/anubad/archive/master.zip][zip]]
    or [[https://github.com/foss-np/anubad/archive/master.tar.gz][tar]] or cloned.
 
-   **NOTE:** see the quick demo =./demo.pyw=, only requires _python_.
+   *TL;DR* requirements check the =./demo.pyw=, only requires
+   _python_.
 
-** Installation
-*** adding symbolic link
 
-    If you are running experimental or doing some hacks, this might be
-    best way to keep up.
+** Symbolic Link
 
-    #+begin_src bash
-      $ cd anubad/src/
-      $ sudo make link
-    #+end_src
+   Application can still be executable from anywhere if add symbolic
+   link added *executable-path* i.e. paths defined under shell
+   variable =$PATH=.
 
-** Adding Glossaries
+   This can be helpful while running *bleeding edge* directly from
+   git repository or in development to avoid constant installation.
 
    #+begin_src bash
-     ./configure
+     $ cd anubad/src/
+     $ sudo make link
    #+end_src
 
-   for more detail configuration see =src/gsettings= and =src/mysettings=.
+   to unlink use =sudo make unlink= in from same directory.
+
+* Glossaries
+
+  *anubad* uses [[https://github.com/foss-np/np-l10n-glossary/][foss-np/np-l10n-glossary]] and the /default glossary/,
+  Which can be download, when application is started for first time.
+
 
 * Usage
 
-** command line options
+** Search Modes
 
-   anubad [OPTIONS] [COMMANDS]
+   Search query beginning with '\\' will unprocessed search
+
+** Command-line
+
+   #+BEGIN_EXAMPLE
+     anubad [OPTIONS] [COMMANDS]
+   #+END_EXAMPLE
 
 *** OPTIONS
     #+BEGIN_EXAMPLE
@@ -65,7 +76,9 @@ Translation Glossary and More
 
 *** EXAMPLES
 
-    $ anubad search hello
+    #+BEGIN_EXAMPLE
+      $ anubad search hello
+    #+END_EXAMPLE
 
 * Known Issues
 
@@ -82,9 +95,14 @@ Translation Glossary and More
     no-thread = True
   #+END_EXAMPLE
 
+* Configuration
+
+  Default Application configuration is stored in =default.ini=. To add
+  you own configuration edit =~/.config/anubad.ini=.
+
 * History
 
-  Anubad started as the graphical interface for browsing translation
+  *anubad* started as the graphical interface for browsing translation
   glossary.
 
 ** Similar Projects
@@ -100,9 +118,11 @@ Translation Glossary and More
   If you wish to contribute this project, there is much thing you can
   do beyond programming, to get started read [[https://github.com/foss-np/anubad/tree/experimental/CONTRIBUTING.org][this]].
 
-  Any code Contributions to anubad should be made via GitHub pull
-  requests.
+
+  Any code Contributions to *anubad* should be made via /GitHub/ =pull
+  request=.
 
 
 [[http://i.creativecommons.org/l/by/3.0/88x31.png]]
+
 Copyright © 2013 - 2016 to the anubad Authors.
