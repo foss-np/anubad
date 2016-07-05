@@ -1,17 +1,15 @@
-#+TITLE: Aanubad
+#+TITLE: anubad
 #+DATE: Tuesday, Jul 05 2016
 #+OPTIONS: num:t
 #+STARTUP: overview
 
 Translation Glossary and More
 
-=Anubad= is GUI for browsing translation glossary, for localizers or any one.
+=Anubad= is GUI for browsing translation glossary, for everyone.
 
 [[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/00.png]]
 
 * How to get it up and running
-
-
 ** Manual
 
    Make sure these requirements are fullfilled.
@@ -27,10 +25,8 @@ Translation Glossary and More
 
    **NOTE:** see the quick demo =./demo.pyw=, only requires _python_.
 
-*** Installation
-
-
-*** Want to do a Quick Test, Run without installing
+** Installation
+*** adding symbolic link
 
     If you are running experimental or doing some hacks, this might be
     best way to keep up.
@@ -40,7 +36,7 @@ Translation Glossary and More
       $ sudo make link
     #+end_src
 
-** Update Glossaries
+** Adding Glossaries
 
    #+begin_src bash
      ./configure
@@ -48,10 +44,7 @@ Translation Glossary and More
 
    for more detail configuration see =src/gsettings= and =src/mysettings=.
 
-*** Manually config
-
 * Usage
-
 
 ** command line options
 
@@ -81,18 +74,18 @@ Translation Glossary and More
 
   use =--nothread= argument to start without threading
 
-  Make changes in config file (=default.ini=) to persist the change by adding
-  =no-thread = True= in =[core]= section.
+  Make changes in config file (=~/.config/anubad.ini=) to persist the
+  change by adding =no-thread = True= in =[core]= section.
 
   #+BEGIN_EXAMPLE
     [core]
     no-thread = True
   #+END_EXAMPLE
 
-
 * History
 
-  Anubad started as the graphical interface for browsing translation glossary.
+  Anubad started as the graphical interface for browsing translation
+  glossary.
 
 ** Similar Projects
 
@@ -102,7 +95,6 @@ Translation Glossary and More
    | Stardict         | An International dictionary software        |
    | Gnome Dictionary | A default gnome application                 |
 
-
 * Development & Contribution
 
   If you wish to contribute this project, there is much thing you can
@@ -111,7 +103,6 @@ Translation Glossary and More
   Any code Contributions to anubad should be made via GitHub pull
   requests.
 
+
 [[http://i.creativecommons.org/l/by/3.0/88x31.png]]
-
 Copyright © 2013 - 2016 to the anubad Authors.
-
