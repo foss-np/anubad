@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=0.97
+Name=anubad
+GenericName=Glossary
+Comment=Translation Glossary and More
+Exec=anubad
+Icon=accessories-dictionary
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=Utility;Languages;Dictionary;Literature;
+Name[en_US]=anubad.desktop.desktop
