@@ -50,7 +50,7 @@ class Glossary(dict):
     def load_glossary(self, path):
         if not os.path.isdir(path):
             print("error: invalid glossary path ", file=sys.stderr)
-            return
+            raise NotADirectoryError("Can not find "+path)
 
         for _file in os.listdir(path):
             name, dot, ext = _file.rpartition('.')
@@ -276,11 +276,18 @@ def load_from_config(cnf):
         while n < len(gloss['pairs']):
             try:
                 g = Glossary(path + gloss['pairs'][n] + '/')
+                gloss['error'] = True
+            except NotADirectoryError as e:
+                print(e)
+                n += 1
+                continue
             except Exception as e:
                 print(e)
                 # if not hasattr(e, 'meta_info'):
                 # TODO robustness and show error in gui
-                if not cnf.core['gloss-fix']: return
+                if not cnf.core['gloss-fix']:
+                    n += 1
+                    continue
                 cmd = cnf.editor_goto_line_uri(*e.meta_info)
                 # NOTE: we need something to hang on till we edit
                 ## vvvv DON'T USES Popen vvvv

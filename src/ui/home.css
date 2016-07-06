@@ -1,3 +1,7 @@
+#Home #searchbar-label {
+    margin: 0px 60px;
+}
+
 #SearchBar button {
     padding: 0px 8px
 }
@@ -5,11 +9,14 @@
 #SearchBar button label {
     font-size: 12px;
     font-weight: bold;
-    padding: 0px
+    padding: 0px;
 }
 
-#searchbar-label {
-    margin: 0px 60px;
+#SearchBar entry,
+#Display textview,
+#SideBar treeview {
+    font-family: Zegoe Light;
+    font-size: 13px;
 }
 
 #INav entry{

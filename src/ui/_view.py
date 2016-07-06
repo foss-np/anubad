@@ -247,14 +247,14 @@ class Display(Gtk.Overlay):
         self.insert_at_cursor(" ")
 
         def url_clicked(textag, textview, event, textiter):
-            if event.type == Gdk.EventType.BUTTON_RELEASE: #and event.button == 1:
-                cmd = [
-                    'setsid',
-                    self.cnf.apps['browser'],
-                    "https://en.wikipedia.org/wiki/%s"%key
-                ]
-                print("pid:", Popen(cmd).pid)
-                # webbrowser.open("https://en.wikipedia.org/wiki/"+key)
+            if event.type != Gdk.EventType.BUTTON_RELEASE: return #and event.button == 1:
+            cmd = [
+                'setsid',
+                self.cnf.apps['browser'],
+                "https://en.wikipedia.org/wiki/%s"%key
+            ]
+            print("pid:", Popen(cmd).pid)
+            # webbrowser.open("https://en.wikipedia.org/wiki/"+key)
 
         tag = self.textbuffer.create_tag(None)
         tag.connect("event", url_clicked )

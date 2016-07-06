@@ -58,13 +58,7 @@ class Home(Gtk.Window):
         self.tray     = cnf.preferences['show-on-system-tray']
         self.nothread = cnf.core['no-thread']
 
-        self.fonts = {
-            'viewer': Pango.font_description_from_string(cnf.fonts['viewer']),
-            'search': Pango.font_description_from_string(cnf.fonts['viewer']),
-        }
-
-        self.track_FONT = set()
-
+        # TIP: lets css handeld all fonts related stuff
         self.css_provider = Gtk.CssProvider()
         self.css_provider.load_from_path(self.PWD + 'ui/home.css')
         Gtk.StyleContext.add_provider_for_screen(
@@ -114,10 +108,9 @@ class Home(Gtk.Window):
         for q in query.split():
             word = q.lower()
             for history in self.cache:
-                if word in history.keys():
-                    print("cache: hit", word, file=fp3)
-                    results[word] = history[word]
-                    continue
+                if word not in history.keys(): continue
+                print("cache: hit", word, file=fp3)
+                results[word] = history[word]
 
             results[word] = self.core.Glossary.search(word)
 
@@ -251,8 +244,6 @@ class Home(Gtk.Window):
         self.searchbar.entry.connect('activate', lambda *a: self.search_and_reflect())
 
         self.searchbar.set_hexpand(True)
-        self.searchbar.entry.modify_font(self.fonts['search'])
-        self.track_FONT.add(self.searchbar.entry)
         return layout
 
 
@@ -271,7 +262,6 @@ class Home(Gtk.Window):
                 return True
 
         self.sidebar.connect("key_press_event", _on_key_press)
-        self.sidebar.treeview.modify_font(self.fonts['viewer'])
         return self.sidebar
 
 
@@ -288,8 +278,6 @@ class Home(Gtk.Window):
 
     def makeWidget_viewer(self):
         self.viewer = _view.Display(self.PWD)
-        self.viewer.textview.modify_font(self.fonts['viewer'])
-        self.track_FONT.add(self.viewer.textview)
 
         def _on_button_press(textview, event):
             if event.type != Gdk.EventType._2BUTTON_PRESS: return

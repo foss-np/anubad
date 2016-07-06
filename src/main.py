@@ -335,7 +335,16 @@ def load_plugins(app):
 
 
 def create_arg_parser():
-    parser = argparse.ArgumentParser(description="anubad")
+    parser = argparse.ArgumentParser(
+        prog='anubad',
+        description=__PKG_DESC__
+    )
+
+    parser.add_argument(
+        "--version",
+        action  = "version",
+        version = '%(prog)s v' + str(__version__))
+
     parser.add_argument(
         "--noplugins",
         action  = "store_true",

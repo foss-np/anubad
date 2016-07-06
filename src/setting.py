@@ -46,7 +46,6 @@ class Settings(configparser.ConfigParser):
         self.gui,         self['gui']         = None, dict()
         self.apps,        self['apps']        = None, dict()
         self.core,        self['core']        = None, dict()
-        self.fonts,       self['fonts']       = None, dict()
         self.preferences, self['preferences'] = None, dict()
 
 
@@ -75,7 +74,6 @@ class Settings(configparser.ConfigParser):
 
         self.gui   = self.extract_gui()
         self.apps  = self.extract_apps()
-        self.fonts = self.extract_fonts()
 
 
     def new_gloss(self, _id, obj):
@@ -137,13 +135,6 @@ class Settings(configparser.ConfigParser):
             'enable-plugins'      : pref.getboolean('enable-plugins', True),
             'append-at-end'       : pref.getboolean('append-at-end', False),
             'regex-search'        : pref.getboolean('regex-search', True),
-        }
-
-
-    def extract_fonts(self):
-        font = self['fonts']
-        return {
-            'viewer' : font.get('viewer', 'DejaVu Sans Mono 13'),
         }
 
 

@@ -20,9 +20,11 @@ setting:
 commander:
 	./commander.py
 
+utils:
+	./utils.py
+
 unlink:
 	rm -f /usr/local/bin/${PKG_NAME}
 
 link: unlink
 	ln -s "$(PWD)/main.py" /usr/local/bin/${PKG_NAME}
-
