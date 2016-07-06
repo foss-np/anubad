@@ -47,9 +47,16 @@ Translation Glossary and More
 
   *anubad* uses [[https://github.com/foss-np/np-l10n-glossary/][foss-np/np-l10n-glossary]] and the /default glossary/,
 
+  run this command to download it.
+
+  #+BEGIN_EXAMPLE
+    $ cd anubad/src/
+    $ ./utils.py
+  #+END_EXAMPLE
+
+
 
 * Usage
-
 ** Search Modes
 
    Search query beginning with '\\' will unprocessed search
