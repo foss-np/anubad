@@ -90,6 +90,46 @@
    | src/ui/_*.py     | widgets componets of /Window/        |
 
 
+** Coding Convention
+
+   *Every python file should be executed separately*
+
+   - Try to include relative functionality in one place
+   - Don't littering your code
+   - Include doctest if possible
+   - it would be nice to have unit test
+
+*** naming
+
+    - variables
+      + Injected /variable/ name should be in *UPPER CASE*
+      + declarative path /variable/ should start with =PATH_= prefix
+      + declarative file /variable/ should start with =FILE_= prefix
+
+    - function
+      + /function/ name should be *lower case*
+      + prefix underscore '_' to nested /function/ name
+      + no. of underscore '_' represent nested levels
+      + encapsulate(nested) /function/ when its trival and tiny
+
+** Comment style
+
+   There are various keyword used inside comment, these are what they
+   mean.
+
+   | Keyword | Meaning                                          |
+   |---------+--------------------------------------------------|
+   | FIXME   | things that could be fixed but i'm lazy          |
+   | TODO    | new task or feature/idea not done yet            |
+   | BUG     | known annoying bug, which may/may not be fixable |
+   | TIP     | just a friendly *NOTE*                           |
+   | TESTING | thing that are not yet ready                     |
+   | WARN    | *STOP IT*, have been then, you don't want to     |
+   | NOTE    | something important, you should know             |
+
+
+
+
 * Design
 
   Reference:
