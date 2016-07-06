@@ -34,6 +34,7 @@ def edit_distance(s1, s2):
 
     return previous_row[-1]
 
+
 class Glossary(dict):
     instances = OrderedDict()
     hashtags = dict() # for auto-complete

@@ -58,15 +58,6 @@ class Home(Gtk.Window):
         self.tray     = cnf.preferences['show-on-system-tray']
         self.nothread = cnf.core['no-thread']
 
-        # TIP: lets css handeld all fonts related stuff
-        self.css_provider = Gtk.CssProvider()
-        self.css_provider.load_from_path(self.PWD + 'ui/home.css')
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            self.css_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-
         self.clips = []
         self.clips_circle = None
 
@@ -85,6 +76,7 @@ class Home(Gtk.Window):
 
         # accelerators
         self.makeWidgets()
+        self.loadCSS()
         self.connect('key_press_event', self.on_key_press)
         self.connect('key_release_event', self.on_key_release)
         self.connect('focus-in-event', lambda *e: self.searchbar.entry.grab_focus())
@@ -119,6 +111,19 @@ class Home(Gtk.Window):
         self.toolbar.mb_BACKWARD.set_sensitive(True)
         self.toolbar.b_FORWARD.set_sensitive(False)
         return results
+
+
+    def loadCSS(self):
+        # TIP: lets css handeld all fonts related stuff
+        self.css_provider = Gtk.CssProvider()
+        css = __file__.replace('.py', '.css')
+        if not os.path.exists(css): return
+        self.css_provider.load_from_path(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            self.css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
 
 
     def makeWidgets(self):

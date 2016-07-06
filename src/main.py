@@ -105,7 +105,7 @@ class App(Gtk.Application):
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
-        self.commander = commander.Engine(app)
+        self.commander = commander.Engine(self)
         self.commander.rc['version'] = lambda *a: str(__version__)
         self.commander.rc['help'] = lambda *a: self.on_help()
 
@@ -116,8 +116,15 @@ class App(Gtk.Application):
         self.no_of_gloss = core.load_from_config(self.cnf)
 
         self.plugins = { k: v for k, v in scan_plugins(self.cnf) }
-        # NOTE: since new 'accessories-dictionary' logo sucks, wtf aspect ratio
-        self.pixbuf_logo = GdkPixbuf.Pixbuf.new_from_file(PWD + '../assets/anubad.png')
+
+        self.icon_theme = Gtk.IconTheme.get_default()
+
+        logo = self.icon_theme.load_icon(
+            'accessories-dictionary', 128,
+            Gtk.IconLookupFlags.FORCE_SVG
+        )
+        # NOTE: new 'accessories-dictionary' logo sucks, wtf aspect ratio
+        self.pixbuf_logo = logo.scale_simple(128, 100, GdkPixbuf.InterpType.BILINEAR)
 
 
     def do_activate(self):
@@ -147,7 +154,7 @@ class App(Gtk.Application):
 
 
     def do_command_line(self, command_line):
-        options = command_line.get_options_dict()
+        opts = command_line.get_options_dict()
         argv = command_line.get_arguments()
 
         if len(argv) == 0:
@@ -156,7 +163,7 @@ class App(Gtk.Application):
 
         self.commander.execute(argv)
 
-        if options.contains("test"):
+        if opts.contains("test"):
             print("Test argument recieved")
 
         return 0
@@ -210,8 +217,8 @@ def confirm_exit(widget, event):
     dialog.destroy()
 
     if response == Gtk.ResponseType.OK:
-        # FIXME app.quit() coz not quitting when emitted
-        app.quit()
+        # BUG app.quit() coz not quitting when emitted
+        # app.quit()
         return False
 
     return True
@@ -220,7 +227,6 @@ def confirm_exit(widget, event):
 def create_about_dialog(pixbuf, parent=None):
     about = Gtk.AboutDialog(title="about", parent=parent)
     about.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
-    # about.set_logo_icon_name('accessories-dictionary')
     about.set_logo(pixbuf)
     about.set_program_name(__PKG_NAME__)
     about.set_comments("%s\n\nv%s\n"%(__PKG_DESC__, __version__))
@@ -241,7 +247,7 @@ def welcome_message(app):
     viewer = app.home.viewer
 
     end = viewer.textbuffer.get_end_iter()
-    logo = app.pixbuf_logo.scale_simple(32, 32, GdkPixbuf.InterpType.BILINEAR)
+    logo = app.pixbuf_logo.scale_simple(36, 32, GdkPixbuf.InterpType.BILINEAR)
     viewer.textbuffer.insert_pixbuf(end, logo)
     viewer.insert_at_cursor("\nanubad", viewer.tag_bold)
     viewer.insert_at_cursor(" v%s"%__version__, viewer.tag_hashtag)
@@ -384,9 +390,13 @@ def create_arg_parser():
     return parser
 
 
-if __name__ == '__main__':
+def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     parser = create_arg_parser()
-    opts, unknown = parser.parse_known_args()
-    app = App(opts)
-    app.run(unknown)
+    opts, commands = parser.parse_known_args()
+    return App(opts), commands
+
+
+if __name__ == '__main__':
+    app, commands = main()
+    app.run(commands)
