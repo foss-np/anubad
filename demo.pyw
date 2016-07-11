@@ -19,8 +19,7 @@ except:
 cnf = ConfigParser()
 cnf.read(PWD + 'default.ini')
 PATH_GLOSS = os.path.expanduser(cnf.get('gloss "foss"', 'path') + 'en2np/')
-tmp = cnf.get('fonts', 'viewer').split()
-def_FONT = [ ' '.join(tmp[:-1]), tmp[-1] ]
+def_FONT = [ "Arial", "13" ]
 
 FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
 
@@ -83,11 +82,11 @@ class Browser(Frame):
 
     def fill_tree(self, _gloss):
         try: # py2/3 compatibility
-            data = open(self.GLOSS, encoding="UTF-8").read()
+            data = open(self.GLOSS, encoding="utf8").read()
         except:
             # for python2
             data = open(self.GLOSS).read()
-            data = data.decode('utf-8')
+            data = data.decode('utf8')
 
         self.count = 0
         for line in data.splitlines():
@@ -97,7 +96,7 @@ class Browser(Frame):
             try:
                 row[2] = row[2][1:] # remove space
             except:
-                print("File Format Error: %s: %d"%(self.GLOSS, self.count))
+                # print("File Format Error: %s: %d"%(self.GLOSS, self.count))
                 exit()
             self.select = self.tree.insert('', 'end', values=row, tag="npfont")
 
