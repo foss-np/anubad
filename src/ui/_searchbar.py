@@ -127,21 +127,22 @@ class INavHistory(Gtk.Popover):
 
 
     def makeWidgets(self):
-        self.layout = Gtk.HBox()
-        self.add(self.layout)
+        layout = Gtk.Box(orientation=0)
+        self.add(layout)
 
         icon = Gtk.Image.new_from_icon_name('document-open-recent', Gtk.IconSize.MENU)
-        self.layout.add(icon)
+        layout.add(icon)
 
         self.label = Gtk.Label()
-        self.layout.add(self.label)
+        layout.add(self.label)
 
         self.entry = Gtk.Entry()
-        self.layout.add(self.entry)
+        layout.add(self.entry)
         self.entry.set_has_frame(False)
         self.entry.set_overwrite_mode(True)
         self.entry.connect('changed', self.on_change)
-        self.layout.show_all()
+        layout.show_all()
+        return layout
 
 
     def on_change(self, widget):
@@ -185,6 +186,7 @@ class INavHistory(Gtk.Popover):
         if reverse: self.label.set_markup(" <b>reverse-i-search:</b> ")
         else: self.label.set_markup(" <b>forward-i-search:</b> ")
         self.show()
+        self.entry.grab_focus() # For failsafe
 
 
 def sample():
