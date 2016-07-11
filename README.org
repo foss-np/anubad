@@ -7,7 +7,11 @@ Translation Glossary and More
 
 [[https://raw.githubusercontent.com/foss-np/anubad/dump/screenshots/00.png]]
 
-*anubad* is GUI for browsing translation glossary, for everyone.
+The *anubad* is the /open sourced/ glossary browsing framework build
+and designed not only for /translators/ and /localizers/ but also for
+the common users.
+
+Don't want to install? we have the [[https://github.com/foss-np/anubad-web][web-port]].
 
 * Getting it
 ** Manual
