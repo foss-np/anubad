@@ -9,6 +9,7 @@ __version__  = 0.1
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
 
+import os
 
 class num2word:
     def __init__(self, word_map, interval):
@@ -122,8 +123,8 @@ def plugin_main(app, fullpath):
     else:
         return False
 
-    path = gloss['path']
-    gloss = app.home.core.Glossary.instances[path + 'en2np/']
+    path = os.path.expanduser(gloss['path'])
+    gloss = app.home.core.Glossary.instances[path + 'en2ne/']
     liststore, ulta = gloss['numbers.tra']
 
     n2w = adaptor(liststore, path + 'numbers.tra')
