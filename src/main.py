@@ -61,7 +61,8 @@ class TrayIcon(Gtk.StatusIcon):
     def makeWidget(self):
         self.set_from_pixbuf(self.app.pixbuf_logo)
         self.set_title(__PKG_NAME__)
-        self.set_name(__PKG_ID__ + ".tray")
+        # self.set_name(__PKG_ID__ + ".tray")
+        ## don't use it ^^^ will create Gdk-CRITICAL
         self.set_tooltip_text(__PKG_DESC__)
         self.set_has_tooltip(True)
         self.set_visible(True)
