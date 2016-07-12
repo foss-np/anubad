@@ -62,7 +62,7 @@ class TrayIcon(Gtk.StatusIcon):
         self.set_from_pixbuf(self.app.pixbuf_logo)
         self.set_title(__PKG_NAME__)
         # self.set_name(__PKG_ID__ + ".tray")
-        ## don't use it ^^^ will create Gdk-CRITICAL
+        ## BUG: don't use it ^^^ will create Gdk-CRITICAL
         self.set_tooltip_text(__PKG_DESC__)
         self.set_has_tooltip(True)
         self.set_visible(True)
@@ -102,6 +102,7 @@ class App(Gtk.Application):
 
         self.opts = opts
         self.home = None
+        self.connect("shutdown", self.on_shutdown)
 
 
     def do_startup(self):
@@ -144,14 +145,13 @@ class App(Gtk.Application):
         self.home.present()
 
 
-    def do_shutdown(self):
+    def on_shutdown(self, app_obj):
         if self.home and self.cnf.preferences['enable-history-file']:
             print("shutdown: update history")
             # NOTE path expanded as the precaution if changed
             fp = open(os.path.expanduser(setting.FILE_HIST), mode='w+')
             fp.write('\n'.join(self.home.searchbar.entry.HISTORY))
             fp.close()
-        self.quit()
 
 
     def do_command_line(self, command_line):
@@ -218,8 +218,8 @@ def confirm_exit(widget, event):
     dialog.destroy()
 
     if response == Gtk.ResponseType.OK:
-        # BUG app.quit() coz not quitting when emitted
-        # app.quit()
+        # BUG: app.quit() coz not quitting when emitted
+        widget.destroy()
         return False
 
     return True
