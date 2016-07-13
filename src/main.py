@@ -67,6 +67,17 @@ class TrayIcon(Gtk.StatusIcon):
         self.set_has_tooltip(True)
         self.set_visible(True)
 
+        self.menu = Gtk.Menu()
+
+        menuitem_visibility = Gtk.MenuItem("Show / Hide")
+        menuitem_visibility.connect("activate", self.toggle_visibility)
+        self.menu.append(menuitem_visibility)
+
+        menuitem_quit = Gtk.MenuItem("Quit")
+        menuitem_quit.connect("activate", lambda *a: self.app.quit())
+        self.menu.append(menuitem_quit)
+        self.menu.show_all()
+
 
     def toggle_visibility(self, widget):
         self.visible = not self.visible
@@ -78,18 +89,7 @@ class TrayIcon(Gtk.StatusIcon):
 
 
     def on_secondary_click(self, widget, button, time):
-        menu = Gtk.Menu()
-
-        menuitem_visibility = Gtk.MenuItem("Show / Hide")
-        menuitem_visibility.connect("activate", self.toggle_visibility)
-        menu.append(menuitem_visibility)
-
-        menuitem_quit = Gtk.MenuItem("Quit")
-        menuitem_quit.connect("activate", lambda *a: self.app.quit())
-        menu.append(menuitem_quit)
-
-        menu.show_all()
-        menu.popup(None, None, None, self, 3, time)
+        self.menu.popup(None, None, None, self, 3, time)
 
 
 class App(Gtk.Application):
@@ -103,6 +103,8 @@ class App(Gtk.Application):
         self.opts = opts
         self.home = None
         self.connect("shutdown", self.on_shutdown)
+        ## BUG: dont use =do_shutdown= virtual func, creates show
+        ## CRITIAL error messages
 
 
     def do_startup(self):
@@ -149,9 +151,8 @@ class App(Gtk.Application):
         if self.home and self.cnf.preferences['enable-history-file']:
             print("shutdown: update history")
             # NOTE path expanded as the precaution if changed
-            fp = open(os.path.expanduser(setting.FILE_HIST), mode='w+')
-            fp.write('\n'.join(self.home.searchbar.entry.HISTORY))
-            fp.close()
+            with open(os.path.expanduser(setting.FILE_HIST), mode='w+') as fp:
+                fp.write('\n'.join(self.home.searchbar.entry.HISTORY))
 
 
     def do_command_line(self, command_line):

@@ -9,7 +9,7 @@ fp3 = fp4 = sys.stderr
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, Pango
+from gi.repository import Gtk, Gdk
 from gi.repository import GObject
 
 from multiprocessing.pool import ThreadPool
@@ -58,12 +58,12 @@ class Home(Gtk.Window):
         self.tray     = cnf.preferences['show-on-system-tray']
         self.nothread = cnf.core['no-thread']
 
-        self.clips = []
+        self.clips = list()
         self.clips_circle = None
 
         self.view_current = set()
 
-        self.cache = []
+        self.cache = list()
         self.cache_cursor = 0
         self.copy_buffer = ""
 
@@ -113,17 +113,6 @@ class Home(Gtk.Window):
         return results
 
 
-    def loadCSS(self):
-        # TIP: lets css handeld all fonts related stuff
-        self.css_provider = Gtk.CssProvider()
-        css = __file__.replace('.py', '.css')
-        if not os.path.exists(css): return
-        self.css_provider.load_from_path(css)
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            self.css_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
 
 
     def makeWidgets(self):
@@ -148,6 +137,19 @@ class Home(Gtk.Window):
 
         layout.show_all()
         layout.add(self.makeWidget_infobar())
+
+
+    def loadCSS(self):
+        # TIP: lets css handeld all fonts related stuff
+        self.css_provider = Gtk.CssProvider()
+        css = __file__.replace('.py', '.css')
+        if not os.path.exists(css): return
+        self.css_provider.load_from_path(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            self.css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
 
 
     def makeWidget_toolbar(self):
@@ -408,8 +410,11 @@ class Home(Gtk.Window):
             self.infobar.show_all()
             return
 
-        if type(output) == tuple: return self._view_results({ query: output })
-        if type(output) == str:
+
+        if isinstance(output, tuple): return self._view_results({ query: output })
+        # if its plain string TODO fix it with new engine switcher,
+        # which will have output paramenter also
+        if isinstance(output, str):
             begin = self.viewer.textbuffer.get_start_iter()
             self.viewer.textbuffer.place_cursor(begin)
             self.viewer.insert_at_cursor("\n")

@@ -49,7 +49,8 @@ Don't want to install? we have the [[https://github.com/foss-np/anubad-web][web-
 
 * Glossaries
 
-  *anubad* uses [[https://github.com/foss-np/np-l10n-glossary/][foss-np/np-l10n-glossary]] and the /default glossary/,
+  *anubad* uses [[https://github.com/foss-np/np-l10n-glossary/][foss-np/np-l10n-glossary]] as the /default glossary/,
+  which can be *downloaded* via application.
 
   run this command to download it.
 
@@ -126,7 +127,7 @@ Don't want to install? we have the [[https://github.com/foss-np/anubad-web][web-
 * Development & Contribution
 
   If you wish to contribute this project, there is much thing you can
-  do beyond programming, to get started read [[https://github.com/foss-np/anubad/tree/experimental/CONTRIBUTING.org][this]].
+  do beyond programming, to get started read [[https://github.com/foss-np/anubad/wiki/CONTRIBUTING][this]]
 
   Any code Contributions to *anubad* should be made via /GitHub/ =pull
   request=.

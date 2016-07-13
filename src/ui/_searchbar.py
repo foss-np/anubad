@@ -50,7 +50,6 @@ class Bar(Gtk.Box):
         button.connect('clicked', lambda *a: self.entry.emit('activate'))
 
 
-
     def add_hashtag_completion(self, liststore):
         area = Gtk.CellAreaBox()
         textrender = Gtk.CellRendererText(scale=0.85)
@@ -75,6 +74,36 @@ class Bar(Gtk.Box):
         self.entrycompletion.set_match_func(_match_func, liststore)
 
 
+    def makeWidget_popover_engine(self, entry):
+        pop = Gtk.Popover.new(entry)
+        pop.set_position(Gtk.PositionType.BOTTOM)
+        pop.set_border_width(2)
+        pop.LAYOUT = Gtk.Box(orientation=1)
+        pop.add(pop.LAYOUT)
+
+        pop.LAYOUT.add(Gtk.Label(" engine "))
+        return pop
+
+
+    def show_engine(self, entry, pos, eventbutton):
+        if pos != 0: return
+        rect = entry.get_icon_area(0)
+        self.pop_engine.set_pointing_to(rect)
+        self.pop_engine.show_all()
+
+
+    def nav_history(self, diff):
+        length = len(self.entry.HISTORY)
+        if length == 0: return True
+        i = self.entry.CURRENT + diff
+        # print("history_seek:", self.entry.CURRENT, '+', diff, ':', i, '==', length)
+        if i >= length: return True
+        if i == -1: return True
+        self.entry.set_text(self.entry.HISTORY[i])
+        self.entry.set_position(-1)
+        self.entry.CURRENT = i
+
+
     def on_key_press(self, widget, event):
         # NOTE to stop propagation of signal return True
         if   event.keyval == 65362: self.nav_history(-1) # Up-arrow
@@ -92,17 +121,6 @@ class Bar(Gtk.Box):
                 if not widget.get_selection_bounds(): return
                 widget.set_position(0)
                 return True
-
-
-    def nav_history(self, diff):
-        length = len(self.entry.HISTORY)
-        if length == 0: return True
-        i = self.entry.CURRENT + diff
-        if i >= length: return True
-        if i == -1: return True
-        self.entry.set_text(self.entry.HISTORY[i])
-        self.entry.set_position(-1)
-        self.entry.CURRENT = i
 
 
 class INavHistory(Gtk.Popover):
