@@ -84,6 +84,7 @@ class adaptor:
         self.src = src
 
         num_en = []
+        num_ne = []
         for word, (ID, *has_hash_tag, parsed_info) in liststore.items():
             noun = ""
             for pos, val in parsed_info:
@@ -96,10 +97,13 @@ class adaptor:
                     if not val.isdigit(): continue
                     v = int(val)
                     num_en.append((v, word))
+                    num_ne.append((v, noun))
                     continue
 
         num_en.sort()
+        num_ne.sort()
         self.en = num2word(num_en, 3)
+        self.ne = num2word(num_ne, 2)
 
 
     def gui_reflect(self, query):
@@ -110,6 +114,7 @@ class adaptor:
             ('_transliterate', t),
             ("{:,}".format(n), ' '.join(self.en.convert(query))),
             ('unknown', ''),
+            (t_format, ' '.join(self.ne.convert(query))),
         )
         FULL = {(query, int(query), self.src): parsed_info}
         FUZZ = dict()
