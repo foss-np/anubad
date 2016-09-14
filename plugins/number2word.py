@@ -138,9 +138,16 @@ def main():
     import setting
     cnf = setting.main()
 
+    for gloss in cnf.glossary_list:
+        if "foss" in gloss['name']:
+            break
+    else:
+        return False
+
+    path = os.path.expanduser(gloss['path'])
+
     import core
-    path = cnf.glossary_list['foss']['pairs'][0]
-    gloss = core.Glossary(path)
+    gloss = core.Glossary(path + 'en2ne/')
 
     liststore, ulta = gloss['numbers.tra']
     src = gloss.fullpath + 'numbers.tra'
@@ -148,11 +155,8 @@ def main():
     n2w = adaptor(liststore, src)
 
     query = '०१२३४५६७८९1'
-    if not query.isdigit(): return
-
     n2w.en.convert(query)
-    print()
-    n2w.ne.convert(query)
+    n2w.ne.convert('100')
 
 
 if __name__ == '__main__':
