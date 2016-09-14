@@ -63,7 +63,11 @@ class num2word:
         if n < 1000:
             return self.hundreds(n);
 
-        shift = l % self.interval # latin: 3, nepali: 2
+        if l > 3:
+            shift = ((l -3) % self.interval)
+        else:
+            shift = l % 3 
+
         exp = l - shift
         place = 10**exp
         r, m = divmod(n, place)
@@ -114,7 +118,7 @@ class adaptor:
             ('_transliterate', t),
             ("{:,}".format(n), ' '.join(self.en.convert(query))),
             ('unknown', ''),
-            (t_format, ' '.join(self.ne.convert(query))),
+            ('unknown', ' '.join(self.ne.convert(query))),
         )
         FULL = {(query, int(query), self.src): parsed_info}
         FUZZ = dict()
@@ -161,7 +165,7 @@ def main():
 
     query = '०१२३४५६७८९1'
     n2w.en.convert(query)
-    n2w.ne.convert('100')
+    n2w.ne.convert('333000')
 
 
 if __name__ == '__main__':
