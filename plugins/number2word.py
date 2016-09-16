@@ -5,29 +5,38 @@
 Convert the numbers into words.
 """
 
-__version__  = 0.1
+__version__  = 0.2
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
 
 import os
 
 class num2word:
-    def __init__(self, word_map, interval):
+    def __init__(self, word_map, interval, drop_and=True, offset=48):
         self.word_map = word_map
         self.interval = interval
-        self.word  = []
+        self.offset   = offset
+        self.drop_and = drop_and
+        self.words = [] # to be share across methods
 
 
     def convert(self, query):
-        self.word.clear()
-
         n = int(query)
-        l = len(query)
+        s = "".join(chr(int(d) + self.offset) for d in str(n))
+        l = len(s)
+
+        digit = s[-3:]
+        for i, d in enumerate(reversed(s[:-3])):
+            if i % self.interval == 0:
+                digit = ',' + digit
+            digit = d + digit
+
+        self.words.clear()
         if   n > 999 : self.pow_interval(n, l)
         elif n > 99  : self.hundreds(n)
-        else         : self.base(n)
+        else         : self.words.append(self.base(n))
 
-        return self.word
+        return digit, ' '.join(self.words)
 
 
     def high_order_names(self, n):
@@ -38,75 +47,44 @@ class num2word:
 
 
     def base(self, n):
-        w = self.word_map[n][1]
-        print(w)
-        self.word.append(w)
-        return w
+        return self.word_map[n][1]
 
 
     def hundreds(self, n, l=2):
         r, m = divmod(n, 100)
 
         if r != 0: # when there is no tens places
-            self.base(r)
-            self.base(100)
+            self.words.append(self.base(r))
+            self.words.append(self.base(100))
 
         if m:
-            if l == 2:
-                self.word.append('and')
-                print('and')
+            if l == 2 and not self.drop_and:
+                self.words.append('and')
+            self.words.append(self.base(m))
 
-            self.base(m)
 
 
     def pow_interval(self, n, l):
         if n < 1000:
             return self.hundreds(n);
 
-        if l > 3:
-            shift = ((l -3) % self.interval)
-        else:
-            shift = l % 3 
-
+        shift = (l - 3) % self.interval if l > 3 else l % 3
         exp = l - shift
         place = 10**exp
         r, m = divmod(n, place)
-        print("len(%d) - %d;"%(l, shift), "10**%d = %d:"%(exp, place), (r, m))
+        # print("len(%d) - %d;"%(l, shift), "10**%d = %d:"%(exp, place), (r, m))
 
         if r != 0:
             self.hundreds(r, l)
-            w = self.high_order_names(place)
-            self.word.append(w)
-            print("places:", w)
+            self.words.append(self.high_order_names(place))
 
         if m:
             self.pow_interval(m, l-self.interval);
 
-    def nepali_number_formatter(self, unformatted_number):
-        # Left trim '०'
-        start_index= 0
-        for index, character in enumerate (unformatted_number):
-            if character != '०':
-                start_index = index
-                break
-
-        unformatted_number = unformatted_number[start_index:]
-        # print(unformatted_number)
-        # add ',' at approprate place
-        length = len(unformatted_number)
-        sample = 1
-        result =''
-        while sample <= length:
-            if sample % 2 ==0 and sample !=2:
-                result = ','+result
-            result = unformatted_number[-sample] + result
-            sample +=1
-        return result
-
 
 class adaptor:
-    def __init__(self, liststore, src=''):
-        self.src = src
+    def __init__(self, liststore):
+        self.src = 'number2word plugin'
 
         num_en = []
         num_ne = []
@@ -115,7 +93,7 @@ class adaptor:
             for pos, val in parsed_info:
                 if pos == 'noun' and noun == "":
                     if not val: continue
-                    noun = val
+                    noun = val.split('/')[0]
                     continue
                 if pos == '_num':
                     if not val: continue
@@ -127,28 +105,19 @@ class adaptor:
 
         num_en.sort()
         num_ne.sort()
-        self.en = num2word(num_en, 3)
-        self.ne = num2word(num_ne, 2)
+        self.en = num2word(num_en, 3, False)
+        self.ne = num2word(num_ne, 2, True, 2406)
 
 
     def gui_reflect(self, query):
-        n = int(query)
-        t = "".join(chr(int(d) + 2406) for d in query)
-        nepali = self.ne.convert(query)
-        nepali.remove('and')
-
-        result = self.ne.nepali_number_formatter(str(t))
-
         parsed_info = (
-            ('_transliterate', t),
-            ("{:,}".format(n), ' '.join(self.en.convert(query))),
+            self.en.convert(query),
             ('unknown', ''),
-            (result, ' '.join(nepali)),
+            self.ne.convert(query),
         )
-        
+
         FULL = {(query, int(query), self.src): parsed_info}
-        FUZZ = dict()
-        return FULL, FUZZ
+        return FULL, dict()
 
 
 def plugin_main(app, fullpath):
@@ -162,7 +131,7 @@ def plugin_main(app, fullpath):
     gloss = app.home.core.Glossary.instances[path + 'en2ne/']
     liststore, ulta = gloss['numbers.tra']
 
-    n2w = adaptor(liststore, path + 'numbers.tra')
+    n2w = adaptor(liststore)
     app.home.engines.append((lambda q: q.isdigit(), n2w.gui_reflect))
 
 
@@ -189,9 +158,16 @@ def main():
 
     n2w = adaptor(liststore, src)
 
-    query = '०१२३४५६७८९1'
-    n2w.en.convert(query)
-    n2w.ne.convert('333000')
+    print(n2w.en.convert('1'))
+    print(n2w.en.convert('12'))
+    print(n2w.en.convert('123'))
+    print(n2w.en.convert('1234'))
+    print(n2w.en.convert('12345'))
+    print(n2w.en.convert('123456'))
+    print(n2w.en.convert('1234567'))
+    print(n2w.ne.convert('12345679'))
+    print(n2w.ne.convert('123456790'))
+    print(n2w.ne.convert('०१२३४५६७८९1'))
 
 
 if __name__ == '__main__':
