@@ -82,6 +82,27 @@ class num2word:
         if m:
             self.pow_interval(m, l-self.interval);
 
+    def nepali_number_formatter(self, unformatted_number):
+        # Left trim '०'
+        start_index= 0
+        for index, character in enumerate (unformatted_number):
+            if character != '०':
+                start_index = index
+                break
+
+        unformatted_number = unformatted_number[start_index:]
+        # print(unformatted_number)
+        # add ',' at approprate place
+        length = len(unformatted_number)
+        sample = 1
+        result =''
+        while sample <= length:
+            if sample % 2 ==0 and sample !=2:
+                result = ','+result
+            result = unformatted_number[-sample] + result
+            sample +=1
+        return result
+
 
 class adaptor:
     def __init__(self, liststore, src=''):
@@ -113,13 +134,18 @@ class adaptor:
     def gui_reflect(self, query):
         n = int(query)
         t = "".join(chr(int(d) + 2406) for d in query)
+        nepali = self.ne.convert(query)
+        nepali.remove('and')
+
+        result = self.ne.nepali_number_formatter(str(t))
 
         parsed_info = (
             ('_transliterate', t),
             ("{:,}".format(n), ' '.join(self.en.convert(query))),
             ('unknown', ''),
-            ('unknown', ' '.join(self.ne.convert(query))),
+            (result, ' '.join(nepali)),
         )
+        
         FULL = {(query, int(query), self.src): parsed_info}
         FUZZ = dict()
         return FULL, FUZZ
