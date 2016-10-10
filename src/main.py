@@ -11,7 +11,7 @@ import os, sys
 __filepath__ = os.path.realpath(__file__)
 PWD = os.path.dirname(__filepath__) + '/'
 
-sys.path.append(PWD)
+sys.path.append(PWD) # path-hack
 
 import argparse
 import signal
@@ -49,7 +49,7 @@ core.fp4 = ui.home.fp4 = fp4
 
 
 class TrayIcon(Gtk.StatusIcon):
-    def __init__(self, app, visible):
+    def __init__(self, app, visible=False):
         Gtk.StatusIcon.__init__(self)
         self.app = app
 
@@ -58,6 +58,7 @@ class TrayIcon(Gtk.StatusIcon):
 
         self.connect("activate", self.toggle_visibility)
         self.connect("popup_menu", self.on_secondary_click)
+        self.connect("button-press-event", self.on_double_click)
 
 
     def makeWidgets(self):
@@ -90,6 +91,13 @@ class TrayIcon(Gtk.StatusIcon):
 
     def on_secondary_click(self, widget, button, time):
         self.menu.popup(None, None, None, self, 3, time)
+
+
+    def on_double_click(self, widget, event):
+        if event.type != Gdk.EventType._2BUTTON_PRESS: return
+        self.menuitem_visibility.set_active(
+            not self.menuitem_visibility.get_active()
+        )
 
 
 class App(Gtk.Application):
@@ -137,7 +145,7 @@ class App(Gtk.Application):
             self.add_window(self.home)
             self.home.engines.append((lambda q: q[0] == '>', self.commander.gui_adaptor))
             if self.cnf.preferences['show-on-system-tray']:
-                self.tray = TrayIcon(self, not self.cnf.preferences['hide-on-startup'])
+                self.tray = TrayIcon(self)
             self.no_of_plugins = load_plugins(self)
             welcome_message(self)
             if self.cnf.preferences['hide-on-startup']: return
