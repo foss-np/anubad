@@ -32,13 +32,14 @@ def browse_gloss(app):
 
     scroll = Gtk.ScrolledWindow()
     layout.add(scroll)
-    scroll.set_min_content_height(250)
+    scroll.set_min_content_height(220)
+    scroll.set_min_content_width(380)
 
-    treemodel = Gtk.TreeStore(str, str)
+    treemodel = Gtk.TreeStore(str, str, int)
     for key, instance in app.home.core.Glossary.instances.items():
-        root = treemodel.append(None, ["folder", key])
+        root = treemodel.append(None, ["folder", key, instance.counter])
         for _file in instance:
-            treemodel.append(root, ["text-x-generic", _file])
+            treemodel.append(root, ["text-x-generic", _file, len(instance[_file][0])])
 
 
     treeview = Gtk.TreeView(treemodel)
@@ -59,6 +60,7 @@ def browse_gloss(app):
 
     treeview.append_column(Gtk.TreeViewColumn("image", Gtk.CellRendererPixbuf(), icon_name=0))
     treeview.append_column(Gtk.TreeViewColumn("gloss", Gtk.CellRendererText(), text=1))
+    treeview.append_column(Gtk.TreeViewColumn("count", Gtk.CellRendererText(), text=2))
     treeview.expand_all()
     treeview.set_headers_visible(False)
     treeview.set_search_column(1)
