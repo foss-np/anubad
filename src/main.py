@@ -183,9 +183,10 @@ def create_home_window(cnf, pixbuf_logo):
     home = ui.home.Home(core, cnf)
     home.set_icon(pixbuf_logo)
     home.set_title(__PKG_NAME__)
+    home.set_wmclass("anubad.home", "anubad")
     home.connect('delete-event', confirm_exit)
 
-    if cnf.preferences['show-on-taskbar']    : home.set_skip_taskbar_hint(True)
+    if cnf.preferences['show-on-taskbar']: home.set_skip_taskbar_hint(True)
 
     histfile = os.path.expanduser(setting.FILE_HIST)
     if cnf.preferences['enable-history-file'] and os.path.exists(histfile):
@@ -270,7 +271,7 @@ def welcome_message(app):
     end    = viewer.textbuffer.get_end_iter()
     anchor = viewer.textbuffer.create_child_anchor(end)
     b_help = Gtk.ToolButton(icon_name='help-contents')
-    b_help.connect('clicked', lambda w: app.on_help())
+    b_help.connect('clicked', lambda w: on_help(app.home))
     b_help.show()
     viewer.textview.add_child_at_anchor(b_help, anchor)
     viewer.insert_at_cursor(" or press")
@@ -305,37 +306,59 @@ def scan_plugins(cnf):
 
 
     for key, plug in cnf.plugin_list.items():
+        # if not importlib.util.find_spec(key): # may be only for python3.5
+        #     sys.path.append(plug['path'])
         if plug['path'] not in sys.path: sys.path.append(plug['path'])
-
         try:
-            namespace = importlib.__import__(key)
+            module = importlib.import_module(key)
         except:
             traceback.print_exception(*sys.exc_info())
             cnf.plugin_list[key]['error'] = True
             continue
 
-        if not hasattr(namespace, 'plugin_main'):
-            del namespace
+        if not hasattr(module, 'plugin_main'):
+            del module
             continue
 
-        yield key, namespace
+        yield key, module
 
 
 def load_plugins(app):
     if not app.cnf.preferences['enable-plugins']: return
     count = 0
-    for key, namespace in app.plugins.items():
+    for key, module in app.plugins.items():
         plug = app.cnf.plugin_list[key]
         if plug['disable']:
             print("plugin.skipped.config.disabled:", key)
             continue
 
-        if getattr(plug, '__platform__', os.name) != os.name:
-            print("plugin.skipped.unmatch.platform:", key)
-            continue
+        platform = getattr(plug, '__platform__', os.name)
+        if platform != os.name:
+            plug['error'] = "incompatible platform"
+            plug['platform']  = platform
+            print("plugin.skipped.unmatch.platform:", key, platform)
+
+
+        version = getattr(plug, '__version__', 0)
+        if version > plug['version']:
+            plug['error'] = "new version already exists"
+            plug['version'] = version
+            print("plugin.skipped.old.version:", key, version)
+
+        require = getattr(plug, '__require__', __version__)
+        if require > __version__:
+            plug['error'] = "new version already exists"
+            plug['require'] = version
+            print("plugin.skipped.requires.anubad:", key, require)
+
+        plug['depends']   = getattr(module, '__depends__', '')
+        plug['authors']   = getattr(module, '__authors__', '')
+        plug['support']   = getattr(module, '__support__', '')
+
+        module.fp3 = fp3
 
         try:
-            if namespace.plugin_main(app, PWD): continue
+            if module.plugin_main(app, PWD): continue
         except Exception as e:
             plug['error'] = True
             traceback.print_exception(*sys.exc_info())
@@ -350,60 +373,60 @@ def load_plugins(app):
     return count
 
 
-def create_arg_parser():
-    parser = argparse.ArgumentParser(
+def parse_args():
+    ap = argparse.ArgumentParser(
         prog='anubad',
         description=__PKG_DESC__
     )
 
-    parser.add_argument(
+    ap.add_argument(
         "--version",
         action  = "version",
         version = '%(prog)s v' + str(__version__))
 
-    parser.add_argument(
+    ap.add_argument(
         "--noplugins",
         action  = "store_true",
         default = False,
         help    = "Disable plugins loading")
 
-    parser.add_argument(
+    ap.add_argument(
         "--hide",
         action  = "store_true",
         default = False,
         help    = "Hide on startup")
 
-    parser.add_argument(
+    ap.add_argument(
         "--notray",
         action  = "store_true",
         default = False,
         help    = "Hide from notification tray")
 
-    parser.add_argument(
+    ap.add_argument(
         "--nohistfile",
         action  = "store_true",
         default = False,
         help    = "Disable history file")
 
-    parser.add_argument(
+    ap.add_argument(
         "--notaskbar",
         action  = "store_true",
         default = False,
         help    = "Hide from taskbar")
 
-    parser.add_argument(
+    ap.add_argument(
         "--nothread",
         action  = "store_true",
         default = False,
         help    = "Don't thread application")
 
-    return parser
+    return ap
 
 
 def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    parser = create_arg_parser()
-    opts, commands = parser.parse_known_args()
+    ap = parse_args()
+    opts, commands = ap.parse_known_args()
     return App(opts), commands
 
 

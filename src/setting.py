@@ -107,6 +107,7 @@ class Settings(configparser.ConfigParser):
             'version'    : getfloat('version', 0),
             'disable'    : getboolean('disable', False),
             'priority'   : getint('priority', 9),
+            'platform'   : get('platform', os.name),
             'registered' : True if obj else False,
             'active'     : False,
             'error'      : False,
