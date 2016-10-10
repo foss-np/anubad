@@ -52,26 +52,27 @@ class TrayIcon(Gtk.StatusIcon):
     def __init__(self, app, visible):
         Gtk.StatusIcon.__init__(self)
         self.app = app
-        self.visible = visible
-        self.makeWidget()
+
+        self.makeWidgets()
+        self.menuitem_visibility.set_active(visible)
+
         self.connect("activate", self.toggle_visibility)
         self.connect("popup_menu", self.on_secondary_click)
 
 
-    def makeWidget(self):
+    def makeWidgets(self):
         self.set_from_pixbuf(self.app.pixbuf_logo)
         self.set_title(__PKG_NAME__)
         # self.set_name(__PKG_ID__ + ".tray")
         ## BUG: don't use it ^^^ will create Gdk-CRITICAL
         self.set_tooltip_text(__PKG_DESC__)
         self.set_has_tooltip(True)
-        self.set_visible(True)
 
         self.menu = Gtk.Menu()
 
-        menuitem_visibility = Gtk.MenuItem("Show / Hide")
-        menuitem_visibility.connect("activate", self.toggle_visibility)
-        self.menu.append(menuitem_visibility)
+        self.menuitem_visibility = Gtk.CheckMenuItem("Show / Hide")
+        self.menuitem_visibility.connect("toggled", self.toggle_visibility)
+        self.menu.append(self.menuitem_visibility)
 
         menuitem_quit = Gtk.MenuItem("Quit")
         menuitem_quit.connect("activate", lambda *a: self.app.quit())
@@ -80,8 +81,7 @@ class TrayIcon(Gtk.StatusIcon):
 
 
     def toggle_visibility(self, widget):
-        self.visible = not self.visible
-        if self.visible:
+        if self.menuitem_visibility.get_active():
             self.app.activate()
             return
 
@@ -137,7 +137,7 @@ class App(Gtk.Application):
             self.add_window(self.home)
             self.home.engines.append((lambda q: q[0] == '>', self.commander.gui_adaptor))
             if self.cnf.preferences['show-on-system-tray']:
-                self.tray = TrayIcon(self, self.cnf.preferences['hide-on-startup'])
+                self.tray = TrayIcon(self, not self.cnf.preferences['hide-on-startup'])
             self.no_of_plugins = load_plugins(self)
             welcome_message(self)
             if self.cnf.preferences['hide-on-startup']: return
