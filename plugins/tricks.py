@@ -27,7 +27,7 @@ from subprocess import check_output
 def browse_gloss(app):
     dialog = Gtk.MessageDialog(transient_for=app.home)
 
-    dialog.props.text = 'Click on the file you want to open.'
+    dialog.props.text = 'Double Click on row to open'
     layout = dialog.get_content_area()
 
     scroll = Gtk.ScrolledWindow()

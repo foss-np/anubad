@@ -5,6 +5,15 @@
 A module for the interactive text interface and Decoration.
 """
 
+POS_MAP = {
+    'n'    : "noun",
+    'j'    : "adjective",
+    'adj'  : "adjective",
+    'adv'  : "adverb",
+    'v'    : "verb",
+    'm'    : "meaning",
+}
+
 import os
 from subprocess import Popen
 
@@ -56,6 +65,7 @@ class Display(Gtk.Overlay):
         self.tag_found   = buffer.create_tag("found", background="yellow")
         self.tag_source  = buffer.create_tag("source", foreground="gray", scale=.65)
         self.tag_example = buffer.create_tag("example", foreground="blue", style=Pango.Style.ITALIC)
+        self.tag_unicode = buffer.create_tag("unicode", scale=1.2)
         self.tag_hashtag = buffer.create_tag("hashtag", foreground="blue", weight=Pango.Weight.BOLD, scale=.85)
 
 
@@ -73,6 +83,8 @@ class Display(Gtk.Overlay):
 
         self.textview.set_left_margin(10)
         self.textview.set_right_margin(20)
+        # NOTE: vvv problem with old gtk
+        self.textview.set_top_margin(-15) # hack for next search separation '\n'
 
         return scroll
 
@@ -173,6 +185,12 @@ class Display(Gtk.Overlay):
         ('noun', 'नमस्कार'), ('noun', 'नमस्ते'),\
         ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ')],\
         'gloss/demo')
+        >>> obj.insert_result('rhythm',\
+        [('noun', 'ताल'), ('unknown', ''), ('_#', '#music'), ('noun', 'लय'), ('_transliterate', 'रिदम')],\
+        'gloss/demo')
+        >>> obj.insert_result('treble',\
+        [('unknown', 'G clef'), ('_unicode', '0x1D11E'), ('unknown', ''), ('_#', '#clef')],\
+        'gloss/demo')
         >>> obj.insert_result('wheat',\
         [('_transliterate', 'वीट्'),\
         ('noun', 'गहूँ'),\
@@ -215,6 +233,14 @@ class Display(Gtk.Overlay):
                 self.insert_at_cursor(' '+val, self.tag_hashtag)
                 continue
 
+            if pos == "_unicode":
+                c += 1
+                self.insert_at_cursor("\n%4d. "%c, self.tag_li)
+                self.insert_at_cursor("unicode", self.tag_pos)
+                self.insert_at_cursor(" » ")
+                self.insert_at_cursor(val + " → ")
+                self.insert_at_cursor("%4s"%chr(int(val, 16)), self.tag_unicode)
+                continue
             if pos == "_note": pre = "<%s>"%val; continue
             if pos == "_wiki": self.link_wiki(val); continue
             if val == "": _pos = ""; continue
@@ -222,7 +248,7 @@ class Display(Gtk.Overlay):
             if pos != _pos:
                 c += 1
                 self.insert_at_cursor("\n%4d. "%c, self.tag_li)
-                self.insert_at_cursor(pos, self.tag_pos)
+                self.insert_at_cursor(POS_MAP.get(pos, pos), self.tag_pos)
                 self.insert_at_cursor(" » ")
             else:
                 self.insert_at_cursor(", ")
@@ -324,9 +350,9 @@ def sample():
     )
     root.set_default_size(500, 300)
 
-    obj = Display(root, PWD)
+    obj = Display(PWD)
     obj.textbuffer.set_text("\n")
-    obj.tb_clean.connect("clicked", lambda *a: obj.textbuffer.set_text(""))
+    obj.b_CLEAR.connect("clicked", lambda *a: obj.textbuffer.set_text(""))
     root.add(obj)
     root.show_all()
     return root

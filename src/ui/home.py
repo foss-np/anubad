@@ -53,9 +53,10 @@ class Home(Gtk.Window):
     def __init__(self, core, cnf):
         Gtk.Window.__init__(self, name="Home")
 
-        self.core     = core
-        self.PWD      = cnf.PWD
-        self.tray     = cnf.preferences['show-on-system-tray']
+        self.core             = core
+        self.PWD              = cnf.PWD
+        self.tray             = cnf.preferences['show-on-system-tray']
+        self.on_close_to_tray = cnf.preferences['on-close-to-tray']
         self.nothread = cnf.core['no-thread']
 
         self.clips = list()

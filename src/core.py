@@ -6,14 +6,6 @@ from collections import OrderedDict
 fp3 = fp4 = sys.stderr
 
 FILE_TYPES = ["tsl", "fun", "abb", "tra"]
-pos_map = {
-    'n'    : "noun",
-    'j'    : "adjective",
-    'adj'  : "adjective",
-    'adv'  : "adverb",
-    'v'    : "verb",
-    'm'    : "meaning",
-}
 
 def edit_distance(s1, s2):
     """
@@ -133,25 +125,25 @@ class Glossary(dict):
         (('unknown', 'सृजना'), ('_note', 'कीर्ति'))
         >>> print("Test 07"); Glossary.format_parser('[मस्टर्ड] n(<leaves>रायोको साग), #vegetable')
         Test 07
-        (('_transliterate', 'मस्टर्ड'), ('noun', ''), ('_note', 'leaves'), ('noun', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', '#vegetable'))
+        (('_transliterate', 'मस्टर्ड'), ('n', ''), ('_note', 'leaves'), ('n', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', '#vegetable'))
         >>> print("Test 06"); Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}')
         Test 06
-        (('_transliterate', 'वीट्'), ('noun', 'गहूँ'), ('unknown', ''), ('_#', '#crop'), ('_wiki', 'Wheat'))
+        (('_transliterate', 'वीट्'), ('n', 'गहूँ'), ('unknown', ''), ('_#', '#crop'), ('_wiki', 'Wheat'))
         >>> print("Test 05"); Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)')
         Test 05
-        (('_transliterate', 'शेल'), ('noun', 'शंख किरो'), ('_#', '#animal'), ('noun', ''), ('noun', 'छिल्का'), ('noun', 'खोल'), ('noun', 'बोक्रा'))
+        (('_transliterate', 'शेल'), ('n', 'शंख किरो'), ('_#', '#animal'), ('n', ''), ('n', 'छिल्का'), ('n', 'खोल'), ('n', 'बोक्रा'))
         >>> print("Test 04"); Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
         Test 04
-        (('_transliterate', 'हेल्\u200dलो'), ('noun', 'नमस्कार'), ('noun', 'नमस्ते'), ('unknown', ''), ('verb', 'स्वागत'), ('verb', 'अभिवादन'), ('verb', 'सम्बोधन'), ('verb', 'जदौ'))
+        (('_transliterate', 'हेल्\u200dलो'), ('n', 'नमस्कार'), ('n', 'नमस्ते'), ('unknown', ''), ('v', 'स्वागत'), ('v', 'अभिवादन'), ('v', 'सम्बोधन'), ('v', 'जदौ'))
         >>> print("Test 03"); Glossary.format_parser('n(<thin> तुवाँलो ~fog)')
         Test 03
-        (('noun', ''), ('_note', 'thin'), ('noun', 'तुवाँलो ~fog'))
+        (('n', ''), ('_note', 'thin'), ('n', 'तुवाँलो ~fog'))
         >>> print("Test 02"); Glossary.format_parser('कर')
         Test 02
         (('unknown', 'कर'),)
         >>> print("Test 01"); Glossary.format_parser('n:v(मस्त)')
         Test 01
-        (('noun:verb', 'मस्त'),)
+        (('n:v', 'मस्त'),)
         """
 
         operator, output = [], []
@@ -179,7 +171,7 @@ class Glossary(dict):
                 buffer = ""
             elif c == '(':
                 operator.append((')', i))
-                pos = ':'.join(pos_map.get(b, b) for b in buffer.split(':'))
+                pos = ':'.join(b for b in buffer.split(':'))
                 fbreak = i + 1
                 buffer = ""
             elif c == ' ' and buffer == "": pass
