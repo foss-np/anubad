@@ -13,15 +13,18 @@ class Engine:
     def __init__(self, app=None):
         self.app = app
         self.rc = {
-            'exit'     : lambda *a: app.quit(),
-            'file'     : self.file_type,
-            'hashtags' : self.hashtags,
-            'history'  : self.history,
-            'open'     : self.file_opener,
-            'quit'     : lambda *a: app.quit(),
-            'search'   : self.search,
-            'set'      : self.set,
-            'stats'    : self.stats,
+            'exit'          : lambda *a: app.quit(),
+            'file'          : self.file_type,
+            'history'       : self.history,
+            'open'          : self.file_opener,
+            'quit'          : lambda *a: app.quit(),
+            'search'        : self.search,
+            'set'           : self.set,
+            'list-pos'      : self.pos,
+            'list-gloss'    : self.gloss,
+            'list-plugins'  : self.plugins,
+            'list-engines'  : self.engines,
+            'list-hashtags' : self.hashtags,
         }
 
 
@@ -43,8 +46,8 @@ class Engine:
 
         self.app.home.searchbar.entry.set_text("> ")
         self.app.home.searchbar.entry.set_position(2)
-
         return output
+
 
     def search(self, args):
         query = ' '.join(args[1:])
@@ -59,6 +62,10 @@ class Engine:
 
     def history(self, args):
         return '\n'.join(self.app.home.searchbar.entry.HISTORY)
+
+
+    def plugins(self, args):
+        return '\n'.join(self.app.cnf.plugin_list.keys())
 
 
     def set(self, args):
@@ -118,11 +125,27 @@ class Engine:
         return str(Popen([executable, path]))
 
 
-    def stats(self, *a):
+    def gloss(self, args):
         output = ""
-        for path, instance in self.app.home.core.Glossary.instances.items():
-            output += "%s : %d \n"%(path, instance.counter)
+        for path in self.app.home.core.Glossary.instances.keys():
+            output += "%s \n"%path
         return output
+
+
+    def pos(self, args):
+        # output = ""
+        # for path in self.app.home.core.Glossary.instances.keys():
+        #     output += "%s \n"%path
+        # return output
+        pass
+
+
+    def engines(self, args):
+        output = ""
+        for e in self.app.home.engines:
+            output += "%s\n"%(e['name'])
+        return output
+
 
 
 def sample():
