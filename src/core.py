@@ -5,11 +5,12 @@ from collections import OrderedDict
 
 fp3 = fp4 = sys.stderr
 
-FILE_TYPES = ["tsl", "fun", "abb", "tra", "txt"]
+FILE_TYPES = ["tsl", "fun", "abb", "tra"]
 pos_map = {
     'n'    : "noun",
     'j'    : "adjective",
     'adj'  : "adjective",
+    'adv'  : "adverb",
     'v'    : "verb",
     'm'    : "meaning",
 }
@@ -40,6 +41,7 @@ class Glossary(dict):
     hashtags = dict() # for auto-complete
 
     def __init__(self, path):
+        super().__init__()
         self.counter = 0
         self.fullpath = os.path.expanduser(path)
         self.load_glossary(self.fullpath)

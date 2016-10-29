@@ -19,6 +19,9 @@ verbose4:
 core:
 	./core.py
 
+dump:
+	./dump.py
+
 setting:
 	./setting.py
 
@@ -32,11 +35,14 @@ unlink:
 	rm -f /usr/local/bin/${PKG_NAME}
 
 link: unlink
-	ln -s "$(PWD)/main.py" /usr/local/bin/${PKG_NAME}
+	ln -s "$(shell pwd)/main.py" /usr/local/bin/${PKG_NAME}
+
+uninstall: unlink
+	rm -rf /opt/${PKG_NAME}
+
 
 gtk-lt-12-patch:
 	sed -i 's/Gtk.Popover/Gtk.Dialog/' ui/_searchbar.py
 	sed -i '/relative_to/d' ui/_searchbar.py
 	sed -i '/self.connect("closed"/d' ui/_searchbar.py
 	sed -i 's/layout = Gtk.Box.*/layout = self.get_content_area()/' ui/_searchbar.py
-
