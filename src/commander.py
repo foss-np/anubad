@@ -6,6 +6,9 @@ from gi.repository import Gio
 
 from pprint import pformat
 from subprocess import Popen
+
+import json
+
 import setting
 import core
 
@@ -55,9 +58,16 @@ class Engine:
             self.app.home.searchbar.entry.set_text(query)
             self.app.home.search_and_reflect(query)
         else:
-            print(query)
-            # TODO show only exact match
-            print(core.Glossary.search(query))
+            FULL, FUZZ = core.Glossary.search(query)
+            print(
+                json.dumps(
+                    {
+                        'match': list(FULL.values()),
+                        'fuzz' : [ word for word, ID, src in FUZZ.keys()],
+                    },
+                    ensure_ascii=False
+                )
+            )
 
 
     def history(self, args):
