@@ -152,7 +152,7 @@ class Glossary(dict):
         fbreak = 0
         hashtag = False
         note = False
-        # TODO: refacator, reduce repeted segements
+        # TODO: refacator, reduce repeated segements
         # TODO: don't separte segment by unknown
         for i, c in enumerate(raw.strip()): # bored strip!
             if   c == '[':
@@ -236,7 +236,8 @@ class Glossary(dict):
                     if has_hashtag[0] is False: continue
                     for pos, val in info:
                         if "_#" != pos: continue
-                        # TODO: #animal.reptile.snake, #snake will match same
+                        # WISH: #animal.reptile.snake, #snake will match same
+                        # this is only required for console
                         if query not in val: continue
                         FUZZ[(word, ID, path + name)] = info
 

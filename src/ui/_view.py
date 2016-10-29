@@ -25,8 +25,8 @@ from gi.repository import GdkPixbuf
 # NOTE: Gtk.Overlay is used instead Gtk.TextView.add_child_in_window()
 # doesn't move while expanding.
 class Display(Gtk.Overlay):
-    hand_cursor = Gdk.Cursor(Gdk.CursorType.HAND2)
-    regular_cursor = Gdk.Cursor(Gdk.CursorType.XTERM)
+    # hand_cursor = Gdk.Cursor(Gdk.CursorType.HAND2)
+    # regular_cursor = Gdk.Cursor(Gdk.CursorType.XTERM)
 
     def __init__(self, pwd=""):
         Gtk.Overlay.__init__(self, name="Display")
