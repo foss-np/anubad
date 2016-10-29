@@ -131,6 +131,8 @@ class Settings(configparser.ConfigParser):
             'show-on-system-tray' : pref.getboolean('show-on-system-tray', True),
             'use-system-defaults' : pref.getboolean('use-system-defaults', True),
             'remember-gui-state'  : pref.getboolean('remember-gui-state', False),
+            'use-select-buffer'   : pref.getboolean('use-select-buffer', True),
+            'on-close-to-tray'    : pref.getboolean('on-close-to-tray', True),
             'show-on-taskbar'     : pref.getboolean('show-on-taskbar', True),
             'hide-on-startup'     : pref.getboolean('hide-on-startup', True),
             'enable-plugins'      : pref.getboolean('enable-plugins', True),
