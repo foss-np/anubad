@@ -172,7 +172,7 @@ class Glossary(dict):
                 buffer = ""
             elif c == '(':
                 operator.append((')', i))
-                pos = ':'.join(b for b in buffer.split(':'))
+                pos = buffer
                 fbreak = i + 1
                 buffer = ""
             elif c == ' ' and buffer == "": pass

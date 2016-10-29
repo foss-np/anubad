@@ -248,7 +248,10 @@ class Display(Gtk.Overlay):
             if pos != _pos:
                 c += 1
                 self.insert_at_cursor("\n%4d. "%c, self.tag_li)
-                self.insert_at_cursor(POS_MAP.get(pos, pos), self.tag_pos)
+                self.insert_at_cursor(
+                    ':'.join(POS_MAP.get(p, p) for p in pos.split(':')),
+                    self.tag_pos
+                )
                 self.insert_at_cursor(" » ")
             else:
                 self.insert_at_cursor(", ")
