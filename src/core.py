@@ -94,7 +94,8 @@ class Glossary(dict):
                     has_hashtag = True
                     continue
 
-                if   pos[0] == '_': continue
+                if   pos    == '_transliterate': pass
+                elif pos[0] == '_': continue
                 elif val    == '': continue
 
                 # inverted list
