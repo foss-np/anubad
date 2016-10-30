@@ -9,7 +9,7 @@ and power users, not really required plugins.
 """
 
 __platform__ = 'posix'
-__version__  = 0.2
+__version__  = 0.3
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
 
@@ -71,7 +71,7 @@ def browse_gloss(app):
     dialog.destroy()
 
 
-def plugin_open_dir(app):
+def addPlugin_open_dir(app):
     def _on_key_release(widget, event):
         if Gdk.ModifierType.MOD1_MASK & event.state:
             if event.keyval == ord('o'): browse_gloss(app)
@@ -85,7 +85,7 @@ def plugin_open_dir(app):
     b_OPEN.show()
 
 
-def plugin_open_src(app):
+def addPlugin_open_src(app):
     def _edit():
         app.home.toolbar.t_COPY.set_active(False)
         treeSelection = app.home.sidebar.treeview.get_selection()
@@ -117,35 +117,28 @@ def plugin_open_src(app):
     app.home.connect('key_release_event', _on_key_release)
 
 
-def engine_shell(home, query):
-    # TODO handle error, exit != 0
-    home.searchbar.entry.set_text("$ ")
-    home.searchbar.entry.set_position(2)
-    try:
-        output = check_output(query.split(), universal_newlines=True)
-    except:
-        return
+def addEngine_shell(ui):
+    def piston(query):
+        ui.searchbar.entry.set_text("$ ")
+        ui.searchbar.entry.set_position(2)
+        try:
+            # TODO handle error, exit != 0
+            output = check_output(query.split(), universal_newlines=True)
+        except:
+            return
+        return output
 
-    return output
-
-
-def engine_dump(home, query):
-    FULL, FUZZ = home.core.Glossary.search(query)
-    output = ""
-    for word, ID, src in FULL:
-        ## handel invert map
-        ## TODO: change the style
-        if type(ID) == int: output += linecache.getline(src, ID)
-        else:
-            for element in ID:
-                output += linecache.getline(src, element)
-
-    return output
+    engine = {
+        'name'   : "shell",
+        'filter' : lambda q: q[0] == '$',
+        'piston' : lambda q: piston(q[1:]),
+        'shaft'  : lambda a: ui.fit_output(a),
+    }
+    ui.search_engines.append(engine)
 
 
 
 def plugin_main(app, fullpath):
-    plugin_open_dir(app)
-    plugin_open_src(app)
-    app.home.engines.append((lambda q: q[0] == '$', lambda q: engine_shell(app.home, q[1:].strip())))
-    app.home.engines.append((lambda q: q.startswith('d:'), lambda q: engine_dump(app.home, q[2:].strip())))
+    addPlugin_open_dir(app)
+    addPlugin_open_src(app)
+    addEngine_shell(app.home)

@@ -12,7 +12,7 @@ import json
 import setting
 import core
 
-class Engine:
+class Shell:
     def __init__(self, app=None):
         self.app = app
         self.rc = {
@@ -28,6 +28,13 @@ class Engine:
             'list-plugins'  : self.plugins,
             'list-engines'  : self.engines,
             'list-hashtags' : self.hashtags,
+        }
+
+        self.engine = {
+            'name'   : "commander",
+            'filter' : lambda q: q[0] == '>',
+            'piston' : self.gui_adaptor,
+            'shaft'  : lambda *a: self.app.home.fit_output(*a),
         }
 
 
@@ -152,14 +159,14 @@ class Engine:
 
     def engines(self, args):
         output = ""
-        for e in self.app.home.engines:
+        for e in self.app.home.search_engines:
             output += "%s\n"%(e['name'])
         return output
 
 
 
 def sample():
-    engine = Engine()
+    shell = Shell()
 
 
 if __name__ == '__main__':

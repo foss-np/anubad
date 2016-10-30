@@ -5,7 +5,7 @@
 Convert the numbers into words.
 """
 
-__version__  = 0.2
+__version__  = 0.3
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
 
@@ -82,9 +82,16 @@ class num2word:
             self.pow_interval(m, l-self.interval);
 
 
-class adaptor:
+class Adaptor(dict):
+    SRC = 'number2word plugin'
     def __init__(self, liststore):
-        self.src = 'number2word plugin'
+        super().__init__()
+        self.engine = {
+            'name'   : "number2word",
+            'filter' : lambda q: q.isdigit(),
+            'piston' : self.gui_reflect,
+        }
+
 
         num_en = []
         num_ne = []
@@ -116,9 +123,9 @@ class adaptor:
             self.ne.convert(query),
         )
 
-        FULL = {(query, int(query), self.src): parsed_info}
-        return FULL, dict()
 
+        FULL = {(query, int(query), __class__.SRC): parsed_info}
+        return { query: (FULL, dict()) }
 
 def plugin_main(app, fullpath):
     for gloss in app.cnf.glossary_list:
@@ -131,8 +138,8 @@ def plugin_main(app, fullpath):
     gloss = app.home.core.Glossary.instances[path + 'en2ne/']
     liststore, ulta = gloss['numbers.tra']
 
-    n2w = adaptor(liststore)
-    app.home.engines.append((lambda q: q.isdigit(), n2w.gui_reflect))
+    n2w = Adaptor(liststore)
+    app.home.search_engines.append(n2w.engine)
 
 
 def main():
@@ -156,7 +163,7 @@ def main():
     liststore, ulta = gloss['numbers.tra']
     src = gloss.fullpath + 'numbers.tra'
 
-    n2w = adaptor(liststore, src)
+    n2w = Adaptor(liststore, src)
 
     print(n2w.en.convert('1'))
     print(n2w.en.convert('12'))

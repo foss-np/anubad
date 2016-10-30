@@ -117,7 +117,7 @@ class App(Gtk.Application):
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
-        self.commander = commander.Engine(self)
+        self.commander = commander.Shell(self)
         self.commander.rc['version'] = lambda *a: str(__version__)
         self.commander.rc['help'] = lambda *a: self.on_help()
 
@@ -143,7 +143,7 @@ class App(Gtk.Application):
         if self.home == None:
             self.home = create_home_window(self.cnf, self.pixbuf_logo)
             self.add_window(self.home)
-            self.home.engines.append((lambda q: q[0] == '>', self.commander.gui_adaptor))
+            self.home.search_engines.append(self.commander.engine)
             if self.cnf.preferences['show-on-system-tray']:
                 self.tray = TrayIcon(self)
             self.no_of_plugins = load_plugins(self)

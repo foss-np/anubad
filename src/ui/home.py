@@ -70,14 +70,24 @@ class Home(Gtk.Window):
 
         self.pool = ThreadPool(processes=1)
 
-        self.engines = [ # not using dict() since we are traversing it
-            (lambda q: q[0] == '#',  self.core.Glossary.search_hashtag),
-            (lambda q: q[0] == '\\', lambda q: self.core.Glossary.search(q[1:])),
-        ]
+        self.search_engines = list()
 
-        # accelerators
         self.makeWidgets()
         self.loadCSS()
+
+        self.engine_default = {
+            'name'   : "default",
+            'filter' : lambda q: True,
+            'piston' : self.piston_default,
+            'cache'  : True,
+            'shaft'  : self._view_results,
+            'icon'   : None # entry.set_icon_from_icon_name(0, 'utilities-terminal')
+        }
+
+        self.addEngines_hashtag()
+        self.addEngines_raw()
+        self.addEngines_gloss()
+
         self.connect('key_press_event', self.on_key_press)
         self.connect('key_release_event', self.on_key_release)
         self.connect('focus-in-event', lambda *e: self.searchbar.entry.grab_focus())
@@ -95,7 +105,19 @@ class Home(Gtk.Window):
             __class__.clipboard.set_text(self.copy_buffer, -1)
 
 
-    def engine_default(self, query):
+    def engine_path_search(self, query):
+        return {}, {}
+        cmd = query.split()
+
+
+    def cache_it(self, results):
+        self.cache.append(results)
+        self.cache_cursor = len(self.cache) - 1
+        self.toolbar.mb_BACKWARD.set_sensitive(True)
+        self.toolbar.b_FORWARD.set_sensitive(False)
+
+
+    def piston_default(self, query):
         ## Ordered Dict use for undo/redo history
         results = OrderedDict()
         for q in query.split():
@@ -107,13 +129,40 @@ class Home(Gtk.Window):
 
             results[word] = self.core.Glossary.search(word)
 
-        self.cache.append(results)
-        self.cache_cursor = len(self.cache) - 1
-        self.toolbar.mb_BACKWARD.set_sensitive(True)
-        self.toolbar.b_FORWARD.set_sensitive(False)
         return results
 
 
+    def addEngines_raw(self):
+        engine = {
+            'name'   : "raw",
+            'filter' : lambda q: q[0] == '\\',
+            'piston' : lambda q: { q[1:]: self.core.Glossary.search(q[1:]) },
+        }
+
+        self.search_engines.append(engine)
+        self.searchbar.pop_engine.LAYOUT.add(Gtk.Label(engine['name']))
+
+
+    def addEngines_hashtag(self):
+        engine = {
+            'name'   : "hashtag",
+            'filter' : lambda q: q[0] == '#',
+            'piston' : lambda q: { q: self.core.Glossary.search_hashtag(q) },
+        }
+
+        self.search_engines.append(engine)
+        self.searchbar.pop_engine.LAYOUT.add(Gtk.Label(engine['name']))
+
+
+    def addEngines_gloss(self):
+        engine = {
+            'name'   : "gloss filter",
+            'filter' : lambda q: q[0] == '/',
+            'piston' : lambda *a: a,
+        }
+
+        self.search_engines.append(engine)
+        self.searchbar.pop_engine.LAYOUT.add(Gtk.Label(engine['name']))
 
 
     def makeWidgets(self):
@@ -365,7 +414,7 @@ class Home(Gtk.Window):
         return query
 
 
-    def do_search_pulse(self, query, async_ret):
+    def do_search_pulse(self, engine, async_ret):
         """Search Pulse Function
 
         Executing the Gtk.TextViewer in threading crashes. To avoid
@@ -376,12 +425,14 @@ class Home(Gtk.Window):
         """
         self.searchbar.entry.progress_pulse()
         if not async_ret.ready(): return True
-        self.fit_output(query, async_ret.get())
+        results = async_ret.get()
+        engine.get('shaft', self._view_results)(results)
+        if engine.get('cache', False): self.cache_it(results)
         self.searchbar.entry.set_progress_fraction(0)
         return False
 
 
-    def search_and_reflect(self, query=None):
+    def search_and_reflect(self, query=None, thread=True):
         if query is None:
             query = self.searchbar.entry.get_text()
 
@@ -392,42 +443,43 @@ class Home(Gtk.Window):
 
         # choosing engines
         engine = self.engine_default
-        for test, func in self.engines:
-            if test(query):
-                engine = func
+        for e in self.search_engines:
+            if e['filter'](query):
+                engine = e
                 break
 
-        if self.nothread:
-            self.fit_output(query, engine(query))
+        if self.nothread and thread:
+            results = engine['piston'](query)
+            engine['shaft'](results)
+            if engine['cache']: self.cache_it(results)
             return
 
-        async_ret = self.pool.apply_async(engine, (query,))
-        timeout_id = GObject.timeout_add(400, self.do_search_pulse, query, async_ret)
+        async_ret = self.pool.apply_async(engine['piston'], (query,))
+        timeout_id = GObject.timeout_add(
+            400,
+            self.do_search_pulse,
+            engine,
+            async_ret
+        )
 
 
-    def fit_output(self, query, output):
+    def fit_output(self, output):
         if output is None:
             self.infobar.LABEL.set_markup("<b>%s</b> did not gave any output"%query)
             self.infobar.show_all()
             return
 
-
-        if isinstance(output, tuple): return self._view_results({ query: output })
         # if its plain string TODO fix it with new engine switcher,
         # which will have output paramenter also
-        if isinstance(output, str):
-            begin = self.viewer.textbuffer.get_start_iter()
-            self.viewer.textbuffer.place_cursor(begin)
-            self.viewer.insert_at_cursor("\n")
-            if output != '':
-                self.viewer.insert_at_cursor(output)
-                return
-
-            self.infobar.LABEL.set_markup("<b>%s</b> did not gave any output"%query)
-            self.infobar.show_all()
+        begin = self.viewer.textbuffer.get_start_iter()
+        self.viewer.textbuffer.place_cursor(begin)
+        self.viewer.insert_at_cursor("\n")
+        if output != '':
+            self.viewer.insert_at_cursor(output)
             return
 
-        self._view_results(output)
+        self.infobar.LABEL.set_markup("<b>%s</b> did not gave any output"%query)
+        self.infobar.show_all()
 
 
     @treeview_signal_safe_toggler

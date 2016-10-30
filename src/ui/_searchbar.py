@@ -18,6 +18,7 @@ class Bar(Gtk.Box):
 
         ### Make popovers
         self.pop_reverse = INavHistory(self.entry)
+        self.pop_engine = self.makeWidget_popover_engine(self.entry)
 
 
     def makeWidgets(self):
