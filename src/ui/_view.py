@@ -12,6 +12,8 @@ POS_MAP = {
     'adv'  : "adverb",
     'v'    : "verb",
     'm'    : "meaning",
+    'p'    : "people",
+    'u'    : "unknown",
 }
 
 import os

@@ -123,32 +123,32 @@ class Glossary(dict):
         """
         >>> print("Test 08"); Glossary.format_parser('सृजना <कीर्ति>')
         Test 08
-        (('unknown', 'सृजना'), ('_note', 'कीर्ति'))
+        (('u', 'सृजना'), ('_note', 'कीर्ति'))
         >>> print("Test 07"); Glossary.format_parser('[मस्टर्ड] n(<leaves>रायोको साग), #vegetable')
         Test 07
-        (('_transliterate', 'मस्टर्ड'), ('n', ''), ('_note', 'leaves'), ('n', 'रायोको साग'), ('unknown', ''), ('unknown', ''), ('_#', '#vegetable'))
+        (('_transliterate', 'मस्टर्ड'), ('n', ''), ('_note', 'leaves'), ('n', 'रायोको साग'), ('u', ''), ('u', ''), ('_#', '#vegetable'))
         >>> print("Test 06"); Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}')
         Test 06
-        (('_transliterate', 'वीट्'), ('n', 'गहूँ'), ('unknown', ''), ('_#', '#crop'), ('_wiki', 'Wheat'))
+        (('_transliterate', 'वीट्'), ('n', 'गहूँ'), ('u', ''), ('_#', '#crop'), ('_wiki', 'Wheat'))
         >>> print("Test 05"); Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)')
         Test 05
         (('_transliterate', 'शेल'), ('n', 'शंख किरो'), ('_#', '#animal'), ('n', ''), ('n', 'छिल्का'), ('n', 'खोल'), ('n', 'बोक्रा'))
         >>> print("Test 04"); Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
         Test 04
-        (('_transliterate', 'हेल्\u200dलो'), ('n', 'नमस्कार'), ('n', 'नमस्ते'), ('unknown', ''), ('v', 'स्वागत'), ('v', 'अभिवादन'), ('v', 'सम्बोधन'), ('v', 'जदौ'))
+        (('_transliterate', 'हेल्\u200dलो'), ('n', 'नमस्कार'), ('n', 'नमस्ते'), ('u', ''), ('v', 'स्वागत'), ('v', 'अभिवादन'), ('v', 'सम्बोधन'), ('v', 'जदौ'))
         >>> print("Test 03"); Glossary.format_parser('n(<thin> तुवाँलो ~fog)')
         Test 03
         (('n', ''), ('_note', 'thin'), ('n', 'तुवाँलो ~fog'))
         >>> print("Test 02"); Glossary.format_parser('कर')
         Test 02
-        (('unknown', 'कर'),)
+        (('u', 'कर'),)
         >>> print("Test 01"); Glossary.format_parser('n:v(मस्त)')
         Test 01
         (('n:v', 'मस्त'),)
         """
 
         operator, output = [], []
-        pos = 'unknown'
+        pos = 'u'
         buffer = ""
         fbreak = 0
         hashtag = False
@@ -205,7 +205,7 @@ class Glossary(dict):
                 output.append((pos, buffer.strip()))
                 buffer = ""
                 fbreak = i + 1
-                pos = 'unknown'
+                pos = 'u'
             else:
                 buffer += c
 
