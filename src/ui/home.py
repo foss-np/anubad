@@ -56,8 +56,8 @@ class Home(Gtk.Window):
         self.core             = core
         self.PWD              = cnf.PWD
         self.tray             = cnf.preferences['show-on-system-tray']
+        self.nothread         = cnf.core['no-thread']
         self.on_close_to_tray = cnf.preferences['on-close-to-tray']
-        self.nothread = cnf.core['no-thread']
 
         self.clips = list()
         self.clips_circle = None
@@ -83,6 +83,7 @@ class Home(Gtk.Window):
             'shaft'  : self._view_results,
             'icon'   : None # entry.set_icon_from_icon_name(0, 'utilities-terminal')
         }
+        self.searchbar.pop_engine.LAYOUT.add(Gtk.Label('default'))
 
         self.addEngines_hashtag()
         self.addEngines_raw()

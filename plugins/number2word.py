@@ -9,7 +9,9 @@ __version__  = 0.3
 __authors__  = 'rho'
 __support__  = 'https://github.com/foss-np/anubad/'
 
-import os
+import os, sys
+
+fp3 = sys.stderr
 
 class num2word:
     def __init__(self, word_map, interval, drop_and=True, offset=48):
@@ -39,15 +41,21 @@ class num2word:
         return digit, ' '.join(self.words)
 
 
-    def high_order_names(self, n):
-        for digit, word in self.word_map[100:]:
-            if n != digit: continue
-            return word
-        return str(n)
-
-
     def base(self, n):
-        return self.word_map[n][1]
+        word = self.word_map.get(n)
+        if word: return word
+        if n > 100: return str(n)
+
+        r, m = divmod(n, 10)
+        word = self.word_map.get(r*10) if r != 0 else ''
+        if word is None:
+            word  = self.word_map.get(r)
+            word += self.word_map.get(10)
+
+        if m:
+            word += ' ' +  self.word_map.get(m, ' ')
+
+        return word
 
 
     def hundreds(self, n, l=2):
@@ -72,11 +80,11 @@ class num2word:
         exp = l - shift
         place = 10**exp
         r, m = divmod(n, place)
-        # print("len(%d) - %d;"%(l, shift), "10**%d = %d:"%(exp, place), (r, m))
+        print("len(%d) - %d;"%(l, shift), "10**%d = %d:"%(exp, place), (r, m), file=fp3)
 
         if r != 0:
             self.hundreds(r, l)
-            self.words.append(self.high_order_names(place))
+            self.words.append(self.base(place))
 
         if m:
             self.pow_interval(m, l-self.interval);
@@ -84,8 +92,15 @@ class num2word:
 
 class Adaptor(dict):
     SRC = 'number2word plugin'
-    def __init__(self, liststore):
+    def __init__(self):
         super().__init__()
+        map_en = dict()
+        for line in open(__file__.replace('.py', '.map')):
+            k, v = line.split(';')
+            map_en[int(k)] = v.strip()
+
+        self['en'] = num2word(map_en, 3, False)
+
         self.engine = {
             'name'   : "number2word",
             'filter' : lambda q: q.isdigit(),
@@ -93,12 +108,12 @@ class Adaptor(dict):
         }
 
 
-        num_en = []
-        num_ne = []
+    def load_map(self, lang, liststore, key=False):
+        map_lang = dict()
         for word, (ID, *has_hash_tag, parsed_info) in liststore.items():
             noun = ""
             for pos, val in parsed_info:
-                if pos == 'noun' and noun == "":
+                if pos == 'n' and noun == "":
                     if not val: continue
                     noun = val.split('/')[0]
                     continue
@@ -106,39 +121,35 @@ class Adaptor(dict):
                     if not val: continue
                     if not val.isdigit(): continue
                     v = int(val)
-                    num_en.append((v, word))
-                    num_ne.append((v, noun))
+                    map_lang[v] = word if key else noun
                     continue
 
-        num_en.sort()
-        num_ne.sort()
-        self.en = num2word(num_en, 3, False)
-        self.ne = num2word(num_ne, 2, True, 2406)
+        # TODO add offset info
+        self[lang] = num2word(map_lang, 2, True, 2406)
 
 
     def gui_reflect(self, query):
-        parsed_info = (
-            self.en.convert(query),
-            ('unknown', ''),
-            self.ne.convert(query),
-        )
+        parsed_info = list()
 
+        for lang, obj  in self.items():
+            parsed_info.append(obj.convert(query))
+            parsed_info.append(('u', ''))
 
         FULL = {(query, int(query), __class__.SRC): parsed_info}
         return { query: (FULL, dict()) }
 
+
 def plugin_main(app, fullpath):
-    for gloss in app.cnf.glossary_list:
-        if "foss" in gloss['name']:
-            break
-    else:
-        return False
+    n2w = Adaptor()
+    for path, gloss in app.home.core.Glossary.instances.items():
+        numb = gloss.get('numbers.tra')
+        l1, l2 = path.split('/')[-2].split('2')
+        if numb is None: continue
+        liststore, ulta = numb
+        if l1 == "en": lang, key = l2, False
+        else: lang, key = l1, True
+        n2w.load_map(lang, liststore, key)
 
-    path = os.path.expanduser(gloss['path'])
-    gloss = app.home.core.Glossary.instances[path + 'en2ne/']
-    liststore, ulta = gloss['numbers.tra']
-
-    n2w = Adaptor(liststore)
     app.home.search_engines.append(n2w.engine)
 
 
@@ -163,18 +174,15 @@ def main():
     liststore, ulta = gloss['numbers.tra']
     src = gloss.fullpath + 'numbers.tra'
 
-    n2w = Adaptor(liststore, src)
+    n2w = Adaptor()
 
-    print(n2w.en.convert('1'))
-    print(n2w.en.convert('12'))
-    print(n2w.en.convert('123'))
-    print(n2w.en.convert('1234'))
-    print(n2w.en.convert('12345'))
-    print(n2w.en.convert('123456'))
-    print(n2w.en.convert('1234567'))
-    print(n2w.ne.convert('12345679'))
-    print(n2w.ne.convert('123456790'))
-    print(n2w.ne.convert('०१२३४५६७८९1'))
+    print(n2w['en'].convert('1'))
+    print(n2w['en'].convert('12'))
+    print(n2w['en'].convert('123'))
+    print(n2w['en'].convert('1234'))
+    print(n2w['en'].convert('12345'))
+    print(n2w['en'].convert('123456'))
+    print(n2w['en'].convert('०१२३४५६७'))
 
 
 if __name__ == '__main__':
