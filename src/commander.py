@@ -61,7 +61,7 @@ class Shell:
 
     def search(self, args):
         query = ' '.join(args[1:])
-        if self.app.home:
+        if self.app:
             self.app.home.searchbar.entry.set_text(query)
             self.app.home.search_and_reflect(query)
         else:
