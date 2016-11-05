@@ -296,12 +296,14 @@ def load_from_config(cnf):
     return count
 
 
-if __name__ == '__main__':
+def sample():
     import setting
     cnf = setting.main()
-
     load_from_config(cnf)
 
+
+if __name__ == '__main__':
+    sample()
     from pprint import pprint
     pprint(Glossary.search('hello'))
     pprint(Glossary.search_hashtag('#color'))
