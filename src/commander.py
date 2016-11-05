@@ -41,7 +41,7 @@ class Shell:
     def execute(self, args):
         for key, func in self.rc.items():
             if key == args[0]:
-                return func(args)
+                return func(args[1:])
 
 
     def gui_adaptor(self, query):
@@ -60,21 +60,24 @@ class Shell:
 
 
     def search(self, args):
-        query = ' '.join(args[1:])
-        if self.app:
+        query = ' '.join(args)
+        if getattr(self.app, 'home', None) is not None:
             self.app.home.searchbar.entry.set_text(query)
             self.app.home.search_and_reflect(query)
-        else:
-            FULL, FUZZ = core.Glossary.search(query)
-            print(
-                json.dumps(
-                    {
-                        'match': list(FULL.values()),
-                        'fuzz' : [ word for word, ID, src in FUZZ.keys()],
-                    },
-                    ensure_ascii=False
-                )
-            )
+            return
+
+        print(query)
+
+        FULL, FUZZ = core.Glossary.search(query)
+        dump = json.dumps(
+            {
+                'match': list(FULL.values()),
+                'fuzz' : [ word for word, ID, src in FUZZ.keys()],
+            },
+            ensure_ascii=False
+        )
+        print(dump)
+        return dump
 
 
     def history(self, args):
@@ -97,28 +100,28 @@ class Shell:
 
 
     def file_type(self, args):
-        if len(args) < 2:
+        if len(args):
             return "Argument Missing\n"
 
-        path = os.path.expanduser(' '.join(args[1:]))
+        path = os.path.expanduser(' '.join(args))
         output = Gio.content_type_guess(path)
         print(output)
         return output[0]
 
 
     def file_opener(self, args):
-        if len(args) < 2:
+        if len(args):
             output  = "Argument Missing\n"
             output += "Accessable files\n\t$"
             output += '\n\t$'.join(attr for attr in dir(setting) if attr.startswith("FILE"))
             return output
 
-        if args[1].startswith('$'):
-            arg1 = args[1].strip('$')
-            if hasattr(setting, arg1):
-                var = getattr(setting, arg1)
+        if args[0].startswith('$'):
+            arg0 = args[0].strip('$')
+            if hasattr(setting, arg0):
+                var = getattr(setting, arg0)
             else:
-                return "'%s' undefined variable"%args[1]
+                return "'%s' undefined variable"%args[0]
         else: var = ' '.join(args[1:])
 
         path = os.path.expanduser(var)
@@ -166,7 +169,7 @@ class Shell:
 
 
 def sample():
-    shell = Shell()
+    return Shell()
 
 
 if __name__ == '__main__':
