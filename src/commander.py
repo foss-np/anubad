@@ -66,8 +66,6 @@ class Shell:
             self.app.home.search_and_reflect(query)
             return
 
-        print(query)
-
         FULL, FUZZ = core.Glossary.search(query)
         dump = json.dumps(
             {

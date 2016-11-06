@@ -257,6 +257,8 @@ def on_help(home):
 def welcome_message(app):
     viewer = app.home.viewer
 
+    # Hack for viewer correction
+    viewer.textbuffer.set_text("\n")
     end = viewer.textbuffer.get_end_iter()
     logo = app.pixbuf_logo.scale_simple(36, 32, GdkPixbuf.InterpType.BILINEAR)
     viewer.textbuffer.insert_pixbuf(end, logo)
