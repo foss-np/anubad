@@ -67,9 +67,15 @@ class Shell:
             return
 
         FULL, FUZZ = core.Glossary.search(query)
+
+        match = dict()
+        for key, values in FULL.items():
+            for t, v in values:
+                match[t] = [ v ] + match.get(t, list())
+
         dump = json.dumps(
             {
-                'match': list(FULL.values()),
+                'match': match,
                 'fuzz' : [ word for word, ID, src in FUZZ.keys()],
             },
             ensure_ascii=False
