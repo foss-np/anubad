@@ -78,13 +78,14 @@ class Home(Gtk.Window):
         self.engine_default = {
             'name'   : "default",
             'filter' : lambda q: True,
-            'piston' : self.piston_default,
+            'piston' : lambda q: { q: self.core.Glossary.search(q.strip().lower()) },
             'cache'  : True,
             'shaft'  : self._view_results,
             'icon'   : None # entry.set_icon_from_icon_name(0, 'utilities-terminal')
         }
         self.searchbar.pop_engine.LAYOUT.add(Gtk.Label('default'))
 
+        self.addEngines_phrase()
         self.addEngines_hashtag()
         self.addEngines_raw()
         self.addEngines_gloss()
@@ -106,9 +107,11 @@ class Home(Gtk.Window):
             __class__.clipboard.set_text(self.copy_buffer, -1)
 
 
-    def engine_path_search(self, query):
-        return {}, {}
-        cmd = query.split()
+    def cache_search(self, word):
+        for history in self.cache:
+            if word not in history.keys(): continue
+            print("cache: hit", word, file=fp3)
+            return history[word]
 
 
     def cache_it(self, results):
@@ -118,19 +121,12 @@ class Home(Gtk.Window):
         self.toolbar.b_FORWARD.set_sensitive(False)
 
 
-    def piston_default(self, query):
-        ## Ordered Dict use for undo/redo history
-        results = OrderedDict()
-        for q in query.split():
-            word = q.lower()
-            for history in self.cache:
-                if word not in history.keys(): continue
-                print("cache: hit", word, file=fp3)
-                results[word] = history[word]
-
-            results[word] = self.core.Glossary.search(word)
-
-        return results
+    def engine_section_search(self, query):
+        # TODO: list section also
+        # music searches /music/*
+        # food searchs en2np/food.tra
+        return {}, {}
+        cmd = query.split()
 
 
     def addEngines_raw(self):
@@ -160,6 +156,34 @@ class Home(Gtk.Window):
             'name'   : "gloss filter",
             'filter' : lambda q: q[0] == '/',
             'piston' : lambda *a: a,
+        }
+
+        self.search_engines.append(engine)
+        self.searchbar.pop_engine.LAYOUT.add(Gtk.Label(engine['name']))
+
+
+    def addEngines_phrase(self):
+        def _filter(query):
+            if not query.find(' '): return False
+            if len(query.split(' ')) > 1:
+                return True
+
+        # handels cache itself
+        def _piston(query):
+            results = OrderedDict()
+            for q in query.split():
+                word = q.lower()
+                hit  = self.cache_search(word)
+                if hit is not None:
+                    results[word] = hit
+                    continue
+                results[word] = self.core.Glossary.search(word)
+            return results
+
+        engine = {
+            'name'   : "phrase",
+            'filter' : _filter,
+            'piston' : _piston,
         }
 
         self.search_engines.append(engine)
@@ -252,21 +276,18 @@ class Home(Gtk.Window):
 
 
     def _show_history(self, widget):
-        state = self.hist_menu_toggle_state
-        self.hist_menu_toggle_state = not state
-        if state: return
+        menu = widget.get_menu()
+        print(menu.get_property('visible'))
+        l = len(menu.get_children())
+        for i, results in enumerate(reversed(self.cache[l:]), l):
+            item = Gtk.MenuItem('%d %s'%(i, ', '.join(results)))
+            item.show()
+            if self.cache_cursor == i:
+                item.set_sensitive(False)
 
-        del self.history_menu
-        self.history_menu = Gtk.Menu()
-        widget.set_menu(self.history_menu)
+            menu.append(item)
 
-        for i, results in enumerate(reversed(self.cache), 1):
-            query = ', '.join([ k for k in results.keys() ])
-            rmi = Gtk.RadioMenuItem(label=query)
-            rmi.show()
-            if len(self.cache) - i == self.cache_cursor:
-                rmi.set_active(True)
-            self.history_menu.append(rmi)
+
     def makeWidget_searchbar(self):
         layout = Gtk.Box()
 
@@ -449,10 +470,17 @@ class Home(Gtk.Window):
                 engine = e
                 break
 
+        cache = engine.get('cache', False)
+        hit = self.cache_search(query) if cache else None
+
+        if hit:
+            engine.get('shaft', self._view_results)({query: hit})
+            return
+
         if self.nothread and thread:
             results = engine['piston'](query)
-            engine['shaft'](results)
-            if engine['cache']: self.cache_it(results)
+            engine.get('shaft', self._view_results)(results)
+            if cache: self.cache_it(results)
             return
 
         async_ret = self.pool.apply_async(engine['piston'], (query,))
