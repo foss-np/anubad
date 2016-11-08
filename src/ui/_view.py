@@ -219,12 +219,12 @@ class Display(Gtk.Overlay):
                 self.tag_trans
             )
 
-        if '' in parsed_info['_#'].keys():
-            self.insert_at_cursor(
-                ' '.join(parsed_info['_#']['']),
-                self.tag_hashtag
-            )
+        def add_hashtag(pos):
+            for k, vals in parsed_info['_#'].items():
+                if pos not in vals: continue
+                self.insert_at_cursor(' '+k, self.tag_hashtag)
 
+        add_hashtag("")
 
         if src != '\n':
             *a, tmp = src.split('gloss/')
@@ -248,12 +248,7 @@ class Display(Gtk.Overlay):
                 continue
 
             self.insert_at_cursor(', '.join(val))
-            if pos in parsed_info['_#'].keys():
-                self.insert_at_cursor(' ')
-                self.insert_at_cursor(
-                    ' '.join(parsed_info['_#'][pos]),
-                    self.tag_hashtag
-                )
+            add_hashtag(pos)
 
         else:
             self.insert_at_cursor("\n")

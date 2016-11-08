@@ -91,12 +91,13 @@ class Glossary(dict):
                     e.meta_info = (src, i)
                     raise e
 
-                # if pos in parsed_info['_#'].keys():
-                #     __class__.hashtags[pos] = __class__.hashtags.get(pos, 0) + 1
-                #     has_hashtag = True
-                #     continue
+                if pos == '_#':
+                    for tag in val.keys():
+                        __class__.hashtags[tag] = __class__.hashtags.get(tag, 0) + 1
+                        has_hashtag = True
+                    continue
 
-                if   pos    == '_transliterate': pass
+                if   pos    == '_t': pass
                 elif pos[0] == '_': continue
                 elif val    == '':
                     print(parsed_info, file=sys.stderr)
@@ -132,14 +133,14 @@ class Glossary(dict):
             {\
                 '_t' : ['मस्टर्ड'],\
                 'n1' : ['रायोको साग'],\
-                '_#' : {'' : ['#vegetable']}\
+                '_#' : {'#vegetable' : ['']}\
             }
         True
         >>> Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}') == \
             {\
                 '_t'    : ['वीट्'],\
                 'n1'    : ['गहूँ'],\
-                '_#'    : {'' : ['#crop']},\
+                '_#'    : {'#crop' : ['']},\
                 '_wiki' : ['Wheat']\
             } # TODO '@Wheat': ['n1']
         True
@@ -147,7 +148,7 @@ class Glossary(dict):
             {\
                 '_t' : ['शेल'],\
                 'n1' : ['शंख किरो'],\
-                '_#' : {'n1' : ['#animal']},\
+                '_#' : {'#animal' : ['n1']},\
                 'n2' : ['छिल्का', 'खोल', 'बोक्रा']\
             }
         True
@@ -162,7 +163,7 @@ class Glossary(dict):
         >>> Glossary.format_parser('मिश्रित ब्याज, आवधिक ब्याज #finance') == \
             {\
                 'u1': ['मिश्रित ब्याज', 'आवधिक ब्याज'],\
-                '_#': { '': ['#finance'] }\
+                '_#': { '#finance': [''] }\
             }
         True
         >>> Glossary.format_parser('n(<thin> तुवाँलो ~fog)') == \
@@ -212,7 +213,7 @@ class Glossary(dict):
             elif c in ' ,)}' and flag_hashtag:
                 # if buff is not buff.strip(): raise Exception(raw, buff)
                 if not operator: pos = ""
-                hashtag[pos] = hashtag.get(pos, []) + [buff]
+                hashtag[buff] = hashtag.get(buff, []) + [pos]
                 buff = ""
                 flag_hashtag = False
             elif c == '#':
@@ -246,7 +247,7 @@ class Glossary(dict):
 
         if buff != "":
             if flag_hashtag:
-                hashtag[""] = hashtag.get("", [buff.strip()])
+                hashtag[buff.strip()] = hashtag.get(buff.strip(), [""])
             else:
                 if pos == "": pos = make_tag()
                 output[pos] = output.get(pos, []) + [ buff.strip() ]
@@ -273,11 +274,10 @@ class Glossary(dict):
                         FULL[(word, ID, path + name)] = info
                         continue
                     if has_hashtag is False: continue
-                    for pos, val in info.items():
-                        if pos[0] is not '#': continue
+                    for tag, pos in info['_#'].items():
                         # WISH: #animal.reptile.snake, #snake will match same
                         # this is only required for console
-                        if query not in pos: continue
+                        if query not in tag: continue
                         FUZZ[(word, ID, path + name)] = info
 
         return FULL, FUZZ
