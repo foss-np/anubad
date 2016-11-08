@@ -618,8 +618,9 @@ class Home(Gtk.Window):
                 if    self.viewer.textbuffer.get_selection_bounds(): self.toolbar.t_COPY.set_active(False)
                 elif  self.searchbar.entry.get_selection_bounds()  : self.toolbar.t_COPY.set_active(False)
                 else: self._circular_search(+1)
-            elif event.keyval == ord('b'): self._circular_search(+1)
-            elif event.keyval == ord('B'): self._circular_search(-1)
+            elif event.keyval == ord('b'): self._circular_search(-1)
+            elif event.keyval == ord('B'): self._circular_search(+1)
+            elif event.keyval == ord('f'): self._circular_search(+1)
             return
         elif Gdk.ModifierType.SHIFT_MASK & event.state:
             if   event.keyval == 65365: self._circular_search(-1); return True # Pg-Up
