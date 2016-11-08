@@ -189,7 +189,7 @@ class Glossary(dict):
 
         pos  = ""
         buff = ""
-        flag_hashtag = False
+        ishashtag = False
 
         def make_tag(pos='u'):
             c = counter.get(pos, 0) + 1
@@ -210,14 +210,14 @@ class Glossary(dict):
                 pos = make_tag(buff)
                 buff = ""
             elif c == ' ' and buff == "": pass
-            elif c in ' ,)}' and flag_hashtag:
+            elif c in ' ,)}' and ishashtag:
                 # if buff is not buff.strip(): raise Exception(raw, buff)
                 if not operator: pos = ""
                 hashtag[buff] = hashtag.get(buff, []) + [pos]
                 buff = ""
-                flag_hashtag = False
+                ishashtag = False
             elif c == '#':
-                flag_hashtag = True;
+                ishashtag = True;
                 if pos == "": pos = make_tag()
                 if buff.strip():
                     output[pos] = output.get(pos, []) + [ buff.strip() ]
@@ -246,7 +246,7 @@ class Glossary(dict):
                 buff += c
 
         if buff != "":
-            if flag_hashtag:
+            if ishashtag:
                 hashtag[buff.strip()] = hashtag.get(buff.strip(), [""])
             else:
                 if pos == "": pos = make_tag()

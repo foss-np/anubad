@@ -220,6 +220,7 @@ class Display(Gtk.Overlay):
             )
 
         def add_hashtag(pos):
+            if '_#' not in parsed_info.keys(): return
             for k, vals in parsed_info['_#'].items():
                 if pos not in vals: continue
                 self.insert_at_cursor(' '+k, self.tag_hashtag)
