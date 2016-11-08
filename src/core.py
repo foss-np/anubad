@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os, sys
+import traceback
 from collections import OrderedDict
 
 fp3 = fp4 = sys.stderr
@@ -83,27 +84,33 @@ class Glossary(dict):
                 raise
 
             has_hashtag = False
-            for pos, val in parsed_info:
+            for pos, val in parsed_info.items():
                 if pos == '':
+                    print(parsed_info, file=sys.stderr)
                     e = Exception("pos tag empty")
                     e.meta_info = (src, i)
                     raise e
 
-                if pos == '_#':
-                    __class__.hashtags[val] = __class__.hashtags.get(val, 0) + 1
-                    has_hashtag = True
-                    continue
+                # if pos in parsed_info['_#'].keys():
+                #     __class__.hashtags[pos] = __class__.hashtags.get(pos, 0) + 1
+                #     has_hashtag = True
+                #     continue
 
                 if   pos    == '_transliterate': pass
                 elif pos[0] == '_': continue
-                elif val    == '': continue
+                elif val    == '':
+                    print(parsed_info, file=sys.stderr)
+                    e = Exception("pos tag empty")
+                    e.meta_info = (src, i)
+                    raise e
+                    continue
 
                 # inverted list
-                ID, info = invert.get(val, (tuple(), tuple()))
-                invert[val] = (
-                    ID + tuple([i]),
-                    info + (tuple([pos, word]), ),
-                )
+                # ID, info = invert.get(val, {})
+                # invert[val] = (
+                #     ID + tuple([i]),
+                #     info + (tuple([pos, word]), ),
+                # )
 
             duplicate = liststore.get(word)
             if duplicate:
@@ -121,99 +128,131 @@ class Glossary(dict):
     @staticmethod
     def format_parser(raw):
         """
-        >>> print("Test 08"); Glossary.format_parser('सृजना <कीर्ति>')
-        Test 08
-        (('u', 'सृजना'), ('_note', 'कीर्ति'))
-        >>> print("Test 07"); Glossary.format_parser('[मस्टर्ड] n(<leaves>रायोको साग), #vegetable')
-        Test 07
-        (('_transliterate', 'मस्टर्ड'), ('n', ''), ('_note', 'leaves'), ('n', 'रायोको साग'), ('u', ''), ('u', ''), ('_#', '#vegetable'))
-        >>> print("Test 06"); Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}')
-        Test 06
-        (('_transliterate', 'वीट्'), ('n', 'गहूँ'), ('u', ''), ('_#', '#crop'), ('_wiki', 'Wheat'))
-        >>> print("Test 05"); Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)')
-        Test 05
-        (('_transliterate', 'शेल'), ('n', 'शंख किरो'), ('_#', '#animal'), ('n', ''), ('n', 'छिल्का'), ('n', 'खोल'), ('n', 'बोक्रा'))
-        >>> print("Test 04"); Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते), v(स्वागत, अभिवादन, सम्बोधन, जदौ)')
-        Test 04
-        (('_transliterate', 'हेल्\u200dलो'), ('n', 'नमस्कार'), ('n', 'नमस्ते'), ('u', ''), ('v', 'स्वागत'), ('v', 'अभिवादन'), ('v', 'सम्बोधन'), ('v', 'जदौ'))
-        >>> print("Test 03"); Glossary.format_parser('n(<thin> तुवाँलो ~fog)')
-        Test 03
-        (('n', ''), ('_note', 'thin'), ('n', 'तुवाँलो ~fog'))
-        >>> print("Test 02"); Glossary.format_parser('कर')
-        Test 02
-        (('u', 'कर'),)
-        >>> print("Test 01"); Glossary.format_parser('n:v(मस्त)')
-        Test 01
-        (('n:v', 'मस्त'),)
+        >>> Glossary.format_parser('[मस्टर्ड] n(रायोको साग), #vegetable') == \
+            {\
+                '_t' : ['मस्टर्ड'],\
+                'n1' : ['रायोको साग'],\
+                '_#' : {'' : ['#vegetable']}\
+            }
+        True
+        >>> Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}') == \
+            {\
+                '_t'    : ['वीट्'],\
+                'n1'    : ['गहूँ'],\
+                '_#'    : {'' : ['#crop']},\
+                '_wiki' : ['Wheat']\
+            } # TODO '@Wheat': ['n1']
+        True
+        >>> Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)') == \
+            {\
+                '_t' : ['शेल'],\
+                'n1' : ['शंख किरो'],\
+                '_#' : {'n1' : ['#animal']},\
+                'n2' : ['छिल्का', 'खोल', 'बोक्रा']\
+            }
+        True
+        >>> Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते ), v(स्वागत, अभिवादन,)') == \
+            {\
+                '_t': ['हेल्‍लो'],\
+                'n1': ['नमस्कार', 'नमस्ते'],\
+                'v1': ['स्वागत', 'अभिवादन'],\
+                '_#': {}\
+            }
+        True
+        >>> Glossary.format_parser('मिश्रित ब्याज, आवधिक ब्याज #finance') == \
+            {\
+                'u1': ['मिश्रित ब्याज', 'आवधिक ब्याज'],\
+                '_#': { '': ['#finance'] }\
+            }
+        True
+        >>> Glossary.format_parser('n(<thin> तुवाँलो ~fog)') == \
+            {\
+                'n1': ['<thin> तुवाँलो ~fog'],\
+                '_#': {}\
+            } # TODO '~': 'fog'
+        True
+        >>> Glossary.format_parser('योगदान, सहाय , सहायता, ,,') == \
+            {\
+                'u1': ['योगदान', 'सहाय', 'सहायता'],\
+                '_#': {}\
+            }
+        True
+        >>> Glossary.format_parser('कर') == {'u1': ['कर'], '_#': {}}
+        True
         """
 
-        operator, output = [], []
-        pos = 'u'
-        buffer = ""
-        fbreak = 0
-        hashtag = False
-        note = False
-        # TODO: refacator, reduce repeated segements
-        # TODO: don't separte segment by unknown
-        for i, c in enumerate(raw.strip()): # bored strip!
-            if   c == '[':
+        counter  = dict()
+        output   = dict()
+        hashtag  = dict()
+        operator = []
+
+        pos  = ""
+        buff = ""
+        flag_hashtag = False
+
+        def make_tag(pos='u'):
+            c = counter.get(pos, 0) + 1
+            counter[pos] = c
+            return '%s%d'%(pos, c)
+
+        for i, c in enumerate(raw):
+            if c == '[':
                 operator.append((']', i));
-                pos = '_transliterate'
-                fbreak = i + 1
-                buffer = ""
-            elif c == '<':
-                note = True
-                output.append((pos, buffer.strip()))
-                buffer = ""
+                pos = '_t'
+                buff = ""
             elif c == '{':
                 operator.append(('}', i));
-                pos = '_' + buffer # '_' prefix for meta tags
-                fbreak = i + 1
-                buffer = ""
+                pos = '_' + buff # '_' prefix for meta tags
+                buff = ""
             elif c == '(':
                 operator.append((')', i))
-                pos = buffer
-                fbreak = i + 1
-                buffer = ""
-            elif c == ' ' and buffer == "": pass
-            elif c in ' ,)>}' and hashtag:
-                output.append(("_#", buffer.strip()))
-                buffer = ""
-                hashtag = False
-            elif c in '>':
-                output.append(("_note", buffer.strip()))
-                buffer = ""
+                pos = make_tag(buff)
+                buff = ""
+            elif c == ' ' and buff == "": pass
+            elif c in ' ,)}' and flag_hashtag:
+                # if buff is not buff.strip(): raise Exception(raw, buff)
+                if not operator: pos = ""
+                hashtag[pos] = hashtag.get(pos, []) + [buff]
+                buff = ""
+                flag_hashtag = False
             elif c == '#':
-                hashtag = True;
-                output.append((pos, buffer.strip()))
-                buffer = "#"
+                flag_hashtag = True;
+                if pos == "": pos = make_tag()
+                if buff.strip():
+                    output[pos] = output.get(pos, []) + [ buff.strip() ]
+                buff = "#"
             elif c == ',':
-                # print(buffer, file=fp3)
-                output.append((pos, buffer.strip()))
-                buffer = ""
-                fbreak = i + 1
+                if pos == "": pos = make_tag()
+                if buff.strip():
+                    output[pos] = output.get(pos, []) + [ buff.strip() ]
+                buff = ""
             elif c in '])}':
                 try:
                     symbol, index = operator.pop()
                 except Exception as e:
                     print(raw)
                     raise
-
                 if c != symbol:
-                    print('buffer: "%s"'%buffer, 'got: "%s"'%c, 'expected: "%s"'%symbol)
+                    print('buffer: "%s"'%buff, 'got: "%s"'%c, 'expected: "%s"'%symbol)
                     raise Exception("error: unbalanced paranthesis")
-                output.append((pos, buffer.strip()))
-                buffer = ""
-                fbreak = i + 1
-                pos = 'u'
+
+                # if buff is not buff.strip(): raise Exception(raw, buff)
+                if buff.strip():
+                    output[pos] = output.get(pos, []) + [ buff.strip() ]
+                buff = ""
+                if c == ')': pos  = ""
             else:
-                buffer += c
+                buff += c
 
-        if buffer != "":
-            if hashtag: pos = '_#'
-            output.append((pos, buffer.strip()))
+        if buff != "":
+            if flag_hashtag:
+                hashtag[""] = hashtag.get("", [buff.strip()])
+            else:
+                if pos == "": pos = make_tag()
+                output[pos] = output.get(pos, []) + [ buff.strip() ]
 
-        return tuple(output)
+        output['_#'] = hashtag
+        return output
 
 
     @staticmethod
@@ -229,17 +268,16 @@ class Glossary(dict):
         FULL, FUZZ = OrderedDict(), dict()
         for path, instance in __class__.instances.items():
             for name, (liststore, invert) in instance.items():
-                for word, (ID, *has_hashtag, info) in liststore.items():
+                for word, (ID, has_hashtag, info) in liststore.items():
                     if query == word:
                         FULL[(word, ID, path + name)] = info
                         continue
-                    if len(has_hashtag) == 0: continue
-                    if has_hashtag[0] is False: continue
-                    for pos, val in info:
-                        if "_#" != pos: continue
+                    if has_hashtag is False: continue
+                    for pos, val in info.items():
+                        if pos[0] is not '#': continue
                         # WISH: #animal.reptile.snake, #snake will match same
                         # this is only required for console
-                        if query not in val: continue
+                        if query not in pos: continue
                         FUZZ[(word, ID, path + name)] = info
 
         return FULL, FUZZ
@@ -279,8 +317,7 @@ def load_from_config(cnf):
                 n += 1
                 continue
             except Exception as e:
-                print(e)
-                # if not hasattr(e, 'meta_info'):
+                traceback.print_exception(*sys.exc_info())
                 # TODO robustness and show error in gui
                 if not cnf.core['gloss-fix']:
                     n += 1
@@ -299,14 +336,18 @@ def load_from_config(cnf):
 def sample():
     import setting
     cnf = setting.main()
+    cnf.core['gloss-fix'] = False
     load_from_config(cnf)
 
 
 if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+
     sample()
     from pprint import pprint
     pprint(Glossary.search('hello'))
-    pprint(Glossary.search_hashtag('#color'))
-
-    import doctest
-    doctest.testmod()
+    pprint(Glossary.search('lavender'))
+    FULL, FUZZ = Glossary.search_hashtag('#color')
+    pprint(FULL)
+    print([ word for word, ID, src in FUZZ.keys() ])

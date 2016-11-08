@@ -14,6 +14,9 @@ POS_MAP = {
     'm'    : "meaning",
     'p'    : "people",
     'u'    : "unknown",
+    '_sci' : "scientific name",
+    '_u'   : "unicode",
+    'unicode' : "unicode",
 }
 
 import os
@@ -208,12 +211,20 @@ class Display(Gtk.Overlay):
         [('unknown', 'सृजना'), ('_note', 'कीर्ति')],\
         'gloss/demo')
         """
-        self.insert_at_cursor(word, self.tag_bold)
+        self.insert_at_cursor(word+'  ', self.tag_bold)
 
-        info = iter(parsed_info)
-        pos, val = next(info)
-        if pos != "_transliterate": info = parsed_info
-        else: self.insert_at_cursor('  [%s]'%val, self.tag_trans)
+        if '_t' in parsed_info:
+            self.insert_at_cursor(
+                '[%s] '%('/'.join(parsed_info['_t'])),
+                self.tag_trans
+            )
+
+        if '' in parsed_info['_#'].keys():
+            self.insert_at_cursor(
+                ' '.join(parsed_info['_#']['']),
+                self.tag_hashtag
+            )
+
 
         if src != '\n':
             *a, tmp = src.split('gloss/')
@@ -222,48 +233,28 @@ class Display(Gtk.Overlay):
             self.insert_at_cursor("\n")
             self.insert_at_cursor("source: "+tmp, self.tag_source)
 
-        _pos = ""
         c = 0
-        note = ""
-        pre = ""
-        for pos, val in info:
-            if pos == "_transliterate":
-                self.insert_at_cursor('  [%s]'%val, self.tag_trans)
-                continue
-
-            if pos == "_#":
-                self.insert_at_cursor(' '+val, self.tag_hashtag)
-                continue
+        for pos, val in parsed_info.items():
+            if pos[0] is '_': continue
+            if pos == "_wiki": self.link_wiki(val); continue
+            c += 1
+            self.insert_at_cursor('\n%4d. '%c, self.tag_li)
+            self.insert_at_cursor(POS_MAP.get(pos[:-1], pos), self.tag_pos)
+            self.insert_at_cursor(' » ')
 
             if pos == "_unicode":
-                c += 1
-                self.insert_at_cursor("\n%4d. "%c, self.tag_li)
-                self.insert_at_cursor("unicode", self.tag_pos)
-                self.insert_at_cursor(" » ")
                 self.insert_at_cursor(val + " → ")
                 self.insert_at_cursor("%4s"%chr(int(val, 16)), self.tag_unicode)
                 continue
-            if pos == "_note": pre = "<%s>"%val; continue
-            if pos == "_wiki": self.link_wiki(val); continue
-            if val == "": _pos = ""; continue
-            if pos == "_sci": pos = "scientific name"
-            if pos != _pos:
-                c += 1
-                self.insert_at_cursor("\n%4d. "%c, self.tag_li)
+
+            self.insert_at_cursor(', '.join(val))
+            if pos in parsed_info['_#'].keys():
+                self.insert_at_cursor(' ')
                 self.insert_at_cursor(
-                    ':'.join(POS_MAP.get(p, p) for p in pos.split(':')),
-                    self.tag_pos
+                    ' '.join(parsed_info['_#'][pos]),
+                    self.tag_hashtag
                 )
-                self.insert_at_cursor(" » ")
-            else:
-                self.insert_at_cursor(", ")
 
-            if pre != "":
-                self.insert_at_cursor(pre)
-                pre = ""
-
-            self.insert_at_cursor(val)
-            _pos = pos
         else:
             self.insert_at_cursor("\n")
 
