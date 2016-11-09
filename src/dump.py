@@ -12,7 +12,10 @@ core.load_from_config(cnf)
 
 with open("gloss.dump", 'w') as fp:
     for instance in core.Glossary.instances.values():
-        # dump = { name: liststore for name, (liststore, invert) in instance.items() }
-        # json.dump(dump, fp, ensure_ascii=False)
-        json.dump(instance['main.tra'][0], fp, ensure_ascii=False)
+        liststore, invert = instance['main.tra']
+        clean = dict()
+        for word, (ID, *has_hashtag, info) in liststore.items():
+            # p POS_MAP.get(p[:-1]):
+            clean[word] = info
+        json.dump(clean, fp, ensure_ascii=False)
         break

@@ -83,35 +83,23 @@ class Glossary(dict):
                 e.meta_info = (src, i)
                 raise
 
-            has_hashtag = False
-            for pos, val in parsed_info.items():
-                if pos == '':
-                    print(parsed_info, file=sys.stderr)
-                    e = Exception("pos tag empty")
-                    e.meta_info = (src, i)
-                    raise e
-
-                if pos == '_#':
-                    for tag in val.keys():
-                        __class__.hashtags[tag] = __class__.hashtags.get(tag, 0) + 1
-                        has_hashtag = True
-                    continue
-
+            # generate inverted list
+            for pos, vals in parsed_info.items():
                 if   pos    == '_t': pass
-                elif pos[0] == '_': continue
-                elif val    == '':
+                elif pos[0] == '_' : continue
+                elif pos    == "":
                     print(parsed_info, file=sys.stderr)
-                    e = Exception("pos tag empty")
+                    e = Exception("empty pos tag ")
                     e.meta_info = (src, i)
                     raise e
-                    continue
 
-                # inverted list
-                # ID, info = invert.get(val, {})
-                # invert[val] = (
-                #     ID + tuple([i]),
-                #     info + (tuple([pos, word]), ),
-                # )
+                for v in vals:
+                    ID, info = invert.get(v, (tuple(), {}))
+                    info[pos] = info.get(pos, []) + [word]
+                    invert[v] = (
+                        ID + tuple([i]),
+                        info
+                    )
 
             duplicate = liststore.get(word)
             if duplicate:
@@ -121,7 +109,10 @@ class Glossary(dict):
                 e.meta_info = (src, i)
                 raise e
 
-            liststore[word] = (i, has_hashtag, parsed_info)
+            for tag in parsed_info['_#'].keys():
+                __class__.hashtags[tag] = __class__.hashtags.get(tag, 0) + 1
+
+            liststore[word] = (i, parsed_info)
 
         return i, liststore, invert
 
@@ -269,11 +260,10 @@ class Glossary(dict):
         FULL, FUZZ = OrderedDict(), dict()
         for path, instance in __class__.instances.items():
             for name, (liststore, invert) in instance.items():
-                for word, (ID, has_hashtag, info) in liststore.items():
+                for word, (ID, info) in liststore.items():
                     if query == word:
                         FULL[(word, ID, path + name)] = info
                         continue
-                    if has_hashtag is False: continue
                     for tag, pos in info['_#'].items():
                         # WISH: #animal.reptile.snake, #snake will match same
                         # this is only required for console
@@ -287,7 +277,7 @@ class Glossary(dict):
     def search(query):
         FULL, FUZZ = OrderedDict(), dict()
         def match(iterable):
-            for word, (ID, *has_hashtag, info) in iterable.items():
+            for word, (ID, info) in iterable.items():
                 d = edit_distance(query, word)
                 if d > 1 and query not in word: continue
                 if d: FUZZ[(word, ID, src)] = info
