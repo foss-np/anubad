@@ -236,11 +236,11 @@ class Display(Gtk.Overlay):
 
         c = 0
         for pos, val in parsed_info.items():
-            if pos[0] is '_': continue
             if pos == "_wiki": self.link_wiki(val); continue
+            if not pos[-1].isdigit(): continue
             c += 1
             self.insert_at_cursor('\n%4d. '%c, self.tag_li)
-            self.insert_at_cursor(POS_MAP.get(pos[:-1], pos), self.tag_pos)
+            self.insert_at_cursor(POS_MAP.get(pos[:-1], pos[:-1]), self.tag_pos)
             self.insert_at_cursor(' » ')
 
             if pos == "_unicode":
