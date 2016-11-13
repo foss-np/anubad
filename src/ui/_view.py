@@ -213,15 +213,15 @@ class Display(Gtk.Overlay):
         """
         self.insert_at_cursor(word+'  ', self.tag_bold)
 
-        if '_t' in parsed_info:
+        if 't' in parsed_info:
             self.insert_at_cursor(
-                '[%s] '%('/'.join(parsed_info['_t'])),
+                '[%s] '%('/'.join(parsed_info['t'])),
                 self.tag_trans
             )
 
         def add_hashtag(pos):
-            if '_#' not in parsed_info.keys(): return
-            for k, vals in parsed_info['_#'].items():
+            if '#' not in parsed_info.keys(): return
+            for k, vals in parsed_info['#'].items():
                 if pos not in vals: continue
                 self.insert_at_cursor(' '+k, self.tag_hashtag)
 
@@ -236,14 +236,14 @@ class Display(Gtk.Overlay):
 
         c = 0
         for pos, val in parsed_info.items():
-            if pos == "_wiki": self.link_wiki(val); continue
+            if pos == "wiki": self.link_wiki(val); continue
             if not pos[-1].isdigit(): continue
             c += 1
             self.insert_at_cursor('\n%4d. '%c, self.tag_li)
             self.insert_at_cursor(POS_MAP.get(pos[:-1], pos[:-1]), self.tag_pos)
             self.insert_at_cursor(' » ')
 
-            if pos == "_unicode":
+            if pos == "unicode":
                 self.insert_at_cursor(val + " → ")
                 self.insert_at_cursor("%4s"%chr(int(val, 16)), self.tag_unicode)
                 continue
