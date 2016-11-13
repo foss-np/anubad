@@ -85,13 +85,14 @@ class Glossary(dict):
 
             # generate inverted list
             for pos, vals in parsed_info.items():
-                if   pos    == '_t': pass
-                elif pos[0] == '_' : continue
-                elif pos    == "":
+                if pos    == "":
                     print(parsed_info, file=sys.stderr)
                     e = Exception("empty pos tag ")
                     e.meta_info = (src, i)
                     raise e
+
+                if   pos == 't': pass
+                elif not pos[-1].isdigit(): continue
 
                 for v in vals:
                     ID, info = invert.get(v, (tuple(), {}))
@@ -109,7 +110,7 @@ class Glossary(dict):
                 e.meta_info = (src, i)
                 raise e
 
-            for tag in parsed_info['_#'].keys():
+            for tag in parsed_info['#'].keys():
                 __class__.hashtags[tag] = __class__.hashtags.get(tag, 0) + 1
 
             liststore[word] = (i, parsed_info)
@@ -122,54 +123,54 @@ class Glossary(dict):
         """
         >>> Glossary.format_parser('[मस्टर्ड] n(रायोको साग), #vegetable') == \
             {\
-                '_t' : ['मस्टर्ड'],\
+                't' : ['मस्टर्ड'],\
                 'n1' : ['रायोको साग'],\
-                '_#' : {'#vegetable' : ['']}\
+                '#' : {'#vegetable' : ['']}\
             }
         True
         >>> Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}') == \
             {\
-                '_t'    : ['वीट्'],\
+                't'    : ['वीट्'],\
                 'n1'    : ['गहूँ'],\
-                '_#'    : {'#crop' : ['']},\
-                '_wiki' : ['Wheat']\
+                '#'    : {'#crop' : ['']},\
+                'wiki' : ['Wheat']\
             } # TODO '@Wheat': ['n1']
         True
         >>> Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)') == \
             {\
-                '_t' : ['शेल'],\
+                't' : ['शेल'],\
                 'n1' : ['शंख किरो'],\
-                '_#' : {'#animal' : ['n1']},\
+                '#' : {'#animal' : ['n1']},\
                 'n2' : ['छिल्का', 'खोल', 'बोक्रा']\
             }
         True
         >>> Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते ), v(स्वागत, अभिवादन,)') == \
             {\
-                '_t': ['हेल्‍लो'],\
+                't': ['हेल्‍लो'],\
                 'n1': ['नमस्कार', 'नमस्ते'],\
                 'v1': ['स्वागत', 'अभिवादन'],\
-                '_#': {}\
+                '#': {}\
             }
         True
         >>> Glossary.format_parser('मिश्रित ब्याज, आवधिक ब्याज #finance') == \
             {\
                 'u1': ['मिश्रित ब्याज', 'आवधिक ब्याज'],\
-                '_#': { '#finance': [''] }\
+                '#': { '#finance': [''] }\
             }
         True
         >>> Glossary.format_parser('n(<thin> तुवाँलो ~fog)') == \
             {\
                 'n1': ['<thin> तुवाँलो ~fog'],\
-                '_#': {}\
+                '#': {}\
             } # TODO '~': 'fog'
         True
         >>> Glossary.format_parser('योगदान, सहाय , सहायता, ,,') == \
             {\
                 'u1': ['योगदान', 'सहाय', 'सहायता'],\
-                '_#': {}\
+                '#': {}\
             }
         True
-        >>> Glossary.format_parser('कर') == {'u1': ['कर'], '_#': {}}
+        >>> Glossary.format_parser('कर') == {'u1': ['कर'], '#': {}}
         True
         """
 
@@ -189,12 +190,13 @@ class Glossary(dict):
 
         for i, c in enumerate(raw):
             if c == '[':
+                istrans = True
                 operator.append((']', i));
-                pos = '_t'
+                pos = 't'
                 buff = ""
             elif c == '{':
                 operator.append(('}', i));
-                pos = '_' + buff # '_' prefix for meta tags
+                pos = buff
                 buff = ""
             elif c == '(':
                 operator.append((')', i))
@@ -202,11 +204,11 @@ class Glossary(dict):
                 buff = ""
             elif c == ' ' and buff == "": pass
             elif c in ' ,)}' and ishashtag:
+                ishashtag = False
                 # if buff is not buff.strip(): raise Exception(raw, buff)
                 if not operator: pos = ""
                 hashtag[buff] = hashtag.get(buff, []) + [pos]
                 buff = ""
-                ishashtag = False
             elif c == '#':
                 ishashtag = True;
                 if pos == "": pos = make_tag()
@@ -243,7 +245,7 @@ class Glossary(dict):
                 if pos == "": pos = make_tag()
                 output[pos] = output.get(pos, []) + [ buff.strip() ]
 
-        output['_#'] = hashtag
+        output['#'] = hashtag
         return output
 
 
@@ -264,7 +266,7 @@ class Glossary(dict):
                     if query == word:
                         FULL[(word, ID, path + name)] = info
                         continue
-                    for tag, pos in info['_#'].items():
+                    for tag, pos in info['#'].items():
                         # WISH: #animal.reptile.snake, #snake will match same
                         # this is only required for console
                         if query not in tag: continue
