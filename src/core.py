@@ -121,78 +121,111 @@ class Glossary(dict):
     @staticmethod
     def format_parser(raw):
         """
+        >>> Glossary.format_parser('[कमा] अल्पविराम #language.grammar.punctuation') == \
+            {\
+                'u1' : ['अल्पविराम'],\
+                '#'  : {'#language.grammar.punctuation': ['']},\
+                't'  : {'कमा': ['']}\
+            }
+        True
+        >>> Glossary.format_parser('v([लिभ्], जीउँनु), j([लाइभ्] प्रत्यक्ष)') == \
+            {\
+                'v1' : ['जीउँनु'],\
+                'j1' : ['प्रत्यक्ष'],\
+                't'  : {\
+                    'लिभ्'  : ['v1'],\
+                    'लाइभ्' : ['j1'],\
+                },\
+                '#'  : {}\
+            }
+        True
         >>> Glossary.format_parser('[मस्टर्ड] n(रायोको साग), #vegetable') == \
             {\
-                't' : ['मस्टर्ड'],\
+                't'  : {'मस्टर्ड': ['']},\
                 'n1' : ['रायोको साग'],\
-                '#' : {'#vegetable' : ['']}\
+                '#'  : {'#vegetable' : ['']}\
             }
         True
         >>> Glossary.format_parser('[वीट्] n(गहूँ) #crop, wiki{Wheat}') == \
             {\
-                't'    : ['वीट्'],\
-                'n1'    : ['गहूँ'],\
+                't'    : {'वीट्': ['']},\
+                'n1'   : ['गहूँ'],\
                 '#'    : {'#crop' : ['']},\
                 'wiki' : ['Wheat']\
             } # TODO '@Wheat': ['n1']
         True
         >>> Glossary.format_parser('[शेल] n(शंख किरो #animal), n(छिल्का, खोल, बोक्रा)') == \
             {\
-                't' : ['शेल'],\
+                't'  : {'शेल': ['']},\
                 'n1' : ['शंख किरो'],\
-                '#' : {'#animal' : ['n1']},\
+                '#'  : {'#animal' : ['n1']},\
                 'n2' : ['छिल्का', 'खोल', 'बोक्रा']\
             }
         True
         >>> Glossary.format_parser('[हेल्‍लो] n(नमस्कार, नमस्ते ), v(स्वागत, अभिवादन,)') == \
             {\
-                't': ['हेल्‍लो'],\
-                'n1': ['नमस्कार', 'नमस्ते'],\
-                'v1': ['स्वागत', 'अभिवादन'],\
-                '#': {}\
+                't'  : {'हेल्‍लो': ['']},\
+                'n1' : ['नमस्कार', 'नमस्ते'],\
+                'v1' : ['स्वागत', 'अभिवादन'],\
+                '#'  : {}\
             }
         True
         >>> Glossary.format_parser('मिश्रित ब्याज, आवधिक ब्याज #finance') == \
             {\
-                'u1': ['मिश्रित ब्याज', 'आवधिक ब्याज'],\
-                '#': { '#finance': [''] }\
+                'u1' : ['मिश्रित ब्याज', 'आवधिक ब्याज'],\
+                '#'  : { '#finance': [''] },\
+                't'  : {},\
             }
         True
         >>> Glossary.format_parser('n(<thin> तुवाँलो ~fog)') == \
             {\
-                'n1': ['<thin> तुवाँलो ~fog'],\
-                '#': {}\
+                'n1' : ['<thin> तुवाँलो ~fog'],\
+                '#'  : {},\
+                't'  : {},\
             } # TODO '~': 'fog'
         True
         >>> Glossary.format_parser('योगदान, सहाय , सहायता, ,,') == \
             {\
-                'u1': ['योगदान', 'सहाय', 'सहायता'],\
-                '#': {}\
+                'u1' : ['योगदान', 'सहाय', 'सहायता'],\
+                '#'  : {},\
+                't'  : {},\
             }
         True
-        >>> Glossary.format_parser('कर') == {'u1': ['कर'], '#': {}}
+        >>> Glossary.format_parser('कर') == {'u1': ['कर'], '#': {}, 't': {}}
         True
         """
 
         counter  = dict()
         output   = dict()
         hashtag  = dict()
+        trans    = dict()
+
         operator = []
 
         pos  = ""
         buff = ""
         ishashtag = False
+        istrans   = False
 
         def make_tag(pos='u'):
             c = counter.get(pos, 0) + 1
             counter[pos] = c
             return '%s%d'%(pos, c)
 
+        def balance_brackets():
+            try:
+                symbol, index = operator.pop()
+            except Exception as e:
+                print(raw)
+                raise
+            if c != symbol:
+                print('buffer: "%s"'%buff, 'got: "%s"'%c, 'expected: "%s"'%symbol)
+                raise Exception("error: unbalanced paranthesis")
+
         for i, c in enumerate(raw):
             if c == '[':
                 istrans = True
                 operator.append((']', i));
-                pos = 't'
                 buff = ""
             elif c == '{':
                 operator.append(('}', i));
@@ -209,6 +242,11 @@ class Glossary(dict):
                 if not operator: pos = ""
                 hashtag[buff] = hashtag.get(buff, []) + [pos]
                 buff = ""
+            elif c in ']' and istrans:
+                istrans = False
+                balance_brackets()
+                trans[buff] = trans.get(buff, []) + [pos]
+                buff = ""
             elif c == '#':
                 ishashtag = True;
                 if pos == "": pos = make_tag()
@@ -221,15 +259,7 @@ class Glossary(dict):
                     output[pos] = output.get(pos, []) + [ buff.strip() ]
                 buff = ""
             elif c in '])}':
-                try:
-                    symbol, index = operator.pop()
-                except Exception as e:
-                    print(raw)
-                    raise
-                if c != symbol:
-                    print('buffer: "%s"'%buff, 'got: "%s"'%c, 'expected: "%s"'%symbol)
-                    raise Exception("error: unbalanced paranthesis")
-
+                balance_brackets()
                 # if buff is not buff.strip(): raise Exception(raw, buff)
                 if buff.strip():
                     output[pos] = output.get(pos, []) + [ buff.strip() ]
@@ -246,6 +276,7 @@ class Glossary(dict):
                 output[pos] = output.get(pos, []) + [ buff.strip() ]
 
         output['#'] = hashtag
+        output['t'] = trans
         return output
 
 
