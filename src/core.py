@@ -264,6 +264,7 @@ class Glossary(dict):
                 if buff.strip():
                     output[pos] = output.get(pos, []) + [ buff.strip() ]
                 buff = ""
+                # if c in ')]': pos  = ""
                 if c == ')': pos  = ""
             else:
                 buff += c

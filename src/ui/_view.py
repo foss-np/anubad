@@ -10,13 +10,13 @@ POS_MAP = {
     'j'    : "adjective",
     'adj'  : "adjective",
     'adv'  : "adverb",
+    'prep' : "preposition",
     'v'    : "verb",
     'm'    : "meaning",
     'p'    : "people",
     'u'    : "unknown",
-    '_sci' : "scientific name",
-    '_u'   : "unicode",
-    'unicode' : "unicode",
+    'sci'  : "scientific name",
+    'conj' : "conjunction",
 }
 
 import os
@@ -213,19 +213,14 @@ class Display(Gtk.Overlay):
         """
         self.insert_at_cursor(word+'  ', self.tag_bold)
 
-        if 't' in parsed_info:
-            self.insert_at_cursor(
-                '[%s] '%('/'.join(parsed_info['t'])),
-                self.tag_trans
-            )
-
-        def add_hashtag(pos):
-            if '#' not in parsed_info.keys(): return
-            for k, vals in parsed_info['#'].items():
+        def add_metatags(meta, pos, ttag, decor=' %s'):
+            if meta not in parsed_info.keys(): return
+            for k, vals in parsed_info[meta].items():
                 if pos not in vals: continue
-                self.insert_at_cursor(' '+k, self.tag_hashtag)
+                self.insert_at_cursor(decor%k, ttag)
 
-        add_hashtag("")
+        add_metatags('t', "", self.tag_trans, '[%s]')
+        add_metatags('#', "", self.tag_hashtag, ' %s')
 
         if src != '\n':
             *a, tmp = src.split('gloss/')
@@ -248,9 +243,9 @@ class Display(Gtk.Overlay):
                 self.insert_at_cursor("%4s"%chr(int(val, 16)), self.tag_unicode)
                 continue
 
+            add_metatags('t', pos, self.tag_trans, '[%s] ')
             self.insert_at_cursor(', '.join(val))
-            add_hashtag(pos)
-
+            add_metatags('#', pos, self.tag_hashtag, '  %s')
         else:
             self.insert_at_cursor("\n")
 

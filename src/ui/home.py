@@ -558,9 +558,8 @@ class Home(Gtk.Window):
         transliterate = [] # collect trasliterations
 
         for pos, val in parsed_info.items():
-            if   pos == "t": transliterate += val; continue
-            elif pos[-1].isalpha(): continue
-            self.clips += val
+            if   pos == "t": transliterate += val
+            elif pos[-1].isdigit(): self.clips += val
 
         ## adding transliteration
         self.clips += transliterate
