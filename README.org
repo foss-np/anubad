@@ -15,11 +15,16 @@ Don't want to install? we have the [[https://github.com/foss-np/anubad-web][web-
 
    Make sure these requirements are fullfilled.
 
-   | requirements          | linux          | ms-windows  |
-   |-----------------------+----------------+-------------|
-   | python                | python >= 3.00 | [[https://www.python.org/downloads/][python 3.xx]] |
-   | gobject-introspection | python-gobject | pygi/base   |
-   | GTK                   | Gtk+ >= 3      | pygi/       |
+   | requirements          | linux               | ms-windows  |
+   |-----------------------+---------------------+-------------|
+   | python                | python >= 3.00      | [[https://www.python.org/downloads/][python 3.xx]] |
+   | gobject-introspection | python-gobject      | pygi/base   |
+   | GTK                   | Gtk+ >= 3           | pygi/       |
+   |-----------------------+---------------------+-------------|
+   | optional              |                     |             |
+   |-----------------------+---------------------+-------------|
+   | editdistance          | python-editdistance |             |
+
 
    Latest version can be downloaded as [[https://github.com/foss-np/anubad/archive/master.zip][zip]]
    or [[https://github.com/foss-np/anubad/archive/master.tar.gz][tar]] or cloned.
