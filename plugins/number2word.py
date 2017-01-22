@@ -13,7 +13,7 @@ import os, sys
 
 fp3 = sys.stderr
 
-class num2word:
+class InWords:
     def __init__(self, word_map, interval, drop_and=True, offset=48):
         self.word_map = word_map
         self.interval = interval
@@ -99,7 +99,7 @@ class Adaptor(dict):
             k, v = line.split(';')
             map_en[int(k)] = v.strip()
 
-        self['en'] = num2word(map_en, 3, False)
+        self['en'] = InWords(map_en, 3, False)
 
         self.engine = {
             'name'   : "number2word",
@@ -108,32 +108,24 @@ class Adaptor(dict):
         }
 
 
-    def load_map(self, lang, liststore, key=False):
-        map_lang = dict()
-        for word, (ID, *has_hash_tag, parsed_info) in liststore.items():
-            noun = ""
-            for pos, val in parsed_info:
-                if pos == 'n' and noun == "":
-                    if not val: continue
-                    noun = val.split('/')[0]
-                    continue
-                if pos == '_num':
-                    if not val: continue
-                    if not val.isdigit(): continue
-                    v = int(val)
-                    map_lang[v] = word if key else noun
-                    continue
+    def map_gen(self, liststore, key=False):
+        mapping = dict()
+        for word, (*a, parsed_info) in liststore.items():
+            if 'num' not in parsed_info.keys(): continue
+            k = int(parsed_info['num'][0])
+            v = word if key else parsed_info['n1'][0].split('/')[0]
+            mapping[k] = v
 
-        # TODO add offset info
-        self[lang] = num2word(map_lang, 2, True, 2406)
+        return mapping
 
 
     def gui_reflect(self, query):
-        parsed_info = list()
+        parsed_info = dict()
 
         for lang, obj  in self.items():
-            parsed_info.append(obj.convert(query))
-            parsed_info.append(('u', ''))
+            k, v = obj.convert(query)
+            # print(lang, k, v)
+            parsed_info[k] = [ v ]
 
         FULL = {(query, int(query), __class__.SRC): parsed_info}
         return { query: (FULL, dict()) }
@@ -143,12 +135,17 @@ def plugin_main(app, fullpath):
     n2w = Adaptor()
     for path, gloss in app.home.core.Glossary.instances.items():
         numb = gloss.get('numbers.tra')
-        l1, l2 = path.split('/')[-2].split('2')
         if numb is None: continue
+        l1, l2 = path.split('/')[-2].split('2')
         liststore, ulta = numb
         if l1 == "en": lang, key = l2, False
         else: lang, key = l1, True
-        n2w.load_map(lang, liststore, key)
+        offset = 48
+        if    lang == "ne": offset = 2406
+        elif  lang == "jp": offset = 65296
+
+        mapping = n2w.map_gen(liststore, key)
+        n2w[lang] = InWords(mapping, 2, True, offset)
 
     app.home.search_engines.append(n2w.engine)
 
