@@ -4,7 +4,7 @@ import os, sys
 import traceback
 from collections import OrderedDict
 
-import importlib
+import importlib.util
 
 fp3 = fp4 = sys.stderr
 
