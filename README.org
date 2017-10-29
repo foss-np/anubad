@@ -1,5 +1,5 @@
 #+TITLE: anubad
-#+DATE: Tuesday, Jul 05 2016
+#+DATE: Tuesday, Oct 27, 2017
 #+OPTIONS: num:t
 #+STARTUP: overview
 
@@ -33,47 +33,50 @@ Don't want to install? we have the [[https://github.com/foss-np/anubad-web][web-
 
 ** Symbolic Link
 
-   Application can still be executable from anywhere if add symbolic
-   link added *executable-path* i.e. paths defined under shell
+   Application can still be executable from anywhere. Add symbolic
+   link to *executable-path* i.e. paths defined under shell
    variable =$PATH=.
 
-   This can be helpful while running *bleeding edge* directly from
-   git repository or in development to avoid constant installation.
+   This can be helpful while running *bleeding edge* version directly from
+   git repository or in development to avoid frequent installation.
 
+*** To link
    #+begin_src bash
      $ cd anubad/src/
      $ sudo make link
    #+end_src
 
-   to unlink use =sudo make unlink= in from same directory.
+*** To unlink
+   #+begin_src bash
+     $ sudo make unlink
+   #+end_src
 
 * Glossaries
 
   *anubad* uses [[https://github.com/foss-np/np-l10n-glossary/][foss-np/np-l10n-glossary]] as the /default glossary/,
   which can be *downloaded* via application.
 
-  run this command to download it.
+  Run below command to download it.
 
-  #+BEGIN_EXAMPLE
+  #+begin_example
     $ cd anubad/src/
     $ ./utils.py
-  #+END_EXAMPLE
-
+  #+end_example
 
 
 * Usage
 ** Search Modes
 
-   Search query beginning with '\\' will unprocessed search
+   Search query beginning with '\\' will be unprocessed search
 
 ** Command-line
 
-   #+BEGIN_EXAMPLE
+   #+begin_example
      anubad [OPTIONS] [COMMANDS]
-   #+END_EXAMPLE
+   #+end_example
 
 *** OPTIONS
-    #+BEGIN_EXAMPLE
+    #+begin_example
       optional arguments:
         -h, --help    show this help message and exit
         --noplugins   Disable plugins loading
@@ -82,29 +85,31 @@ Don't want to install? we have the [[https://github.com/foss-np/anubad-web][web-
         --nohistfile  Disable history file
         --notaskbar   Hide from taskbar
         --nothread    Don't thread application
-    #+END_EXAMPLE
+    #+end_example
 
 
 *** EXAMPLES
 
-    #+BEGIN_EXAMPLE
+    #+begin_example
       $ anubad search hello
-    #+END_EXAMPLE
+    #+end_example
 
 * Known Issues
 
-  Sometime application tend to crash unexpectedly. Turn off the
-  threading if it happens often (its turned off by default).
+  Sometime application tend to crash unexpectedly.
 
-  use =--nothread= argument to start without threading
+** Solution:
+  Turn off the threading if it happens often (default: turned off).
+
+  use =--nothread= argument to start `anubad` without threading
 
   Make changes in config file (=~/.config/anubad.ini=) to persist the
   change by adding =no-thread = True= in =[core]= section.
 
-  #+BEGIN_EXAMPLE
+  #+begin_example
     [core]
     no-thread = True
-  #+END_EXAMPLE
+  #+end_example
 
 * Configuration
 
@@ -126,8 +131,8 @@ Don't want to install? we have the [[https://github.com/foss-np/anubad-web][web-
 
 * Development & Contribution
 
-  If you wish to contribute this project, there is much thing you can
-  do beyond programming, to get started read [[https://github.com/foss-np/anubad/wiki/CONTRIBUTING][this]]
+  If you wish to contribute to this project, there are many things you can
+  do beyond programming, to get started please read [[https://github.com/foss-np/anubad/wiki/CONTRIBUTING][this]]
 
   Any code Contributions to *anubad* should be made via /GitHub/ =pull
   request=.
@@ -136,4 +141,4 @@ Don't want to install? we have the [[https://github.com/foss-np/anubad-web][web-
 
 [[http://i.creativecommons.org/l/by/3.0/88x31.png]]
 
-Copyright © 2013 - 2016 to the *anubad* Authors.
+Copyright © 2013 - 2017 to the *anubad* Authors.
